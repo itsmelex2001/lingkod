@@ -1,0 +1,412 @@
+/* patient-profile.css */
+
+/* ── Page wrapper ── */
+.profile-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  animation: pageIn .3s ease both;
+}
+
+/* ── Back button ── */
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 1.5rem;
+  font-size: .87rem;
+  font-weight: 500;
+  color: var(--dark-green);
+  background-color: #dcfce7;
+  padding: 12px;
+  border-radius: 50%;
+  text-decoration: none;
+  transition: transform 0.1s ease, background var(--transition);
+}
+.btn-back:hover { background-color: #bbf7d0; }
+.btn-back:active { transform: translateY(2px); }
+.btn-back svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* ── Skeleton loader ── */
+.profile-skeleton { animation: pageIn .3s ease both; }
+
+.sk {
+  background: linear-gradient(90deg, #eef5f1 25%, #dff0e8 50%, #eef5f1 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.sk-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sk-lines { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.sk-line   { height: 14px; border-radius: 6px; }
+.sk-lg     { width: 55%; }
+.sk-md     { width: 35%; }
+.sk-block  { height: 160px; border-radius: var(--radius-xl); margin-bottom: 12px; }
+
+/* ── Profile header card ── */
+.profile-header-card {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.profile-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: .04em;
+  color: var(--white);
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary-green), #1a9c52);
+}
+
+.profile-name {
+  font-size: 1.35rem;
+  color: var(--deep-green);
+  margin-bottom: .35rem;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.profile-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.dot-sep {
+  color: var(--border-color);
+  font-size: .8rem;
+}
+
+.profile-type-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.profile-type-badge.first-time { background: #eef2fc; color: #3a52c0; }
+.profile-type-badge.returning  { background: #e6f9ef; color: #1a7a40; }
+
+.profile-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.profile-date-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .78rem;
+  color: var(--muted);
+}
+
+/* ── Info grid ── */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem;
+  margin-bottom: 1.25rem;
+}
+
+.info-card {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.info-card-wide {
+  grid-column: 1 / -1;
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  margin-bottom: 1rem;
+  padding-bottom: .65rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.info-card-header svg { flex-shrink: 0; }
+
+.info-rows { display: flex; flex-direction: column; gap: 0; }
+
+.info-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: .55rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.info-row:last-child { border-bottom: none; }
+
+.info-row-block {
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.info-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.info-val {
+  font-size: .88rem;
+  color: var(--text);
+  font-weight: 500;
+  text-align: right;
+}
+
+.info-val-wrap {
+  text-align: left;
+  line-height: 1.55;
+  font-weight: 400;
+  color: var(--text-soft);
+}
+
+/* ── Assign doctor card ── */
+.assign-card {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.assign-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: .25rem;
+}
+
+.assign-select {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: .88rem;
+  color: var(--text);
+  background: var(--light-bg);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236b7c6f' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
+
+.assign-select:focus {
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, .12);
+  background-color: var(--white);
+}
+
+/* ── Notes card ── */
+.notes-card {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .85rem;
+}
+
+.notes-count {
+  font-size: .78rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── Add note form ── */
+.add-note-wrap {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.note-textarea {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: .875rem;
+  color: var(--text);
+  background: var(--light-bg);
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  line-height: 1.5;
+}
+
+.note-textarea::placeholder { color: var(--muted); }
+
+.note-textarea:focus {
+  border-color: var(--primary-green);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, .12);
+}
+
+.note-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 9px 18px;
+  flex-shrink: 0;
+}
+
+/* ── Notes list ── */
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.note-item {
+  background: var(--light-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.2rem;
+  animation: cardIn .25s ease both;
+}
+
+.note-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .45rem;
+}
+
+.note-by {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--dark-green);
+}
+
+.note-time {
+  font-size: .76rem;
+  color: var(--muted);
+}
+
+.note-text {
+  font-size: .88rem;
+  color: var(--text-soft);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.notes-empty {
+  padding: 2.5rem 1rem;
+}
+
+/* ── Error state ── */
+.profile-error {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .profile-page { padding: 1.5rem 1rem 3rem; }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-card-wide { grid-column: 1; }
+
+  .profile-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-header-right {
+    align-items: flex-start;
+  }
+
+  .add-note-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .note-submit-btn { width: 100%; justify-content: center; }
+
+  .assign-row { flex-direction: column; align-items: stretch; }
+  .assign-row .btn-action { width: 100%; text-align: center; justify-content: center; }
+
+  .profile-name { font-size: 1.15rem; }
+}

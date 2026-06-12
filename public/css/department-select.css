@@ -1,0 +1,152 @@
+/* department-select.css */
+body {
+  font-family: 'Poppins', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: url('/sdn/public/assets/hospital_hero_bg.jpg') center/cover fixed;
+  z-index: 0;
+}
+
+body::before {
+  content: '';
+  position: fixed; /* Cover entire viewport */
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(18, 53, 36, 0.85); /* Dark green tint */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: -1;
+}
+
+.select-container {
+  max-width: 1050px;
+  margin: 1rem auto 3rem; /* Slightly moved to top */
+  padding: 0 2rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center everything vertically */
+}
+
+.select-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.select-header h1 {
+  font-size: 2.4rem;
+  color: #ffffff; /* White for dark background */
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.select-header p {
+  font-size: 1.1rem;
+  color: #e2ece6;
+  margin-bottom: 0;
+}
+
+.dept-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr)); /* Force 3 columns centered */
+  gap: 20px;
+  justify-content: center;
+  align-items: stretch;
+}
+
+@media (max-width: 800px) {
+  .dept-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+}
+
+.dept-card {
+  background: rgba(255, 255, 255, 0.95); /* Glassy white */
+  border-radius: 20px;
+  padding: 40px 24px 30px; /* More top/bottom padding */
+  min-height: 400px; /* Long portrait box */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  backdrop-filter: blur(8px);
+}
+
+.dept-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border-color: #ffffff;
+}
+
+.icon-wrapper {
+  width: 96px; /* Significantly larger icon wrapper */
+  height: 96px;
+  background: #f0fdf4;
+  color: var(--primary-green, #286b46);
+  border-radius: 24px; /* More rounded squircle */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(40, 107, 70, 0.1);
+}
+
+.icon-wrapper svg { 
+  width: 48px; 
+  height: 48px; 
+}
+
+.dept-card:hover .icon-wrapper {
+  background: var(--primary-green, #286b46);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 8px 16px rgba(40, 107, 70, 0.3);
+}
+
+.dept-card h3 {
+  font-size: 1.15rem; /* Adjusted text size */
+  color: #183527;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.dept-card p {
+  color: #475569;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #e2ece6; /* Lighter color for dark background */
+  background-color: transparent;
+  padding: 8px 16px 8px 0;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  color: #ffffff;
+  transform: translateX(-4px);
+}
+
+.btn-back svg {
+  width: 24px;
+  height: 24px;
+}

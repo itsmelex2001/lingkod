@@ -1,0 +1,179 @@
+/* landing.css */
+
+/* Splash Screen Styles */
+#splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s ease-out;
+}
+
+.splash-logo-svg {
+  width: 550px;
+  height: 550px;
+  filter: drop-shadow(0 15px 30px rgba(27, 94, 32, 0.3));
+  animation: floatLogo 4.5s ease-in-out infinite;
+}
+
+.splash-logo-svg path {
+  stroke-dasharray: 180;
+  stroke-dashoffset: 180;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  animation: drawCross 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.splash-logo-svg path.light-green {
+  animation-delay: 0.2s;
+}
+
+@keyframes drawCross {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes floatLogo {
+  0%, 100% { transform: translateY(0); filter: drop-shadow(0 15px 30px rgba(27, 94, 32, 0.3)); }
+  50% { transform: translateY(-15px); filter: drop-shadow(0 25px 45px rgba(27, 94, 32, 0.45)); }
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Removed Navbar Overrides so it inherits from navigation.css */
+
+
+
+/* FAQ Floating Button */
+.faq-fab {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: var(--primary-green);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(56, 161, 105, 0.4);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+.faq-fab:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(56, 161, 105, 0.6);
+  background: #2f855a;
+}
+
+/* FAQ Modal */
+.faq-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+.faq-modal-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+.faq-modal-content {
+  background: white;
+  width: 90%;
+  max-width: 600px;
+  border-radius: 16px;
+  padding: 40px;
+  position: relative;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.faq-modal-overlay.active .faq-modal-content {
+  transform: translateY(0);
+}
+.faq-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.faq-close-btn:hover {
+  color: #111827;
+}
+.faq-header h2 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.8rem;
+  color: #111827;
+  margin-bottom: 8px;
+}
+.faq-header p {
+  color: #6b7280;
+  margin-bottom: 30px;
+}
+.faq-item {
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 15px;
+}
+.faq-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+.faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 15px 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+}
+.faq-icon {
+  font-size: 1.5rem;
+  color: var(--primary-green);
+  transition: 0.3s;
+}
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+.faq-answer p {
+  padding-bottom: 15px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+.faq-item.active .faq-icon {
+  transform: rotate(45deg);
+}
+.faq-item.active .faq-answer {
+  max-height: 200px;
+}
