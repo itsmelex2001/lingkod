@@ -1,10 +1,10 @@
 <script>
-  export let logoSrc = "/sdn/public/assets/LINKod_logo.png"; // Changed to cleaner logo if available, or fallback to original
+  export let logoSrc = "/public/assets/LINKod_logo.png"; // Changed to cleaner logo if available, or fallback to original
 </script>
 
 <header class="hero">
   <div class="hero-content">
-    <img src="/sdn/public/assets/linkod-logo.png.png" alt="LINKod Logo" class="hero-logo-img" draggable="false">
+    <img src="/public/assets/linkod-logo.png.png" alt="LINKod Logo" class="hero-logo-img" draggable="false">
 
     <h1>Mariveles Mental Wellness and General Hospital</h1>
     <h2>Localized Network and Knowledge-base for Online Service Delivery</h2>
@@ -17,7 +17,7 @@
 <style>
   .hero {
     min-height: calc(100vh - 70px);
-    background: url('/sdn/public/assets/bg_login.jpg') center/cover fixed;
+    background: url('/public/assets/bg_login.jpg') center/cover fixed;
     position: relative;
     display: flex;
     flex-direction: column;

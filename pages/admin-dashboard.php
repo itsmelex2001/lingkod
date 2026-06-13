@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION['user']) || strtolower(trim($_SESSION['role'] ?? '')) !== 'admin') {
-    header('Location: /sdn/pages/login.php');
+    header('Location: /pages/login.php');
     exit;
 }
 ?>
@@ -12,9 +12,9 @@ if (empty($_SESSION['user']) || strtolower(trim($_SESSION['role'] ?? '')) !== 'a
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Portal | Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
-  <link rel="stylesheet" href="/sdn/public/css/notifier.css?v=<?= time() ?>" />
-  <link rel="stylesheet" href="/sdn/public/css/admin-dashboard.css?v=<?= time() ?>" />
+  <link rel="stylesheet" href="/public/css/global.css?v=<?= time() ?>" />
+  <link rel="stylesheet" href="/public/css/notifier.css?v=<?= time() ?>" />
+  <link rel="stylesheet" href="/public/css/admin-dashboard.css?v=<?= time() ?>" />
 </head>
 <body class="admin-layout">
 
@@ -76,7 +76,7 @@ if (empty($_SESSION['user']) || strtolower(trim($_SESSION['role'] ?? '')) !== 'a
     </nav>
     
     <div class="sidebar-footer">
-      <button class="btn-sidebar-logout" onclick="window.location.href='/sdn/pages/logout.php'">
+      <button class="btn-sidebar-logout" onclick="window.location.href='/pages/logout.php'">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
         Logout
       </button>
@@ -466,9 +466,9 @@ if (empty($_SESSION['user']) || strtolower(trim($_SESSION['role'] ?? '')) !== 'a
 
   </main>
 
-  <script src="/sdn/public/js/admin-dashboard-inline.js?v=<?= time() ?>"></script>
-  <script src="/sdn/public/js/admin-spa-v2.js?v=<?= time() ?>"></script>
-  <script src="/sdn/public/js/notifier.js?v=<?= time() ?>"></script>
+  <script src="/public/js/admin-dashboard-inline.js?v=<?= time() ?>"></script>
+  <script src="/public/js/admin-spa-v2.js?v=<?= time() ?>"></script>
+  <script src="/public/js/notifier.js?v=<?= time() ?>"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <!-- Add User Modal -->

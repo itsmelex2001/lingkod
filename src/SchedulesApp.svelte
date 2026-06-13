@@ -75,7 +75,7 @@
 </script>
 
 <main class="sched-page">
-  <a href="/sdn/index.php" class="btn-back">
+  <a href="/index.php" class="btn-back">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
   </a>
 

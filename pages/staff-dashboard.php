@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION['user'])) {
-    header('Location: /sdn/pages/login.php');
+    header('Location: /pages/login.php');
     exit;
 }
 
@@ -26,9 +26,9 @@ header('Expires: 0');
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Staff Portal | SDN</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
-  <link rel="stylesheet" href="/sdn/public/css/notifier.css?v=<?= time() ?>" />
-  <link rel="stylesheet" href="/sdn/public/css/staff-dashboard.css?v=<?= time() ?>" />
+  <link rel="stylesheet" href="/public/css/global.css?v=<?= time() ?>" />
+  <link rel="stylesheet" href="/public/css/notifier.css?v=<?= time() ?>" />
+  <link rel="stylesheet" href="/public/css/staff-dashboard.css?v=<?= time() ?>" />
 </head>
 <body class="staff-layout">
 
@@ -80,7 +80,7 @@ header('Expires: 0');
     </nav>
 
     <div class="sidebar-footer">
-      <button class="btn-sidebar-logout" onclick="window.location.href='/sdn/pages/logout.php'">
+      <button class="btn-sidebar-logout" onclick="window.location.href='/pages/logout.php'">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
         Logout
       </button>
@@ -298,9 +298,9 @@ header('Expires: 0');
 
   </main>
 
-  <script src="/sdn/public/js/staff-dashboard-inline.js"></script>
-  <script src="/sdn/public/js/staff-spa-v2.js?v=9?v=<?= time() ?>"></script>
-  <script src="/sdn/public/js/notifier.js?v=<?= time() ?>"></script>
+  <script src="/public/js/staff-dashboard-inline.js"></script>
+  <script src="/public/js/staff-spa-v2.js?v=9?v=<?= time() ?>"></script>
+  <script src="/public/js/notifier.js?v=<?= time() ?>"></script>
   <!-- Assign Doctor Modal -->
   <div id="assignModal" class="modal-box" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
     <div style="background: #fff; padding: 30px; border-radius: 16px; width: 400px; max-width: 90%;">

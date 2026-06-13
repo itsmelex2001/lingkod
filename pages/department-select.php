@@ -6,14 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Select Department | Registration</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
-  <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
-  <link rel="stylesheet" href="/sdn/public/css/department-select.css?v=11" />
+  <link rel="stylesheet" href="/public/css/global.css?v=9" />
+  <link rel="stylesheet" href="/public/css/navigation.css?v=9" />
+  <link rel="stylesheet" href="/public/css/department-select.css?v=11" />
 </head>
 <body>
   
   <nav class="navbar" style="border-bottom: 1px solid rgba(255,255,255,0.1); justify-content: flex-start;">
-    <a href="/sdn/index.php" class="btn-back" style="margin: 0; gap: 8px;">
+    <a href="/index.php" class="btn-back" style="margin: 0; gap: 8px;">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       <span style="font-size: 1rem; font-weight: 500;">Back</span>
     </a>

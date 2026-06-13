@@ -1,11 +1,11 @@
 <?php
 session_start();
 if (empty($_SESSION['user']) || !in_array($_SESSION['role'], ['admin', 'staff'])) {
-    header('Location: /sdn/pages/login.php');
+    header('Location: /pages/login.php');
     exit;
 }
 $isStaff = ($_SESSION['role'] === 'staff');
-$dashLink = $isStaff ? '/sdn/pages/staff-dashboard.php' : '/sdn/pages/admin-dashboard.php';
+$dashLink = $isStaff ? '/pages/staff-dashboard.php' : '/pages/admin-dashboard.php';
 $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
 ?>
 <!doctype html>
@@ -14,10 +14,10 @@ $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Portal | Patient Profile</title>
-    <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/dashboard.css" />
-    <link rel="stylesheet" href="/sdn/public/css/patient-profile.css" />
+    <link rel="stylesheet" href="/public/css/global.css?v=9" />
+    <link rel="stylesheet" href="/public/css/navigation.css?v=9" />
+    <link rel="stylesheet" href="/public/css/dashboard.css" />
+    <link rel="stylesheet" href="/public/css/patient-profile.css" />
     <!-- html2pdf for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   </head>
@@ -39,7 +39,7 @@ $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
       <ul class="nav-links" id="navLinks" role="list">
         <li><a href="<?php echo $dashLink; ?>" class="active-nav">Patient Management</a></li>
         <?php if (!$isStaff): ?>
-        <li><a href="/sdn/pages/system-logs.php">System Logs</a></li>
+        <li><a href="/pages/system-logs.php">System Logs</a></li>
         <?php endif; ?>
         <li>
           <button class="btn-logout">Logout</button>
@@ -235,7 +235,7 @@ $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
         </svg>
         <p class="empty-title">Patient not found</p>
         <p class="empty-sub" id="errorMsg">The requested patient could not be loaded.</p>
-        <a href="/sdn/pages/admin-dashboard.php" class="btn-action approve-btn" style="margin-top:1rem;text-decoration:none;display:inline-block;">Return to Dashboard</a>
+        <a href="/pages/admin-dashboard.php" class="btn-action approve-btn" style="margin-top:1rem;text-decoration:none;display:inline-block;">Return to Dashboard</a>
       </div>
 
     </main>
@@ -255,8 +255,8 @@ $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
       </div>
     </div>
 
-    <script src="/sdn/public/js/utils.js"></script>
-    <script src="/sdn/public/js/navigation.js"></script>
-    <script src="/sdn/public/js/patient-profile.js?v=9"></script>
+    <script src="/public/js/utils.js"></script>
+    <script src="/public/js/navigation.js"></script>
+    <script src="/public/js/patient-profile.js?v=9"></script>
   </body>
 </html>

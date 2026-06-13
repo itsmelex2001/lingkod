@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // IntersectionObserver for scroll spy (updates active link while scrolling)
-  if (window.location.pathname.endsWith("index.php") || window.location.pathname === "/sdn/") {
+  if (window.location.pathname.endsWith("index.php") || window.location.pathname === "/") {
     const sections = document.querySelectorAll("section[id], main[id]");
     if (sections.length > 0) {
       const observer = new IntersectionObserver(
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Logout error:", err);
       } finally {
         // Clear any remaining session data from client
-        window.location.href = "/sdn/index.php";
+        window.location.href = "/index.php";
       }
     });
   });

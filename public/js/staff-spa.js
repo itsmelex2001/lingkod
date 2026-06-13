@@ -17,7 +17,7 @@ function changeMonth(offset) {
 async function fetchCalendar(deptFilter = currentDeptFilter) {
     currentDeptFilter = deptFilter;
     try {
-        const docRes = await fetch('/sdn/api/schedule.php');
+        const docRes = await fetch('/api/schedule.php');
         const docResult = await docRes.json();
         const docMap = {};
         const docList = [];
@@ -28,7 +28,7 @@ async function fetchCalendar(deptFilter = currentDeptFilter) {
             });
         }
 
-        const res = await fetch('/sdn/api/patients.php'); 
+        const res = await fetch('/api/patients.php'); 
         const result = await res.json();
         
         if (result.success) {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchPatientQueue() {
     try {
-        const res = await fetch('/sdn/api/patients.php');
+        const res = await fetch('/api/patients.php');
         const result = await res.json();
         
         if (result.success) {
@@ -167,7 +167,7 @@ async function fetchPatientQueue() {
                     tr.innerHTML = `
                         <td>${dateString}</td>
                         <td>
-                            <a href="/sdn/pages/patient-profile.php?id=${p.patient_id}" style="color:var(--deep-green); text-decoration:none;"><strong>${p.full_name}</strong></a><br>
+                            <a href="/pages/patient-profile.php?id=${p.patient_id}" style="color:var(--deep-green); text-decoration:none;"><strong>${p.full_name}</strong></a><br>
                             <span style="font-size: 0.8rem; color:#666;">ID: ${p.patient_id}</span>
                         </td>
                         <td>${p.department}</td>
@@ -188,7 +188,7 @@ async function fetchPatientQueue() {
 
 async function fetchStaffLeave() {
     try {
-        const res = await fetch('/sdn/api/leave.php');
+        const res = await fetch('/api/leave.php');
         const result = await res.json();
         if (result.success) {
             const leaves = result.data;
@@ -219,7 +219,7 @@ async function fetchStaffLeave() {
 async function updatePatientStatus(patientId, action) {
     if (!confirm(`Are you sure you want to ${action} this patient?`)) return;
     try {
-        const res = await fetch('/sdn/api/patients.php', {
+        const res = await fetch('/api/patients.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: action, patient_id: patientId })
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const reason = document.getElementById('leaveReason').value;
             
             try {
-                const res = await fetch('/sdn/api/leave.php', {
+                const res = await fetch('/api/leave.php', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({action: 'create', start_date: start, end_date: end, reason: reason})
@@ -285,7 +285,7 @@ async function openAssignModal(patientId) {
     select.innerHTML = '<option value="">Loading doctors...</option>';
     
     try {
-        const res = await fetch('/sdn/api/schedule.php');
+        const res = await fetch('/api/schedule.php');
         const result = await res.json();
         if (result.success) {
             select.innerHTML = '<option value="">-- Select Available Doctor --</option>';
@@ -308,7 +308,7 @@ async function submitAssign() {
     const doc = document.getElementById('assignDoctor').value;
     
     try {
-        const res = await fetch('/sdn/api/patients.php', {
+        const res = await fetch('/api/patients.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'assign', patient_id: pId, doctor: doc})
@@ -328,7 +328,7 @@ async function submitAssign() {
 
 async function fetchReports() {
     try {
-        const res = await fetch('/sdn/api/reports.php');
+        const res = await fetch('/api/reports.php');
         const result = await res.json();
         if (result.success) {
             if(document.getElementById('report-total-patients-today')) {
@@ -347,7 +347,7 @@ async function fetchReports() {
 }
 
 function fetchPatientHistory() {
-    fetch(`/sdn/api/history.php?_=${new Date().getTime()}`)
+    fetch(`/api/history.php?_=${new Date().getTime()}`)
         .then(res => res.json())
         .then(res => {
             if(res.success) {
@@ -426,7 +426,7 @@ function submitHistory() {
         return;
     }
 
-    fetch('/sdn/api/history.php', {
+    fetch('/api/history.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ patient_id: patientId, diagnosis, treatment, prescription })
@@ -450,7 +450,7 @@ function submitHistory() {
 function deleteHistory(patientId) {
     if(!confirm('Are you sure you want to delete this medical history record?')) return;
 
-    fetch('/sdn/api/history.php', {
+    fetch('/api/history.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ action: 'delete', patient_id: patientId })

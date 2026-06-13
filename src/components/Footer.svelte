@@ -13,8 +13,8 @@
           <li><a href="#about">About Us</a></li>
           <li><a href="#services">Services</a></li>
           <li><a href="#location">Location</a></li>
-          <li><a href="/sdn/pages/schedules.php">Schedules</a></li>
-          <li><a href="/sdn/pages/department-select.php" class="highlight-link">Book Appointment</a></li>
+          <li><a href="/pages/schedules.php">Schedules</a></li>
+          <li><a href="/pages/department-select.php" class="highlight-link">Book Appointment</a></li>
         </ul>
       </div>
       

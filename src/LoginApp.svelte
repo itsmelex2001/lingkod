@@ -19,14 +19,14 @@
 
   <!-- Centered Login Form -->
   <div class="login-card-container">
-    <a href="/sdn/index.php" class="btn-back">
+    <a href="/index.php" class="btn-back">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       Back
     </a>
 
     <div class="form-wrapper">
       <div class="form-header">
-        <img src="/sdn/public/assets/mmwgh_logo.png" alt="Hospital Logo" class="form-logo" />
+        <img src="/public/assets/mmwgh_logo.png" alt="Hospital Logo" class="form-logo" />
         <h2>{welcomeTitle}</h2>
         <p>{subTitle}</p>
       </div>
@@ -77,7 +77,7 @@
             </button>
           </div>
           <div class="forgot-row">
-            <a href="/sdn/pages/forgot-password.php?role={role}" class="forgot-link">Forgot Password?</a>
+            <a href="/pages/forgot-password.php?role={role}" class="forgot-link">Forgot Password?</a>
           </div>
         </div>
 
@@ -101,7 +101,7 @@
     min-height: 100vh;
     width: 100%;
     position: relative;
-    background: url('/sdn/public/assets/bg_login.jpg') center/cover fixed;
+    background: url('/public/assets/bg_login.jpg') center/cover fixed;
   }
 
   .login-overlay {

@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Additional check: verify we have a valid session
   if (!session.user) {
     alert("Session error: Please log in again.");
-    window.location.href = "/sdn/pages/login.php";
+    window.location.href = "/pages/login.php";
     return;
   }
 

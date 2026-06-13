@@ -8,9 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/landing.css?v=16" />
+    <link rel="stylesheet" href="/public/css/global.css?v=9" />
+    <link rel="stylesheet" href="/public/css/navigation.css?v=9" />
+    <link rel="stylesheet" href="/public/css/landing.css?v=16" />
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
   </head>
   <body>
@@ -25,32 +25,32 @@
       </svg>
     </div>
 
-    <script src="/sdn/public/js/splash-inline.js"></script>
+    <script src="/public/js/splash-inline.js"></script>
 
     <!-- NAVIGATION -->
     <nav class="navbar" id="navbar">
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 2rem; margin: 0 auto;">
-        <a class="logo" href="/sdn/index.php" title="Home">
-          <img src="/sdn/public/assets/mmwgh_logo.png" alt="Hospital Logo" />
+        <a class="logo" href="/index.php" title="Home">
+          <img src="/public/assets/mmwgh_logo.png" alt="Hospital Logo" />
           <span class="logo-text">Mariveles Mental Wellness and General Hospital LINKOD</span>
         </a>
 
         <ul class="nav-links" id="navLinks">
-          <li><a href="/sdn/index.php" class="active-nav">Home</a></li>
+          <li><a href="/index.php" class="active-nav">Home</a></li>
           <li><a href="#services">Services</a></li>
           <li><a href="#about">About</a></li>
           <li><a href="#location">Location</a></li>
           <li>
-            <button class="btn-nav-secondary" onclick="window.location.href = '/sdn/pages/schedules.php'">View Schedule</button>
+            <button class="btn-nav-secondary" onclick="window.location.href = '/pages/schedules.php'">View Schedule</button>
           </li>
           <li>
-            <button class="btn-nav-primary" onclick="window.location.href = '/sdn/pages/department-select.php'">Book Appointment</button>
+            <button class="btn-nav-primary" onclick="window.location.href = '/pages/department-select.php'">Book Appointment</button>
           </li>
           <li class="nav-dropdown">
             <button class="btn-signin">Sign In</button>
             <div class="dropdown-content">
-              <a href="/sdn/pages/login.php?role=staff">as Medical Staff</a>
-              <a href="/sdn/pages/login.php?role=admin">as Administrator</a>
+              <a href="/pages/login.php?role=staff">as Medical Staff</a>
+              <a href="/pages/login.php?role=admin">as Administrator</a>
             </div>
           </li>
         </ul>
@@ -67,13 +67,13 @@
     <!-- Svelte Component Mount Point -->
     <div id="app"></div>
     <!-- Compiled Svelte Assets -->
-    <script type="module" crossorigin src="/sdn/dist/assets/main.js"></script>
-    <link rel="stylesheet" crossorigin href="/sdn/dist/assets/main.css">
+    <script type="module" crossorigin src="/dist/assets/main.js"></script>
+    <link rel="stylesheet" crossorigin href="/dist/assets/main.css">
 
 
 
-    <script src="/sdn/public/js/utils.js"></script>
-    <script src="/sdn/public/js/navigation.js"></script>
-    <script src="/sdn/public/js/landing.js"></script>
+    <script src="/public/js/utils.js"></script>
+    <script src="/public/js/navigation.js"></script>
+    <script src="/public/js/landing.js"></script>
   </body>
 </html>

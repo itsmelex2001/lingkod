@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  const API_BASE = '/sdn/api';
+  const API_BASE = '/api';
 
   function escHtml(str) {
     if (!str) return '';

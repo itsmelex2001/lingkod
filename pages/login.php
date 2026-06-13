@@ -11,8 +11,8 @@ header('Expires: 0');
 // If user is logged in, redirect to appropriate dashboard
 if (!empty($_SESSION['user'])) {
     $dest = strtolower(trim($_SESSION['role'] ?? '')) === 'admin'
-        ? '/sdn/pages/admin-dashboard.php'
-        : '/sdn/pages/staff-dashboard.php';
+        ? '/pages/admin-dashboard.php'
+        : '/pages/staff-dashboard.php';
     header("Location: $dest");
     exit;
 }
@@ -86,8 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['department'] = $user['department'] ?? '';
 
                     $dest = strtolower(trim($user['role'] ?? '')) === 'admin'
-                        ? '/sdn/pages/admin-dashboard.php'
-                        : '/sdn/pages/staff-dashboard.php';
+                        ? '/pages/admin-dashboard.php'
+                        : '/pages/staff-dashboard.php';
                     header("Location: $dest");
                     exit;
                 }
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
     
     <!-- Compiled Svelte CSS -->
-    <link rel="stylesheet" crossorigin href="/sdn/dist/assets/main.css">
+    <link rel="stylesheet" crossorigin href="/dist/assets/main.css">
   </head>
   <body>
     <!-- Svelte Mount Point -->
@@ -120,6 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          data-role="<?= htmlspecialchars($roleParam) ?>"></div>
     
     <!-- Compiled Svelte JS -->
-    <script type="module" crossorigin src="/sdn/dist/assets/main.js"></script>
+    <script type="module" crossorigin src="/dist/assets/main.js"></script>
   </body>
 </html>

@@ -1,16 +1,16 @@
 <!doctype html>
 <?php
 $role = $_GET['role'] ?? '';
-$loginUrl = "/sdn/pages/login.php" . ($role ? "?role=" . urlencode($role) : "");
+$loginUrl = "/pages/login.php" . ($role ? "?role=" . urlencode($role) : "");
 ?>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Forgot Password | LINKOD</title>
-    <link rel="stylesheet" href="/sdn/public/css/global.css" />
+    <link rel="stylesheet" href="/public/css/global.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/sdn/public/css/forgot-password.css" />
+    <link rel="stylesheet" href="/public/css/forgot-password.css" />
   </head>
   <body>
     <div class="login-box">
@@ -48,6 +48,6 @@ $loginUrl = "/sdn/pages/login.php" . ($role ? "?role=" . urlencode($role) : "");
 
     </div>
 
-    <script src="/sdn/public/js/forgot-password-inline.js"></script>
+    <script src="/public/js/forgot-password-inline.js"></script>
   </body>
 </html>

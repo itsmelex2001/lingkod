@@ -125,7 +125,7 @@ function closeAndConfirm() {
   if (ageInput) ageInput.value = "";
 
   setTimeout(() => {
-    window.location.href = "/sdn/index.php";
+    window.location.href = "/index.php";
   }, 1200);
 }
 

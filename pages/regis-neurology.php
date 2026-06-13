@@ -5,21 +5,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Registration</title>
-    <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/forms.css" />
-    <link rel="stylesheet" href="/sdn/public/css/modal-export.css" />
+    <link rel="stylesheet" href="/public/css/global.css?v=9" />
+    <link rel="stylesheet" href="/public/css/navigation.css?v=9" />
+    <link rel="stylesheet" href="/public/css/forms.css" />
+    <link rel="stylesheet" href="/public/css/modal-export.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   </head>
   <body>
     <div style="max-width: 1000px; width: 90%; margin: 2rem auto 0;">
       <?php
       if (isset($_GET['source']) && $_GET['source'] === 'home') {
-          $backUrl = '/sdn/index.php';
+          $backUrl = '/index.php';
       } elseif (isset($_GET['source']) && $_GET['source'] === 'schedules') {
-          $backUrl = '/sdn/pages/schedules.php';
+          $backUrl = '/pages/schedules.php';
       } else {
-          $backUrl = '/sdn/pages/department-select.php';
+          $backUrl = '/pages/department-select.php';
       }
       ?>
       <a href="<?= htmlspecialchars($backUrl) ?>" class="btn-back">
@@ -476,10 +476,10 @@
       </div>
     </div>
 
-    <script src="/sdn/public/js/utils.js"></script>
-    <script src="/sdn/public/js/navigation.js"></script>
-    <script src="/sdn/public/js/print-pdf-setup.js"></script>
-    <script src="/sdn/public/js/regis-neurology.js"></script>
-    <script src="/sdn/public/js/modal-export.js"></script>
+    <script src="/public/js/utils.js"></script>
+    <script src="/public/js/navigation.js"></script>
+    <script src="/public/js/print-pdf-setup.js"></script>
+    <script src="/public/js/regis-neurology.js"></script>
+    <script src="/public/js/modal-export.js"></script>
   </body>
 </html>

@@ -53,7 +53,7 @@
   .about-section {
     padding: 4rem 2rem;
     position: relative;
-    background: url('/sdn/public/assets/hospital_hero_bg.jpg') center/cover fixed;
+    background: url('/public/assets/hospital_hero_bg.jpg') center/cover fixed;
   }
 
   .about-section::before {

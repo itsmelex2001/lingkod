@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchAdminStats() {
     try {
-        const response = await fetch('/sdn/api/admin-stats.php');
+        const response = await fetch('/api/admin-stats.php');
         const result = await response.json();
         
         if (result.success) {
@@ -80,7 +80,7 @@ async function fetchAdminStats() {
 
 async function fetchStaffDirectory() {
     try {
-        const response = await fetch('/sdn/api/staff.php');
+        const response = await fetch('/api/staff.php');
         const result = await response.json();
         
         if (result.success) {
@@ -136,7 +136,7 @@ async function submitAddStaff() {
         return;
     }
     try {
-        const res = await fetch('/sdn/api/staff.php', {
+        const res = await fetch('/api/staff.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'create', full_name: fullName, username, mobile_number: mobile, password, department: dept })
@@ -162,7 +162,7 @@ async function submitAddStaff() {
 async function toggleStaffStatus(userId, newStatus) {
     if (!confirm(`Are you sure you want to mark this staff member as ${newStatus}?`)) return;
     try {
-        const res = await fetch('/sdn/api/staff.php', {
+        const res = await fetch('/api/staff.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'toggle', user_id: userId, status: newStatus })
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchAuditLogs() {
     try {
-        const res = await fetch('/sdn/api/logs.php');
+        const res = await fetch('/api/logs.php');
         const result = await res.json();
         if (result.success) {
             const logs = result.data;
@@ -244,7 +244,7 @@ async function fetchAuditLogs() {
 
 async function fetchAdminAppointments() {
     try {
-        const res = await fetch('/sdn/api/patients.php');
+        const res = await fetch('/api/patients.php');
         const result = await res.json();
         if (result.success) {
             const patients = result.data;
@@ -261,7 +261,7 @@ async function fetchAdminAppointments() {
                     
                     tr.innerHTML = `
                         <td>${p.patient_id}</td>
-                        <td><a href="/sdn/pages/patient-profile.php?id=${p.patient_id}" style="color:var(--deep-green); text-decoration:none;"><strong>${p.full_name}</strong></a></td>
+                        <td><a href="/pages/patient-profile.php?id=${p.patient_id}" style="color:var(--deep-green); text-decoration:none;"><strong>${p.full_name}</strong></a></td>
                         <td>${p.department}</td>
                         <td>${p.assigned_doctor || '<span style="color:#888;">Unassigned</span>'}</td>
                         <td>${badge}</td>
@@ -280,7 +280,7 @@ async function fetchAdminAppointments() {
 
 async function fetchAdminLeave() {
     try {
-        const res = await fetch('/sdn/api/leave.php');
+        const res = await fetch('/api/leave.php');
         const result = await res.json();
         
         if (result.success) {
@@ -332,7 +332,7 @@ async function fetchAdminLeave() {
 async function updateLeaveStatus(reqId, newStatus) {
     if (!confirm(`Are you sure you want to mark this request as ${newStatus}?`)) return;
     try {
-        const res = await fetch('/sdn/api/leave.php', {
+        const res = await fetch('/api/leave.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'update_status', request_id: reqId, status: newStatus})
@@ -350,7 +350,7 @@ async function updateLeaveStatus(reqId, newStatus) {
 
 async function fetchSettings() {
     try {
-        const res = await fetch('/sdn/api/settings.php');
+        const res = await fetch('/api/settings.php');
         const result = await res.json();
         if (result.success) {
             result.data.forEach(setting => {
@@ -372,15 +372,15 @@ async function saveSettings() {
     const allow_swaps = document.getElementById('setting_allow_swaps').value;
 
     try {
-        await fetch('/sdn/api/settings.php', {
+        await fetch('/api/settings.php', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'update', setting_key: 'max_working_hours', setting_value: max_hours})
         });
-        await fetch('/sdn/api/settings.php', {
+        await fetch('/api/settings.php', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'update', setting_key: 'default_appt_duration', setting_value: appt_duration})
         });
-        await fetch('/sdn/api/settings.php', {
+        await fetch('/api/settings.php', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'update', setting_key: 'allow_swaps', setting_value: allow_swaps})
         });
@@ -392,7 +392,7 @@ async function saveSettings() {
 
 async function fetchAdminSchedule() {
     try {
-        const res = await fetch('/sdn/api/schedule.php');
+        const res = await fetch('/api/schedule.php');
         const result = await res.json();
         if (result.success) {
             const doctors = result.data;
@@ -423,7 +423,7 @@ async function fetchAdminSchedule() {
 
 async function fetchAdminSwaps() {
     try {
-        const res = await fetch('/sdn/api/swaps.php');
+        const res = await fetch('/api/swaps.php');
         const result = await res.json();
         if (result.success) {
             const swaps = result.data;
@@ -464,7 +464,7 @@ async function fetchAdminSwaps() {
 async function updateSwapStatus(swapId, newStatus) {
     if (!confirm(`Are you sure you want to mark this swap as ${newStatus}?`)) return;
     try {
-        const res = await fetch('/sdn/api/swaps.php', {
+        const res = await fetch('/api/swaps.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'update_status', swap_id: swapId, status: newStatus})
@@ -493,7 +493,7 @@ function openScheduleModal(doctorId, sDate, sStart, sEnd) {
         document.getElementById('scheduleDoctorSelectGroup').style.display = 'block';
         const select = document.getElementById('scheduleDoctorSelect');
         select.innerHTML = '<option value="">Loading doctors...</option>';
-        fetch('/sdn/api/schedule.php').then(r => r.json()).then(result => {
+        fetch('/api/schedule.php').then(r => r.json()).then(result => {
             if (result.success) {
                 select.innerHTML = '<option value="">-- Select Doctor --</option>';
                 result.data.forEach(doc => {
@@ -527,7 +527,7 @@ async function submitSchedule() {
     }
     
     try {
-        const res = await fetch('/sdn/api/schedule.php', {
+        const res = await fetch('/api/schedule.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -558,7 +558,7 @@ async function openReassignModal(patientId, currentDoc) {
     select.innerHTML = '<option value="">Loading doctors...</option>';
     
     try {
-        const res = await fetch('/sdn/api/schedule.php');
+        const res = await fetch('/api/schedule.php');
         const result = await res.json();
         if (result.success) {
             select.innerHTML = '<option value="">-- Select Available Doctor --</option>';
@@ -582,7 +582,7 @@ async function submitReassign() {
     const doc = document.getElementById('reassignDoctor').value;
     
     try {
-        const res = await fetch('/sdn/api/patients.php', {
+        const res = await fetch('/api/patients.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'assign', patient_id: pId, doctor: doc})
@@ -612,7 +612,7 @@ function filterSchedule(period) {
 
 async function fetchReports() {
     try {
-        const res = await fetch('/sdn/api/reports.php');
+        const res = await fetch('/api/reports.php');
         const result = await res.json();
         if (result.success) {
             if(document.getElementById('report-total-consults')) {
@@ -631,7 +631,7 @@ async function fetchReports() {
 }
 
 function fetchPatientHistory() {
-    fetch(`/sdn/api/history.php?_=${new Date().getTime()}`)
+    fetch(`/api/history.php?_=${new Date().getTime()}`)
         .then(res => res.json())
         .then(res => {
             if(res.success) {
@@ -710,7 +710,7 @@ function submitHistory() {
         return;
     }
 
-    fetch('/sdn/api/history.php', {
+    fetch('/api/history.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ patient_id: patientId, diagnosis, treatment, prescription })
@@ -734,7 +734,7 @@ function submitHistory() {
 function deleteHistory(patientId) {
     if(!confirm('Are you sure you want to delete this medical history record?')) return;
 
-    fetch('/sdn/api/history.php', {
+    fetch('/api/history.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ action: 'delete', patient_id: patientId })

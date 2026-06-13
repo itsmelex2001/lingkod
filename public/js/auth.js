@@ -44,9 +44,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (data.success) {
         if (data.role === "admin") {
-          window.location.href = "/sdn/pages/admin-dashboard.php";
+          window.location.href = "/pages/admin-dashboard.php";
         } else {
-          window.location.href = "/sdn/pages/staff-dashboard.php";
+          window.location.href = "/pages/staff-dashboard.php";
         }
       } else {
         alert(`Access Denied: ${data.message || "Invalid credentials."}`);

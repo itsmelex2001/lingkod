@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           confirmClass: "danger",
         });
       } else if (btn.classList.contains("manage-btn")) {
-        window.location.href = `/sdn/pages/patient-profile.php?id=${encodeURIComponent(id)}`;
+        window.location.href = `/pages/patient-profile.php?id=${encodeURIComponent(id)}`;
       }
     });
   }

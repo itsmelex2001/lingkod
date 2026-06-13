@@ -1,8 +1,8 @@
 // utils.js — shared utility functions
 // ── CONFIGURE THIS to match your XAMPP project folder name ──────────────────
-//    If your project is at: http://localhost/sdn/  → keep '/sdn/api'
+//    If your project is at: http://localhost/sdn/  → keep '/api'
 //    If renamed to 'myproject':                   → change to '/myproject/api'
-const API_BASE = '/sdn/api';
+const API_BASE = '/api';
 
 // ── Date & value helpers ─────────────────────────────────────────────────────
 
@@ -59,17 +59,17 @@ async function requireLogin(expectedRole = null) {
     const res  = await fetch(`${API_BASE}/auth.php?action=check`);
     const data = await res.json();
     if (!data.loggedIn) {
-      window.location.href = '/sdn/pages/login.php';
+      window.location.href = '/pages/login.php';
       return false;
     }
     if (expectedRole && data.role !== expectedRole) {
       alert('Access denied: insufficient permissions.');
-      window.location.href = '/sdn/pages/login.php';
+      window.location.href = '/pages/login.php';
       return false;
     }
     return data;
   } catch {
-    window.location.href = '/sdn/pages/login.php';
+    window.location.href = '/pages/login.php';
     return false;
   }
 }
