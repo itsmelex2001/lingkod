@@ -140,7 +140,6 @@ sdn/
 │   ├── history.php                  # Patient clinical history & progress notes
 │   ├── logs.php                     # Immutable security audit log stream
 │   ├── patients.php                 # Queue queries, status transitions & verification
-│   ├── public-stats.php             # Public landing page real-time statistics
 │   ├── registration.php             # Multi-department patient appointment intake
 │   ├── reports.php                  # Demographic & clinical analytics export
 │   └── schedule.php                 # Real-time department doctor schedule feed
@@ -173,7 +172,7 @@ sdn/
 ├── src/                             # Pure Front-End Svelte Architecture
 │   ├── components/
 │   │   ├── layout/                  # Framing elements (Container, Footer, TopNav)
-│   │   ├── landing/                 # Hero, StatsBox, Services, About, Location
+│   │   ├── landing/                 # Hero, Services, About, Location
 │   │   ├── auth/                    # VideoBackground, BrandShowcase, RoleSelector
 │   │   ├── schedules/               # DoctorCard, DepartmentTabs, ScheduleFilters
 │   │   ├── chatbot/                 # Chatbot, ChatSpeechBubble, QuickReplies, Rating

@@ -980,25 +980,19 @@ async function loadPMI() {
     try {
         const filterEl = document.getElementById('pmi-filter');
         const filterVal = filterEl ? filterEl.value : 'all';
-        
-        // Fetch real-time tracking metrics aligned with PMI
-        fetch(`/sdn/api/public-stats.php?filter=${filterVal}`)
-            .then(r => r.json())
-            .then(stats => {
-                if(stats.status === 'success') {
-                    const elApp = document.getElementById('pmi-stat-appointments');
-                    const elSlots = document.getElementById('pmi-stat-slots');
-                    const elPts = document.getElementById('pmi-stat-patients');
-                    if(elApp) elApp.innerText = stats.appointmentsBooked;
-                    if(elSlots) elSlots.innerText = stats.slotsAvailable;
-                    if(elPts) elPts.innerText = stats.registeredPatients;
-                }
-            }).catch(err => console.error(err));
 
         const res = await fetch(`/sdn/api/patients.php?filter=${filterVal}`).then(r=>r.json());
         if(res.success && res.data) {
             cachedPMIPatients = res.data;
             filterPMITable();
+
+            const elApp = document.getElementById('pmi-stat-appointments');
+            const elSlots = document.getElementById('pmi-stat-slots');
+            const elPts = document.getElementById('pmi-stat-patients');
+            if(elApp) elApp.innerText = cachedPMIPatients.length;
+            if(elSlots) elSlots.innerText = "-";
+            const uniquePatients = new Set(cachedPMIPatients.map(p => p.full_name || p.patient_id)).size;
+            if(elPts) elPts.innerText = uniquePatients;
         }
     } catch(e) { console.error(e); }
 }

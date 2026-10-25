@@ -7,11 +7,16 @@
     <title>Homepage | LINKOD</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Kaushan+Script&family=Caveat:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
       @font-face {
         font-family: 'Avallon Alt';
         src: local('Avallon Alt'), local('Avallon-Alt'), local('AvallonAlt'), local('Avallon');
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Avallon';
+        src: local('Avallon'), local('Avallon Regular'), local('Avallon-Regular');
         font-display: swap;
       }
     </style>
@@ -113,18 +118,9 @@
               <a href="/sdn/pages/schedules.php" style="color: #047023;">View Schedule</a>
             </div>
           </li>
-          <li class="nav-dropdown">
-            <a href="#about-new" class="nav-dropdown-toggle" style="cursor: default;">
-              About
-              <svg class="nav-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </a>
-            <div class="dropdown-content">
-              <a href="#footer-new" style="color: #047023;">Contact Us</a>
-            </div>
-          </li>
+          <li><a href="#about-new">About</a></li>
           <li><a href="#location-new">Location</a></li>
+          <li><a href="#footer-new">Contact Us</a></li>
           <li>
             <button class="btn-login" onclick="window.location.href = '/sdn/pages/login.php'">Login</button>
           </li>
