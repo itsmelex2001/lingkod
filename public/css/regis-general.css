@@ -12,3 +12,33 @@
   cursor: pointer;
   color: var(--deep-green);
 }
+
+/* Locked Specialty Field (Auto-filled from Selected Service) */
+select#specialty.locked-select,
+select#specialty:disabled {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  border-color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #0f172a !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+}
+
+.badge-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 4px;
+  padding: 1.5px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+

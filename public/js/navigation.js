@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Logout error:", err);
       } finally {
         // Clear any remaining session data from client
-        window.location.href = "/index.php";
+        window.location.href = "/sdn/index.php";
       }
     });
   });

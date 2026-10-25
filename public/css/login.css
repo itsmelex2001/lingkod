@@ -11,7 +11,7 @@ body, html {
   align-items: center;
   justify-content: center;
   position: relative;
-  background: url('/public/assets/bg_login.jpg') no-repeat center center;
+  background: url('/sdn/public/assets/bg_login.jpg') no-repeat center center;
   background-size: cover;
 }
 

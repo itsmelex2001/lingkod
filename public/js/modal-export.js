@@ -20,8 +20,23 @@ function populateSummary() {
   const deptMap = { psychiatry: "OPU Psychiatry", general: "General Management", neurology: "Neurology" };
   setText("p-department", deptMap[deptVal] || deptVal || "—");
 
+  const getPatientFullName = () => {
+    const full = getVal("fullName");
+    if (full) return full;
+    const fn = getVal("firstName");
+    const ln = getVal("lastName");
+    const mi = getVal("middleInitial");
+    if (fn || ln) {
+      const miStr = mi ? (mi.trim().endsWith('.') ? mi.trim() : mi.trim() + '.') : '';
+      return [fn, miStr, ln].filter(Boolean).join(' ');
+    }
+    return "—";
+  };
+
   if (deptVal === "neurology") {
-    setText("p-fullName", getVal("fullName") || "—");
+    setText("p-fullName", getPatientFullName());
+    setText("p-middleInitial", getVal("middleInitial") || "—");
+    setText("p-hrn", getVal("hrn") || "—");
     setText("p-gender", getVal("gender") || "—");
     setText("p-birthdate", formatDate(getVal("birthdate")) || "—");
     setText("p-age", getVal("age") || "—");
@@ -43,13 +58,20 @@ function populateSummary() {
     setText("p-mode", getVal("consultationMode") || "—");
     setText("p-appointmentDate", formatDate(getVal("appointmentDate")) || "—");
     setText("p-referral", getVal("referralSource") || "N/A");
+    setText("p-inquiryOnly", document.getElementById("inquiryOnly")?.checked ? "Yes" : "No");
   } 
   else if (deptVal === "psychiatry") {
-    setText("p-appointmentDate", getVal("appointmentDate") ? new Date(getVal("appointmentDate")).toLocaleString() : "—");
+    const aptDate = getVal("appointmentDate");
+    const aptTime = getVal("appointmentTime");
+    setText("p-appointmentDate", aptDate ? (formatDate(aptDate) + (aptTime ? ` ${aptTime}` : '')) : "—");
     setText("p-receiver", getVal("receiver") || "—");
     setText("p-appointmentType", getVal("appointmentType") || "—");
     setText("p-referralSource", getVal("referralSource") || "—");
-    setText("p-fullName", getVal("fullName") || "—");
+    setText("p-fullName", getPatientFullName());
+    setText("p-middleInitial", getVal("middleInitial") || "—");
+    setText("p-hrn", getVal("hrn") || "—");
+    setText("p-birthdate", formatDate(getVal("birthdate")) || "—");
+    setText("p-age", getVal("age") || "—");
     
     const ptMap = { "first-time": "New", returning: "Old" };
     setText("p-patientType", ptMap[getVal("patientType")] || "—");
@@ -69,15 +91,19 @@ function populateSummary() {
     setText("p-modeOfInquiry", getVal("modeOfInquiry") || "—");
     setText("p-employeeType", getVal("employeeType") || "—");
     setText("p-selectType", getVal("selectType") || "—");
-    setText("p-fullName", getVal("fullName") || "—");
+    setText("p-fullName", getPatientFullName());
+    setText("p-middleInitial", getVal("middleInitial") || "—");
     setText("p-hrn", getVal("hrn") || "—");
     setText("p-birthdate", formatDate(getVal("birthdate")) || "—");
     setText("p-age", getVal("age") || "—");
     setText("p-gender", getVal("gender") || "—");
     setText("p-contactNumber", getVal("contactNumber") || "—");
     setText("p-complaint", getVal("complaint") || "—");
-    setText("p-remarks", getVal("remarks") || "—");
-    setText("p-specialty", getVal("specialty") || "—");
+    const generalSpec = (document.getElementById("lockedSpecialtyInput") && document.getElementById("lockedSpecialtyInput").value.trim()) 
+      || getVal("specialty") 
+      || (document.getElementById("specialty") ? document.getElementById("specialty").value.trim() : "") 
+      || "—";
+    setText("p-specialty", generalSpec);
     setText("p-scheduledDate", formatDate(getVal("scheduledDate")) || "—");
     setText("p-scheduledTime", getVal("scheduledTime") || "—");
   }
@@ -125,7 +151,7 @@ function closeAndConfirm() {
   if (ageInput) ageInput.value = "";
 
   setTimeout(() => {
-    window.location.href = "/index.php";
+    window.location.href = "/sdn/index.php";
   }, 1200);
 }
 
@@ -161,10 +187,15 @@ document.addEventListener("DOMContentLoaded", () => {
     btnDownloadPDF.addEventListener("click", (e) => {
       e.preventDefault();
       const fullNameInput = document.getElementById("fullName");
-      const patientName =
-        fullNameInput && fullNameInput.value
-          ? fullNameInput.value.replace(/\s+/g, "_")
-          : "Patient";
+      const fnInput = document.getElementById("firstName");
+      const lnInput = document.getElementById("lastName");
+      let patientName = "Patient";
+      if (fullNameInput && fullNameInput.value.trim()) {
+        patientName = fullNameInput.value.trim().replace(/\s+/g, "_");
+      } else if (fnInput && fnInput.value.trim()) {
+        const parts = [fnInput.value.trim(), lnInput ? lnInput.value.trim() : ""].filter(Boolean);
+        patientName = parts.join("_").replace(/\s+/g, "_");
+      }
 
       // Target the exact visible element in the modal to guarantee 100% accurate layout
       const element = document.getElementById("printArea");

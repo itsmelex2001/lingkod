@@ -38,7 +38,7 @@ try {
 } catch (PDOException $e) {
     http_response_code(500);
     header('Content-Type: application/json');
-    // TODO: change $e->getMessage() to a generic message before going live
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    error_log("Database connection error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Internal database error. Please contact the administrator.']);
     exit;
 }

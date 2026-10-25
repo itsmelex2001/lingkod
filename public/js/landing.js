@@ -1,23 +1,82 @@
 // landing.js
-// Splash Screen Logic
-window.addEventListener('load', () => {
-  const splash = document.getElementById('splash-screen');
+// Splash Screen & Chatbot Pop-in Controller
+(function() {
+  function initSplashScreen() {
+    const splash = document.getElementById('splash-screen');
+    if (!splash) return;
 
-  // Check if splash screen was already shown in this session
-  if (sessionStorage.getItem('splashShown')) {
-    splash.style.display = 'none';
-  } else {
-    // Mark as shown for the rest of the session
-    sessionStorage.setItem('splashShown', 'true');
+    let isReload = false;
+    try {
+      if (window.performance && performance.getEntriesByType) {
+        const navEntries = performance.getEntriesByType('navigation');
+        if (navEntries.length > 0 && navEntries[0].type === 'reload') {
+          isReload = true;
+        }
+      }
+    } catch (e) {}
 
-    setTimeout(() => {
-      splash.style.opacity = '0';
+    const splashAlreadySeen = sessionStorage.getItem('linkod_splash_shown');
+
+    function triggerChatbotPop() {
+      const fab = document.querySelector('.fab-container');
+      if (fab) {
+        fab.classList.remove('chatbot-hidden');
+        fab.classList.add('chatbot-pop-in');
+      } else {
+        // In case Svelte component is still mounting
+        const observer = new MutationObserver((mutations, obs) => {
+          const fabEl = document.querySelector('.fab-container');
+          if (fabEl) {
+            fabEl.classList.remove('chatbot-hidden');
+            fabEl.classList.add('chatbot-pop-in');
+            obs.disconnect();
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => observer.disconnect(), 6000);
+      }
+    }
+
+    if (splashAlreadySeen && !isReload && !window.location.search.includes('splash=1')) {
+      splash.style.display = 'none';
+      if (document.body) {
+        document.body.classList.remove('splash-active');
+        document.body.classList.add('splash-done');
+      }
+      const fab = document.querySelector('.fab-container');
+      if (fab) fab.classList.remove('chatbot-hidden');
+    } else {
+      // Show splash screen, mark session
+      sessionStorage.setItem('linkod_splash_shown', 'true');
+      if (document.body) document.body.classList.add('splash-active');
+
+      const fab = document.querySelector('.fab-container');
+      if (fab) fab.classList.add('chatbot-hidden');
+
+      // Splash animation runs (~2.5s for typewriter + subtitle fade + pause)
       setTimeout(() => {
-        splash.style.display = 'none';
-      }, 500); // Wait for transition to finish
-    }, 2500); // Show splash for 2.5 seconds
+        splash.style.transition = 'opacity 0.6s ease-out';
+        splash.style.opacity = '0';
+
+        setTimeout(() => {
+          splash.style.display = 'none';
+          if (document.body) {
+            document.body.classList.remove('splash-active');
+            document.body.classList.add('splash-done');
+          }
+          // Trigger the chatbot pop-up entrance animation!
+          triggerChatbotPop();
+        }, 550);
+      }, 2500);
+    }
   }
-});
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSplashScreen);
+  } else {
+    initSplashScreen();
+  }
+})();
 
 function toggleServiceDetails(card) {
   // Remove flipped class from all other cards

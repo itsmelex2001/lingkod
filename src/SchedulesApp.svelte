@@ -1,186 +1,305 @@
 <script>
   import { onMount } from 'svelte';
-
-  // Live Clock State
-  let clockTime = '--:-- --';
-  let clockDate = '--';
-
+  
+  let rawDoctors = [];
+  let loading = true;
+  let clockTime = '';
+  
+  let searchQuery = '';
+  let selectedDept = 'All';
+  let showOnlyAvailable = false;
+  
+  const depts = ['All', 'Psychiatry', 'Neurology', 'General Management'];
+  
+  const loadSchedule = async () => {
+    try {
+      const res = await fetch('/sdn/api/schedule.php').then(r => r.json());
+      if (res.success && res.data) rawDoctors = res.data;
+    } catch(e) { console.error(e); } finally { loading = false; }
+  };
+  
   onMount(() => {
     const updateTime = () => {
-      const now = new Date();
-      clockTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      clockDate = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+      clockTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
+    loadSchedule();
     return () => clearInterval(interval);
   });
-
-  // Tab State
-  let activeTab = 'psychiatry';
-
-  const tabs = [
-    { id: 'psychiatry', label: 'OPU Psychiatry' },
-    { id: 'neurology', label: 'Neurology' },
-    { id: 'general', label: 'General Management' }
-  ];
-
-  // Doctors Data
-  const doctors = {
-    psychiatry: [
-      {
-        initials: 'AM', name: 'Dr. Alan Magno', spec: 'Adult Psychiatry', avatarClass: 'av-a',
-        time: '08:00 AM – 12:00 PM',
-        slotsFilled: 9, slotsTotal: 20, fillClass: 'fill-green',
-        status: 'Available', badgeClass: 'badge-available',
-        actionLink: 'regis-psychiatry.php?source=schedules', actionLabel: 'Book Now', actionDisabled: false
-      },
-      {
-        initials: 'SR', name: 'Dr. Sarah Reyes', spec: 'Child Psychiatry', avatarClass: 'av-b',
-        time: '01:00 PM – 05:00 PM',
-        slotsFilled: 20, slotsTotal: 20, fillClass: 'fill-red',
-        status: 'Fully Booked', badgeClass: 'badge-booked',
-        actionLink: '#', actionLabel: 'Full', actionDisabled: true
-      }
-    ],
-    neurology: [
-      {
-        initials: 'EC', name: 'Dr. Emilio Cruz', spec: 'Clinical Neurology', avatarClass: 'av-c',
-        time: '09:00 AM – 03:00 PM',
-        slotsFilled: 13, slotsTotal: 20, fillClass: 'fill-amber',
-        status: 'Available', badgeClass: 'badge-available',
-        actionLink: 'regis-neurology.php?source=schedules', actionLabel: 'Book Now', actionDisabled: false
-      }
-    ],
-    general: [
-      {
-        initials: 'MS', name: 'Dr. Maria Santos', spec: 'Internal Medicine', avatarClass: 'av-d',
-        time: '08:00 AM – 04:00 PM',
-        slotsFilled: 6, slotsTotal: 20, fillClass: 'fill-green',
-        status: 'Available', badgeClass: 'badge-available',
-        actionLink: 'regis-general.php?source=schedules', actionLabel: 'Book Now', actionDisabled: false
-      },
-      {
-        initials: 'JD', name: 'Dr. Juan Dela Cruz', spec: 'Family Medicine', avatarClass: 'av-e',
-        time: 'Not scheduled', isMutedTime: true,
-        slotsFilled: 0, slotsTotal: 0, isMutedSlots: true,
-        status: 'On Leave', badgeClass: 'badge-leave',
-        actionLink: '#', actionLabel: 'Unavailable', actionDisabled: true
-      }
-    ]
+  
+  const formatTime = (t) => {
+    if(!t) return 'N/A';
+    const [h,m] = t.split(':');
+    let hr = parseInt(h);
+    const ampm = hr >= 12 ? 'PM' : 'AM';
+    hr = hr % 12 || 12;
+    return `${hr}:${m} ${ampm}`;
   };
 
-  // Stats
-  let stats = { total: 5, available: 3, fullyBooked: 1, onLeave: 1 };
+  const getDoctorStatus = (doc) => {
+    if (!doc) return { label: 'Available', pillClass: 'bg-avail', isBookable: true, buttonText: 'Book' };
+    const booked = parseInt(doc.booked_slots || 0, 10);
+    const total = parseInt(doc.total_slots || 20, 10);
+    const isFull = total > 0 && booked >= total;
+    const raw = (doc.status || 'available').toLowerCase().trim();
+
+    if (isFull || raw === 'booked' || raw === 'fully booked' || raw === 'full') {
+      return { label: 'Full', pillClass: 'bg-full', isBookable: false, buttonText: 'Waitlist' };
+    }
+    if (raw === 'leave' || raw === 'on_leave' || raw === 'on leave') {
+      return { label: 'On Leave', pillClass: 'bg-leave', isBookable: false, buttonText: 'On Leave' };
+    }
+    if (raw === 'emergency') {
+      return { label: 'Emergency', pillClass: 'bg-emergency', isBookable: false, buttonText: 'Emergency' };
+    }
+    if (raw === 'on_break' || raw === 'break') {
+      return { label: 'On Break', pillClass: 'bg-break', isBookable: true, buttonText: 'Book' };
+    }
+    if (raw === 'in_clinic' || raw === 'in-clinic' || raw === 'in clinic') {
+      return { label: 'In Clinic', pillClass: 'bg-inclinic', isBookable: true, buttonText: 'Book' };
+    }
+    return { label: 'Available', pillClass: 'bg-avail', isBookable: true, buttonText: 'Book' };
+  };
+
+  $: filteredDoctors = rawDoctors.filter(d => {
+    const matchSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.specialization.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchDept = selectedDept === 'All' || d.department.toLowerCase().includes(selectedDept.toLowerCase().split(' ')[0]);
+    const statusInfo = getDoctorStatus(d);
+    const matchAvail = showOnlyAvailable ? statusInfo.isBookable : true;
+    return matchSearch && matchDept && matchAvail;
+  });
 </script>
 
-<main class="sched-page">
-  <a href="/index.php" class="btn-back">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-  </a>
+<main class="minimal-dashboard">
+  <!-- Minimal Header -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <a href="/sdn/index.php" class="btn-back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </a>
+      <div class="brand-text">
+        <h1>Directory</h1>
+        <span class="live-clock"><span class="dot"></span> {clockTime}</span>
+      </div>
+    </div>
+    
+    <div class="nav-filters">
+      <div class="search-wrapper">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" bind:value={searchQuery} placeholder="Search doctors..." class="input-search" />
+      </div>
+      <label class="toggle-minimal">
+        <input type="checkbox" bind:checked={showOnlyAvailable}>
+        <span class="toggle-box"></span>
+        <span class="toggle-txt">Available Only</span>
+      </label>
+    </div>
+  </header>
 
-  <!-- Premium Header -->
-  <div class="sched-header">
-    <div>
-      <h1 class="sched-title">Doctor Availability</h1>
-      <p class="sched-subtitle">Real-time schedules for our medical professionals across all departments.</p>
-    </div>
-    <div class="live-clock-block">
-      <span class="clock-time">{clockTime}</span>
-      <span class="clock-date">{clockDate}</span>
-      <span class="live-label">
-        <span class="live-dot"></span> Live
-      </span>
-    </div>
-  </div>
+  <!-- Horizontal Department Tabs -->
+  <nav class="dept-tabs">
+    {#each depts as d}
+      <button class="tab {selectedDept === d ? 'active' : ''}" on:click={() => selectedDept = d}>{d}</button>
+    {/each}
+  </nav>
 
-  <!-- Summary Cards -->
-  <div class="summary-grid">
-    <div class="summary-card">
-      <div class="summary-icon icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div><p class="summary-label">Total Doctors</p><p class="summary-value">{stats.total}</p></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-icon icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-      <div><p class="summary-label">Available</p><p class="summary-value">{stats.available}</p></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-icon icon-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-      <div><p class="summary-label">Fully Booked</p><p class="summary-value">{stats.fullyBooked}</p></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-icon icon-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-      <div><p class="summary-label">On Leave</p><p class="summary-value">{stats.onLeave}</p></div>
-    </div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="tabs-row">
-    <div class="tabs-group">
-      {#each tabs as tab}
-        <button 
-          class="tab-btn {activeTab === tab.id ? 'active' : ''}" 
-          on:click={() => activeTab = tab.id}
-        >
-          {tab.label}
-        </button>
-      {/each}
-    </div>
-    <span class="last-updated">Updated: Just now</span>
-  </div>
-
-  <!-- Tab Content -->
-  <div class="tab-content active">
-    <div class="table-card">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Doctor</th><th>Specialization</th><th>Schedule (Today)</th><th>Slots</th><th>Status</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each doctors[activeTab] as doc}
-            <tr>
-              <td>
-                <div class="doctor-cell">
-                  <div class="avatar {doc.avatarClass}">{doc.initials}</div>
-                  <div><p class="doctor-name">{doc.name}</p><p class="doctor-spec">{doc.spec}</p></div>
-                </div>
-              </td>
-              <td>{doc.spec}</td>
-              <td>
-                {#if doc.isMutedTime}
-                  <div class="time-cell muted">{doc.time}</div>
-                {:else}
-                  <div class="time-cell">{doc.time}</div>
-                {/if}
-              </td>
-              <td>
-                {#if doc.isMutedSlots}
-                  <span class="muted">—</span>
-                {:else}
-                  <div class="slots-bar">
-                    <div class="slots-fill {doc.fillClass}" style="width:{(doc.slotsFilled / doc.slotsTotal) * 100}%"></div>
-                  </div>
-                  <p class="slots-text">{doc.slotsFilled} / {doc.slotsTotal} booked</p>
-                {/if}
-              </td>
-              <td>
-                <span class="status-badge {doc.badgeClass}">
-                  <span class="status-dot"></span>{doc.status}
-                </span>
-              </td>
-              <td>
-                {#if doc.actionDisabled}
-                  <button class="btn-action disabled-btn" disabled>{doc.actionLabel}</button>
-                {:else}
-                  <a href={doc.actionLink} class="btn-action">{doc.actionLabel}</a>
-                {/if}
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <section class="content-area">
+    {#if loading}
+       <div class="status-msg">Loading schedules...</div>
+    {:else if filteredDoctors.length === 0}
+       <div class="status-msg empty">
+         No specialists found.
+         <button class="btn-text" on:click={() => { searchQuery = ''; selectedDept = 'All'; showOnlyAvailable = false; }}>Clear filters</button>
+       </div>
+    {:else}
+      <div class="doc-grid">
+        {#each filteredDoctors as doc}
+          {@const statusInfo = getDoctorStatus(doc)}
+          {@const isAvailable = statusInfo.isBookable}
+          {@const percentage = doc.total_slots > 0 ? (parseInt(doc.booked_slots) / parseInt(doc.total_slots)) * 100 : 0}
+          {@const link = doc.department.toLowerCase().includes('psychiatry') ? 'regis-psychiatry.php' : doc.department.toLowerCase().includes('neurology') ? 'regis-neurology.php' : 'regis-general.php'}
+          
+          <div class="minimal-card {isAvailable ? '' : 'unavailable'}">
+            <div class="card-header">
+              <div class="doc-meta">
+                <h2>{doc.name}</h2>
+                <p>{doc.specialization}</p>
+              </div>
+              <div class="status-pill {statusInfo.pillClass}">
+                {statusInfo.label}
+              </div>
+            </div>
+            
+            <div class="card-body">
+              <div class="info-item">
+                <span class="lbl">Dept</span>
+                <span class="val">{doc.department}</span>
+              </div>
+              <div class="info-item">
+                <span class="lbl">Time</span>
+                <span class="val">{doc.schedule_start ? `${formatTime(doc.schedule_start)} - ${formatTime(doc.schedule_end)}` : 'N/A'}</span>
+              </div>
+            </div>
+            
+            <div class="card-footer">
+              <div class="slots-minimal">
+                <span class="slot-txt">Slots: <strong>{doc.booked_slots || 0}</strong> / {doc.total_slots || 20}</span>
+                <div class="bar-bg"><div class="bar-fill {isAvailable ? 'fill-black' : 'fill-gray'}" style="width: {percentage}%"></div></div>
+              </div>
+              
+              {#if isAvailable}
+                <a href="/sdn/pages/{link}?source=schedules&doctor={encodeURIComponent(doc.name)}" class="btn-action">Book</a>
+              {:else}
+                <button class="btn-action disabled" disabled>{statusInfo.buttonText}</button>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
 </main>
+
+<style>
+  :global(body) {
+    background-color: #f9f9f9;
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #111;
+  }
+  
+  .minimal-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+
+  /* Header */
+  .top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #eaeaea;
+    margin-bottom: 2rem;
+  }
+  
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  
+  .btn-back {
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border: 1px solid #eaeaea; border-radius: 50%;
+    color: #111; text-decoration: none; transition: all 0.2s ease;
+  }
+  .btn-back:hover { background: #111; color: #fff; border-color: #111; }
+  
+  .brand-text h1 { margin: 0; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.03em; }
+  .live-clock { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #666; font-weight: 500; margin-top: 0.25rem; }
+  .dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: blink 2s infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .nav-filters {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .search-wrapper {
+    display: flex; align-items: center; gap: 0.75rem;
+    border-bottom: 1px solid #ccc; padding: 0.5rem 0; width: 250px;
+    transition: border-color 0.2s;
+  }
+  .search-wrapper:focus-within { border-color: #111; }
+  .input-search { border: none; outline: none; background: transparent; font-size: 0.95rem; width: 100%; color: #111;}
+  
+  .toggle-minimal { display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-size: 0.9rem; font-weight: 500; }
+  .toggle-minimal input { display: none; }
+  .toggle-box { width: 16px; height: 16px; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+  .toggle-minimal input:checked + .toggle-box { background: #111; border-color: #111; }
+  .toggle-minimal input:checked + .toggle-box::after { content: ''; width: 6px; height: 6px; background: #fff; border-radius: 1px; }
+
+  /* Tabs */
+  .dept-tabs {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  .tab {
+    background: transparent; border: none; font-size: 1.1rem; color: #888; font-weight: 500;
+    cursor: pointer; padding: 0; transition: color 0.2s; position: relative;
+  }
+  .tab:hover { color: #111; }
+  .tab.active { color: #111; font-weight: 600; }
+  .tab.active::after {
+    content: ''; position: absolute; bottom: -8px; left: 0; width: 100%; height: 2px; background: #111;
+  }
+
+  /* Grid */
+  .doc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .minimal-card {
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .minimal-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.04); border-color: #ddd; }
+  .minimal-card.unavailable { opacity: 0.7; }
+  
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+  .doc-meta h2 { margin: 0 0 0.25rem 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+  .doc-meta p { margin: 0; color: #666; font-size: 0.9rem; }
+  
+  .status-pill { padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+  .bg-avail { background: #ecfdf5; color: #059669; }
+  .bg-inclinic { background: #eff6ff; color: #2563eb; }
+  .bg-break { background: #fef3c7; color: #d97706; }
+  .bg-full { background: #fffbeb; color: #d97706; }
+  .bg-leave { background: #fef2f2; color: #dc2626; }
+  .bg-emergency { background: #fee2e2; color: #dc2626; }
+  
+  .card-body { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem; flex-grow: 1; border-top: 1px dashed #eaeaea; border-bottom: 1px dashed #eaeaea; padding: 1rem 0; }
+  .info-item { display: flex; justify-content: space-between; font-size: 0.9rem; }
+  .info-item .lbl { color: #888; }
+  .info-item .val { font-weight: 500; text-align: right; }
+  
+  .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .slots-minimal { flex-grow: 1; }
+  .slot-txt { display: block; font-size: 0.8rem; color: #666; margin-bottom: 0.4rem; }
+  .slot-txt strong { color: #111; font-weight: 700; }
+  .bar-bg { width: 100%; height: 4px; background: #f0f0f0; border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .fill-black { background: #111; } .fill-gray { background: #aaa; }
+  
+  .btn-action {
+    background: #111; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 600;
+    padding: 0.6rem 1.2rem; border-radius: 6px; transition: background 0.2s; border: none; cursor: pointer;
+  }
+  .btn-action:hover { background: #333; }
+  .btn-action.disabled { background: #f0f0f0; color: #999; cursor: not-allowed; }
+  
+  .status-msg { font-size: 1.1rem; color: #666; padding: 4rem 0; text-align: center; }
+  .empty { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .btn-text { background: none; border: none; color: #111; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+  @media (max-width: 768px) {
+    .top-nav { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+    .nav-filters { width: 100%; justify-content: space-between; }
+    .search-wrapper { width: 60%; }
+  }
+</style>

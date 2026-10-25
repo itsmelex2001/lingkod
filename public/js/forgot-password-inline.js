@@ -5,7 +5,7 @@ async function requestCode() {
     if (!user || !mobile) return alert('Please enter both username and mobile number.');
 
     try {
-        const res = await fetch('/api/recover.php', {
+        const res = await fetch('/sdn/api/recover.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'request_code', username: user, mobile: mobile })
@@ -30,7 +30,7 @@ async function resetPassword() {
     if (!code || !pass) return alert('Please enter the code and your new password.');
 
     try {
-        const res = await fetch('/api/recover.php', {
+        const res = await fetch('/sdn/api/recover.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'reset_password', username: user, code: code, new_password: pass })
@@ -38,7 +38,7 @@ async function resetPassword() {
         const result = await res.json();
         if (result.success) {
             alert(result.message);
-            window.location.href = '/pages/login.php';
+            window.location.href = '/sdn/pages/login.php';
         } else {
             alert(result.message);
         }

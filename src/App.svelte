@@ -1,10 +1,10 @@
 <script>
-  import Hero from './components/Hero.svelte';
-  import Services from './components/Services.svelte';
-  import About from './components/About.svelte';
-  import Location from './components/Location.svelte';
-  import Footer from './components/Footer.svelte';
-  import Chatbot from './components/Chatbot.svelte';
+  import Hero from './components/landing/Hero.svelte';
+  import Services from './components/landing/Services.svelte';
+  import About from './components/landing/About.svelte';
+  import Location from './components/landing/Location.svelte';
+  import Footer from './components/layout/Footer.svelte';
+  import Chatbot from './components/chatbot/Chatbot.svelte';
 </script>
 
 <main class="svelte-app-container">

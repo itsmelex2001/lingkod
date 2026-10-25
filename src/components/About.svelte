@@ -1,182 +1,157 @@
-<section class="about-section" id="about">
+<script>
+  // Images to be displayed in the infinite carousel
+  const images = [
+    '/sdn/public/assets/aboutpage_img',
+    '/sdn/public/assets/aboutpage_img1',
+    '/sdn/public/assets/aboutpage_img2',
+    '/sdn/public/assets/aboutpage_img3',
+    '/sdn/public/assets/aboutpage_img4'
+  ];
+  
+  // Duplicate array to create a seamless infinite loop
+  const carouselImages = [...images, ...images];
+</script>
+
+<section id="about" class="about-section">
   <div class="container">
-    <div class="section-header">
-      <h2>About Our Hospital</h2>
-      <p>
-        The Mariveles Mental Wellness and General Hospital (MMWGH) serves as a
-        Department of Health hospital, catering to the mental health needs of
-        Northern and Central Luzon.
-      </p>
+    <h2 class="about-heading" data-aos="fade-up">About Us</h2>
+    
+    <!-- Infinite Carousel Container -->
+    <div class="carousel-wrapper" data-aos="fade-up" data-aos-delay="100">
+      <!-- Gradient fades for left and right edges -->
+      <div class="fade-left"></div>
+      <div class="fade-right"></div>
+      
+      <!-- Scrolling Track -->
+      <div class="carousel-track">
+        {#each carouselImages as img, i}
+          <div class="carousel-item">
+            <img src="{img}" alt="About Us {i}" />
+          </div>
+        {/each}
+      </div>
     </div>
 
-    <div class="cards-grid">
-      <div class="info-card">
-        <div class="card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-        </div>
-        <h3>Vision</h3>
-        <p>
-          Mariveles Mental Wellness and General Hospital is the premier
-          client-oriented DOH hospital, providing safe, efficient, and quality
-          services.
-        </p>
-      </div>
-      
-      <div class="info-card">
-        <div class="card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
-        </div>
-        <h3>Mission</h3>
-        <p>
-          To provide and advocate for quality mental and medical health care
-          through promotive, preventive, curative, and rehabilitative services
-          with equitable access to ensure the highest client satisfaction.
-        </p>
-      </div>
-
-      <div class="info-card">
-        <div class="card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>
-        </div>
-        <h3>Core Values</h3>
-        <ul>
-          <li>Fairness</li>
-          <li>Accountability</li>
-          <li>Continuous Improvement</li>
-        </ul>
-      </div>
+    <!-- Description Text -->
+    <div class="about-description" data-aos="fade-up" data-aos-delay="200">
+      <p>
+        The Mariveles Mental Wellness and General Hospital (MMWGH) serves as a Department of Health hospital, catering to the mental health needs of Northern and Central Luzon. Currently operating under a Level 1 license (LTO No. 03-0171-24-H1-1), with 18 beds, MMWGH also offers essential add-on services including a 500-bed custodial psychiatric care unit, type-1 ambulance service, secondary clinical laboratory, HIV-testing laboratory, and pharmacy.
+      </p>
     </div>
   </div>
 </section>
 
 <style>
   .about-section {
-    padding: 4rem 2rem;
-    position: relative;
-    background: url('/public/assets/hospital_hero_bg.jpg') center/cover fixed;
+    padding: 8rem 2rem 10rem;
+    background-color: #041006; /* Very dark green/almost black */
+    color: white;
+    overflow: hidden;
   }
-
-  .about-section::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(30, 70, 45, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    z-index: 1;
-  }
-
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    position: relative;
-    z-index: 2;
-  }
-
-  .section-header {
-    text-align: center;
-    margin-bottom: 3rem;
-  }
-
-  .section-header h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 2.2rem;
-    color: #ffffff;
-    margin-bottom: 1rem;
-    font-weight: 700;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
-
-  .section-header p {
-    font-family: 'Inter', sans-serif;
-    color: #e2e8f0;
-    font-size: 1.1rem;
-    max-width: 700px;
-    margin: 0 auto;
-    line-height: 1.6;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
-  }
-
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-  }
-
-  .info-card {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 24px;
-    padding: 2rem 1.5rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
+  
+  .container { 
+    max-width: 1400px; 
+    margin: 0 auto; 
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+  
+  .about-heading { 
+    font-family: 'Kaushan Script', cursive; 
+    color: #ffffff; 
+    font-size: 4.5rem; 
+    margin-bottom: 4rem; 
+    font-weight: 400;
     text-align: center;
   }
-
-  .info-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
-    border-color: #10b981;
-    background: rgba(255, 255, 255, 0.95);
-  }
-
-  .card-icon {
-    width: 50px;
-    height: 50px;
-    background: #f0fdf4;
-    color: #1b5e20;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1.2rem;
-  }
-
-  .card-icon svg {
-    width: 24px;
-    height: 24px;
-  }
-
-  .info-card h3 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 1.4rem;
-    color: #0f172a;
-    margin-bottom: 1rem;
-    font-weight: 700;
-  }
-
-  .info-card p, .info-card ul {
-    font-family: 'Inter', sans-serif;
-    color: #475569;
-    line-height: 1.6;
-    font-size: 0.95rem;
-    margin: 0;
-  }
-
-  .info-card ul {
-    padding-left: 0;
-    list-style: none;
-    text-align: left;
-    display: inline-block;
-  }
-
-  .info-card li {
-    margin-bottom: 0.8rem;
+  
+  /* Carousel Layout */
+  .carousel-wrapper {
     position: relative;
-    padding-left: 1.2rem;
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    overflow: hidden;
+    padding: 1rem 0;
+    margin-bottom: 5rem;
+  }
+  
+  /* Edge Fades */
+  .fade-left, .fade-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 15vw;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .fade-left {
+    left: 0;
+    background: linear-gradient(to right, #041006 10%, rgba(4, 16, 6, 0) 100%);
+  }
+  .fade-right {
+    right: 0;
+    background: linear-gradient(to left, #041006 10%, rgba(4, 16, 6, 0) 100%);
+  }
+  
+  /* The sliding track */
+  .carousel-track {
+    display: flex;
+    gap: 2rem;
+    width: max-content;
+    animation: scroll-left 35s linear infinite;
+  }
+  
+  /* Continuous Scroll Animation */
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      /* Scroll halfway because the images array is exactly doubled */
+      transform: translateX(calc(-50% - 1rem));
+    }
+  }
+  
+  /* Carousel Items */
+  .carousel-item {
+    flex: 0 0 auto;
+    width: 320px;
+    height: 320px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    background-color: #f0fdf4; /* placeholder just in case */
+  }
+  
+  .carousel-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  /* Description Text */
+  .about-description {
+    max-width: 900px;
+    text-align: center;
+  }
+  
+  .about-description p {
+    font-family: 'Inter', sans-serif;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    font-style: italic;
+    font-weight: 300;
   }
 
-  .info-card li::before {
-    content: "•";
-    color: #10b981;
-    font-weight: bold;
-    font-size: 1.2rem;
-    position: absolute;
-    left: 0;
-    top: -2px;
+  @media (max-width: 768px) {
+    .about-heading { font-size: 3.5rem; margin-bottom: 3rem; }
+    .carousel-item { width: 250px; height: 250px; }
+    .about-description p { font-size: 0.85rem; padding: 0 1rem; }
   }
 </style>

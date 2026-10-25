@@ -1,121 +1,236 @@
 <script>
-  export let logoSrc = "/public/assets/LINKod_logo.png"; // Changed to cleaner logo if available, or fallback to original
+  import { onMount } from 'svelte';
+
+  let stats = {
+    appointmentsBooked: "0",
+    slotsAvailable: "0",
+    registeredPatients: "0"
+  };
+
+  onMount(async () => {
+    try {
+      const res = await fetch('/sdn/api/public-stats.php');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'success') {
+          stats = {
+            appointmentsBooked: data.appointmentsBooked || "0",
+            slotsAvailable: data.slotsAvailable || "0",
+            registeredPatients: data.registeredPatients || "0"
+          };
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch public stats:', err);
+    }
+  });
 </script>
 
-<header class="hero">
-  <div class="hero-content">
-    <img src="/public/assets/linkod-logo.png.png" alt="LINKod Logo" class="hero-logo-img" draggable="false">
+<section class="hero-container">
+  <!-- Gradient Overlay -->
+  <div class="hero-overlay"></div>
 
-    <h1>Mariveles Mental Wellness and General Hospital</h1>
-    <h2>Localized Network and Knowledge-base for Online Service Delivery</h2>
-    <p>
-      Dedicated to your health, driven by excellence. Your seamless journey to professional care starts here.
+  <!-- Main Centered Content -->
+  <div class="hero-content">
+    
+    <div class="hero-title-row">
+      <span class="mmwgh-text">MMWGH</span>
+      <!-- Using the brush script image for exact match -->
+      <img src="/sdn/public/assets/linkod_brush.png" alt="Linkod" class="linkod-img" />
+    </div>
+
+    <h2 class="hero-subtitle">
+      Localized Network and Knowledge-base<br>for Online Service Delivery
+    </h2>
+
+    <p class="hero-description">
+      Dedicated to promoting total wellness, the hospital delivers quality, compassionate, and patient-centered<br>
+      healthcare services to the community and surrounding regions.
     </p>
+
   </div>
-</header>
+
+  <!-- Floating Stats Box at the bottom -->
+  <div class="stats-box-wrapper">
+    <div class="stats-box">
+      <div class="stat-item">
+        <h3 class="stat-number">{stats.appointmentsBooked}</h3>
+        <p class="stat-label">Appointments booked</p>
+      </div>
+      <div class="stat-item">
+        <h3 class="stat-number">{stats.slotsAvailable}</h3>
+        <p class="stat-label">Slot schedules available</p>
+      </div>
+      <div class="stat-item">
+        <h3 class="stat-number">{stats.registeredPatients}</h3>
+        <p class="stat-label">Registered patients</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <style>
-  .hero {
-    min-height: calc(100vh - 70px);
-    background: url('/public/assets/bg_login.jpg') center/cover fixed;
+  .hero-container {
     position: relative;
+    width: 100%;
+    /* Use the new uploaded background image */
+    background-image: url('/sdn/public/assets/LINKod 2.1.png');
+    background-size: cover;
+    background-position: center;
+    min-height: 85vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
-    padding: 1rem;
+    align-items: center;
+    /* Margin bottom to make room for the floating stats box */
+    margin-bottom: 80px; 
   }
 
-  .hero::before {
-    content: '';
+  /* Exact green gradient filter and shadowy bottom */
+  .hero-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(30, 70, 45, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Green tint matching the screenshot */
+    background: linear-gradient(
+      to bottom, 
+      rgba(67, 184, 73, 0.45) 0%, 
+      rgba(15, 115, 23, 0.75) 80%,
+      rgba(5, 75, 12, 0.95) 100%
+    );
     z-index: 1;
   }
 
   .hero-content {
     position: relative;
-    z-index: 10;
+    z-index: 2;
     text-align: center;
-    width: 100%;
-    max-width: 1100px;
+    padding: 0 20px;
+    margin-top: -50px; /* Shift content slightly up */
+  }
+
+  .hero-title-row {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    animation: fadeIn 1s ease-out;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 10px;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .hero-logo-img {
-    max-width: 350px;
-    width: 100%;
-    height: auto;
-    margin-bottom: 0.5rem;
-    filter: drop-shadow(0 4px 15px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 35px rgba(255, 255, 255, 0.4)) brightness(1.3);
-    transform: scale(1.4);
-    user-select: none;
-    -webkit-user-drag: none;
-  }
-
-  h1 {
-    font-family: 'Outfit', sans-serif;
-    font-size: clamp(1.5rem, 3.8vw, 2.6rem);
-    font-weight: 700;
+  .mmwgh-text {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-size: clamp(5rem, 8vw, 7.5rem);
     color: #ffffff;
-    margin-bottom: 0.2rem;
-    letter-spacing: -0.02em;
-    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    width: 100%;
+    letter-spacing: 2px;
+    line-height: 1;
+    /* Shadow for depth */
+    text-shadow: 2px 4px 15px rgba(0,0,0,0.4);
   }
 
-  h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: clamp(1.2rem, 2vw, 1.6rem);
-    font-weight: 500;
-    color: #bbf7d0; /* Soft emerald */
-    margin-bottom: 0.8rem;
-    letter-spacing: 0.01em;
+  .linkod-img {
+    height: clamp(80px, 12vw, 150px);
+    width: auto;
+    object-fit: contain;
+    /* Drop shadow on the white brush image to match */
+    filter: drop-shadow(2px 4px 10px rgba(0,0,0,0.3));
+    margin-bottom: -15px; /* Adjust alignment with MMWGH */
   }
 
-  p {
+  .hero-subtitle {
     font-family: 'Inter', sans-serif;
-    font-size: 1.15rem;
-    color: #e2e8f0;
-    max-width: 700px;
-    margin: 0 auto;
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 40px;
+    text-shadow: 1px 2px 8px rgba(0,0,0,0.5);
+    letter-spacing: 0.5px;
+  }
+
+  .hero-description {
+    font-family: 'Inter', sans-serif;
+    color: #f1f8f1;
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-style: italic;
     line-height: 1.6;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    max-width: 800px;
+    margin: 0 auto;
+    text-shadow: 1px 2px 5px rgba(0,0,0,0.5);
   }
 
-  .btn-primary {
-    background: #10b981; /* Emerald green */
-    color: white;
-    box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+  /* ─── Floating Stats Box ─── */
+  .stats-box-wrapper {
+    position: absolute;
+    bottom: -60px; /* Floats half inside and half outside the hero */
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 10;
   }
 
-  .btn-primary:hover {
-    background: #059669;
-    transform: translateY(-3px);
-    box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
+  .stats-box {
+    background-color: #5cc851; /* Vibrant green from the screenshot */
+    border-radius: 30px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 25px 40px;
+    width: 90%;
+    max-width: 900px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
   }
 
-  .btn-secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(5px);
+  .stat-item {
+    text-align: center;
+    color: #ffffff;
+    flex: 1;
+    padding: 0 15px;
   }
 
-  .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: white;
-    transform: translateY(-3px);
+  .stat-number {
+    font-family: 'Inter', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 0 0 5px 0;
+    line-height: 1;
+    text-shadow: 1px 2px 5px rgba(0,0,0,0.1);
+  }
+
+  .stat-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin: 0;
+    opacity: 0.95;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .stats-box {
+      flex-direction: column;
+      gap: 20px;
+      padding: 30px;
+      border-radius: 20px;
+      bottom: -100px;
+    }
+    .hero-container {
+      margin-bottom: 120px;
+      min-height: 90vh;
+    }
+    .hero-title-row {
+      flex-direction: column;
+      gap: 5px;
+    }
+    .mmwgh-text {
+      font-size: 4.5rem;
+    }
+    .linkod-img {
+      height: 90px;
+      margin-bottom: 0;
+    }
   }
 </style>

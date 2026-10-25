@@ -1,0 +1,822 @@
+/* ==========================================================================
+   CHIBI CHATBOT - LINKod Assistants (Dr. Leo & Nurse Mika)
+   Pixel-art Chibi Doctor & Nurse with Slow Walking, ASK ME Popup, & Single Avatar
+   ========================================================================== */
+
+:root {
+  --chibi-primary: #1e5a32;
+  --chibi-primary-dark: #143e22;
+  --chibi-primary-light: #286b46;
+  --chibi-accent: #10b981;
+  --chibi-bg: #f8faf9;
+  --chibi-border: #e2e8f0;
+}
+
+/* --- Floating Container at Bottom Right --- */
+.chibi-widget-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 99999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  pointer-events: auto;
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  user-select: none;
+}
+
+/* Hide when splash is active */
+body.splash-active .chibi-widget-container,
+.chibi-widget-container.chatbot-hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(40px) scale(0.85);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* --- Chibi Stage / Walking Area --- */
+.chibi-stage {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+  border: none;
+  outline: none;
+  overflow: visible;
+}
+
+/* Floor shadow */
+.chibi-ground-shadow {
+  position: absolute;
+  bottom: 0px;
+  width: 65px;
+  height: 14px;
+  background: radial-gradient(ellipse at center, rgba(16, 70, 36, 0.35) 0%, rgba(16, 70, 36, 0.08) 55%, transparent 75%);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.chibi-stage:hover .chibi-ground-shadow {
+  transform: scale(1.15);
+  opacity: 0.8;
+}
+
+/* Character wrapper that handles movement */
+.chibi-character-actor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transition: transform 0.2s ease;
+}
+
+/* ------------------- BOY: Dr. Leo Walk Cycles ------------------- */
+/* 1. Walk in from the right: approaches smoothly at a natural walking pace (2.6s) */
+.chibi-character-actor.actor-boy.state-walk-in,
+.chibi-character-actor.state-walk-in {
+  animation: boySlowWalkIn 2.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes boySlowWalkIn {
+  0% {
+    transform: translateX(115px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 2. Boy Arrived: stops cleanly on both feet, eyes open, gentle breathing */
+.chibi-character-actor.actor-boy.state-arrived {
+  transform: translateX(0);
+  opacity: 1;
+  animation: chibiGentleBreathe 2.6s ease-in-out infinite;
+}
+
+/* 3. Boy Walk Out: turns to face right, walks off-screen at a natural pace (2.2s) */
+.chibi-character-actor.actor-boy.state-walk-out,
+.chibi-character-actor.state-walk-out {
+  animation: boySlowWalkOut 2.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes boySlowWalkOut {
+  0% {
+    transform: translateX(0) scaleX(-1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(130px) scaleX(-1);
+    opacity: 0;
+  }
+}
+
+/* ------------------- GIRL: Nurse Mika Walk & Wave Cycles ------------------- */
+/* 1. Girl Walk In: approaches smoothly at a natural walking pace (2.6s) */
+.chibi-character-actor.actor-girl.state-walk-in {
+  animation: girlStraightWalkIn 2.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes girlStraightWalkIn {
+  0% {
+    transform: translateX(115px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 2. Girl Wave Hello (Greeting after walking in, 1.6s) */
+.chibi-character-actor.actor-girl.state-wave-hello {
+  transform: translateX(0);
+  opacity: 1;
+  animation: chibiGentleBreathe 2.4s ease-in-out infinite;
+}
+
+/* 3. Girl Arrived: stands cleanly in place on both feet with periodic eye-blinking (3.6s) */
+.chibi-character-actor.actor-girl.state-arrived {
+  transform: translateX(0);
+  opacity: 1;
+  animation: chibiGentleBreathe 2.4s ease-in-out infinite;
+}
+
+/* 4. Girl Wave Bye (Farewell wave before exiting, 1.4s) */
+.chibi-character-actor.actor-girl.state-wave-bye {
+  transform: translateX(0);
+  opacity: 1;
+  animation: chibiGentleBreathe 2.4s ease-in-out infinite;
+}
+
+/* 5. Girl Walk Out: turns to face right, walks off-screen past right edge (2.2s) */
+.chibi-character-actor.actor-girl.state-walk-out {
+  animation: girlStraightWalkOut 2.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes girlStraightWalkOut {
+  0% {
+    transform: translateX(0) scaleX(-1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(130px) scaleX(-1);
+    opacity: 0;
+  }
+}
+
+@keyframes chibiGentleBreathe {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+
+/* Fallback for general arrived state */
+.chibi-character-actor.state-arrived {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* --- Sprite Sheets with Stepping Animation --- */
+.chibi-sprite {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.16));
+  transition: filter 0.2s ease;
+}
+
+.chibi-stage:hover .chibi-sprite {
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
+}
+
+/* Boy Chibi Sprite: 16 frames, 380x655 per frame (height 124px, width 72px) */
+.chibi-sprite-boy {
+  width: 72px;
+  height: 124px;
+  background-image: url('/sdn/public/assets/boy_walk_spritesheet.png');
+  background-size: 1152px 124px;
+  background-repeat: no-repeat;
+  animation: boyStep 1.0s steps(16) infinite;
+}
+
+/* Pause stepping when arrived: snap immediately to standing idle pose (Frame 0: eyes open, feet down) */
+.chibi-character-actor.state-arrived .chibi-sprite-boy {
+  animation: none !important;
+  background-position: 0 0 !important;
+}
+
+@keyframes boyStep {
+  from { background-position: 0 0; }
+  to { background-position: -1152px 0; }
+}
+
+/* Girl Chibi Walking Sprite: 16 frames natural leg walk cycle with walking eye blinks, 360x635 per frame (height 120px, width 68px) */
+.chibi-sprite-girl {
+  width: 68px;
+  height: 120px;
+  background-image: url('/sdn/public/assets/girl_walk_spritesheet.png');
+  background-size: 1088px 120px;
+  background-repeat: no-repeat;
+  animation: girlStep 1.0s steps(16) infinite;
+}
+
+/* When girl is arrived, stand cleanly on both feet and blink eyes smoothly!
+   girl_idle_spritesheet.png has 4 frames:
+   Frame 0 (0px): Open eyes (normal resting face)
+   Frame 1 (-68px): Half-closed eyes (natural eyelid drop transition)
+   Frame 2 (-136px): Fully closed eyes (sweet smiling anime curved lashes)
+   Frame 3 (-204px): Half-open eyes (natural eyelid opening transition) */
+.chibi-character-actor.state-arrived .chibi-sprite-girl {
+  background-image: url('/sdn/public/assets/girl_idle_spritesheet.png') !important;
+  background-size: 272px 120px !important;
+  animation: girlIdleBlink 3.6s steps(1) infinite !important;
+}
+
+@keyframes girlIdleBlink {
+  0%, 91.5%, 98.5%, 100% {
+    background-position: 0 0;
+  }
+  92%, 97.5% {
+    background-position: -68px 0;
+  }
+  93.5%, 96% {
+    background-position: -136px 0;
+  }
+}
+
+/* Girl Waving Sprite: 4 frames, 480x635 per frame (height 120px, width 91px)
+   Raised arm holding pen, swinging back and forth with smiling/blinking face! */
+.chibi-sprite-girl-wave {
+  width: 91px;
+  height: 120px;
+  margin-left: -11px; /* Align body/feet with walking & standing position */
+  background-image: url('/sdn/public/assets/girl_wave_spritesheet.png');
+  background-size: 364px 120px;
+  background-repeat: no-repeat;
+  animation: girlWave 0.75s steps(4) infinite;
+}
+
+@keyframes girlWave {
+  from { background-position: 0 0; }
+  to { background-position: -364px 0; }
+}
+
+@keyframes girlStep {
+  from { background-position: 0 0; }
+  to { background-position: -1088px 0; }
+}
+
+/* --- "ASK ME" Pixel Speech Bubble --- */
+.chibi-ask-me-bubble {
+  position: absolute;
+  top: -46px;
+  left: -86px;
+  width: 96px;
+  height: 52px;
+  background-image: url('/sdn/public/assets/chibi_ask_me.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
+  cursor: pointer;
+  z-index: 20;
+  transform-origin: bottom right;
+  animation: askMePopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both,
+             askMeFloat 3s ease-in-out infinite 0.6s;
+  transition: transform 0.2s ease, filter 0.2s ease, width 0.2s ease, height 0.2s ease, top 0.2s ease, left 0.2s ease;
+}
+
+/* Tagalog "TANUNGIN MO AKO" Speech Bubble (Enlarged) */
+.chibi-ask-me-bubble.is-tl {
+  width: 124px;
+  height: 68px;
+  top: -62px;
+  left: -114px;
+  background-image: url('/sdn/public/assets/chibi_ask_me_tl.png') !important;
+}
+
+.chibi-ask-me-bubble:hover {
+  transform: scale(1.12) translateY(-3px) !important;
+  filter: drop-shadow(0 8px 18px rgba(16, 185, 129, 0.35));
+}
+
+@keyframes askMePopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.2) translateY(18px) rotate(-6deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.1) translateY(-3px) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes askMeFloat {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+
+/* ==========================================================================
+   CHAT WINDOW MODAL
+   ========================================================================== */
+.chibi-chat-window {
+  position: fixed;
+  bottom: 5rem;
+  right: 2rem;
+  width: 390px;
+  height: 560px;
+  max-height: calc(100vh - 7rem);
+  background: #fafcfb;
+  border-radius: 20px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  z-index: 100000;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  border: 1px solid #e0ece5;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(30px) scale(0.95);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.3s;
+}
+
+.chibi-chat-window.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+/* --- Chat Header --- */
+.chibi-chat-header {
+  background: linear-gradient(135deg, #1b532e 0%, #286b46 50%, #1f5634 100%);
+  color: white;
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  position: relative;
+  z-index: 10;
+}
+
+.chibi-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+/* Single Head Circle Avatar in Header */
+.chibi-avatar-single {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.chibi-avatar-single:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.chibi-avatar-single img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: translateY(2px);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  transition: transform 0.2s ease;
+}
+
+.chibi-avatar-single[data-assistant="girl"] img {
+  transform: translateY(2px) scale(0.92);
+}
+
+.chibi-avatar-single[data-assistant="boy"] img {
+  transform: translateY(1.5px) scale(0.92);
+}
+
+.chibi-header-text h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+
+.chibi-header-text p {
+  margin: 2px 0 0 0;
+  font-size: 0.75rem;
+  color: #a7f3d0;
+  font-weight: 500;
+}
+
+.chibi-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Language Switch */
+.chibi-lang-switch {
+  display: flex;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 20px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.chibi-lang-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chibi-lang-btn.active {
+  background: #ffffff;
+  color: var(--chibi-primary);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Close Button */
+.chibi-close-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.chibi-close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: rotate(90deg);
+}
+
+/* --- Chat Body & Log --- */
+.chibi-chat-body {
+  flex: 1;
+  padding: 1.25rem 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: #f7faf8;
+  scroll-behavior: smooth;
+}
+
+/* Message Item */
+.chibi-msg-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  animation: msgSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes msgSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chibi-msg-row.user {
+  justify-content: flex-end;
+}
+
+/* Single Head Avatar in Conversation */
+.chibi-msg-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #d1fae5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 2px;
+}
+
+.chibi-msg-avatar img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: translateY(1.5px);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.chibi-msg-box {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+}
+
+.chibi-msg-row.user .chibi-msg-box {
+  align-items: flex-end;
+}
+
+.chibi-msg-bubble {
+  padding: 12px 16px;
+  border-radius: 20px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  color: #1e293b;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+.chibi-msg-bubble.bot {
+  background: #ffffff;
+  border: 1px solid #e2ece6;
+  border-bottom-left-radius: 4px;
+}
+
+.chibi-msg-bubble.user {
+  background: linear-gradient(135deg, #1b532e 0%, #286b46 100%);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 12px rgba(27, 83, 46, 0.25);
+}
+
+.chibi-msg-time {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 4px;
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+.chibi-msg-row.user .chibi-msg-time {
+  margin-right: 6px;
+  margin-left: 0;
+}
+
+/* --- Typing Indicator --- */
+.chibi-typing-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.chibi-typing-bubble {
+  background: #ffffff;
+  border: 1px solid #e2ece6;
+  border-radius: 18px;
+  border-bottom-left-radius: 4px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chibi-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  animation: typingBlink 1.4s infinite ease-in-out both;
+}
+
+.chibi-dot:nth-child(1) { animation-delay: -0.32s; }
+.chibi-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingBlink {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1.1); opacity: 1; }
+}
+
+/* --- FAQ Prompt Options --- */
+.chibi-faq-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-left: 48px;
+}
+
+.chibi-faq-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4b6b55;
+  margin: 0 0 2px 2px;
+}
+
+.chibi-faq-item {
+  background: #ffffff;
+  border: 1.5px solid #d5e7dc;
+  color: var(--chibi-primary);
+  padding: 10px 14px;
+  border-radius: 16px;
+  text-align: left;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chibi-faq-item::after {
+  content: "➔";
+  font-size: 0.75rem;
+  color: #10b981;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.chibi-faq-item:hover {
+  background: #f0fdf4;
+  border-color: #10b981;
+  color: #065f46;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.12);
+}
+
+.chibi-faq-item:hover::after {
+  transform: translateX(3px);
+  opacity: 1;
+}
+
+/* --- Ask Another Button --- */
+.chibi-reset-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.chibi-reset-btn {
+  background: #ffffff;
+  border: 1.5px solid #10b981;
+  color: #10b981;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.1);
+}
+
+.chibi-reset-btn:hover {
+  background: #10b981;
+  color: #ffffff;
+  transform: scale(1.04);
+}
+
+/* --- Rating Widget --- */
+.chibi-rating-card {
+  background: #ffffff;
+  border: 1px solid #d5e7dc;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.chibi-rating-card p {
+  margin: 0 0 10px 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e3a27;
+}
+
+.chibi-stars {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.chibi-star-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+  padding: 2px;
+}
+
+.chibi-star-btn:hover {
+  color: #f59e0b;
+  transform: scale(1.25);
+}
+
+/* Custom Scrollbar */
+.chibi-chat-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chibi-chat-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chibi-chat-body::-webkit-scrollbar-thumb {
+  background: #c3d9cc;
+  border-radius: 10px;
+}
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 600px) {
+  .chibi-widget-container {
+    bottom: 0.85rem;
+    right: 0.85rem;
+  }
+  
+  /* Scale the entire stage seamlessly so all spritesheets, animations, blinks, and bubbles stay 100% mathematically aligned */
+  .chibi-stage {
+    transform: scale(0.85);
+    transform-origin: bottom right;
+  }
+
+  .chibi-chat-window {
+    width: calc(100vw - 1.5rem);
+    right: 0.75rem;
+    bottom: 4.8rem;
+    height: 490px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .chibi-stage {
+    transform: scale(0.78);
+    transform-origin: bottom right;
+  }
+}
+

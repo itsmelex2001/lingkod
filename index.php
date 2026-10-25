@@ -7,51 +7,126 @@
     <title>Homepage | LINKOD</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/public/css/global.css?v=9" />
-    <link rel="stylesheet" href="/public/css/navigation.css?v=9" />
-    <link rel="stylesheet" href="/public/css/landing.css?v=16" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Kaushan+Script&family=Caveat:wght@700&display=swap" rel="stylesheet">
+    <style>
+      @font-face {
+        font-family: 'Avallon Alt';
+        src: local('Avallon Alt'), local('Avallon-Alt'), local('AvallonAlt'), local('Avallon');
+        font-display: swap;
+      }
+    </style>
+    <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/sdn/public/css/landing.css?v=<?= time() ?>">
+    <!-- Load Svelte App CSS -->
+    <link rel="stylesheet" href="/sdn/dist/assets/main.css?v=<?= time() ?>">
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <!-- AOS Library for Scroll Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Injected Mobile Fixes to force override -->
+    <style>
+      @media (max-width: 768px) {
+        html, body {
+          overflow-x: hidden !important;
+          width: 100vw !important;
+          max-width: 100vw !important;
+        }
+        .hospital-name, [class*="hospital-name"], .hospital-heading {
+          white-space: normal !important;
+          word-wrap: break-word !important;
+          word-break: break-word !important;
+          text-align: left !important;
+          font-size: 1.5rem !important;
+          line-height: 1.2 !important;
+        }
+        .hero-actions, [class*="hero-actions"] {
+          margin-left: 0 !important;
+          width: 100% !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+        }
+        .btn-action, [class*="btn-action"] {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin-left: 0 !important;
+        }
+        .hero-content-wrapper, [class*="hero-content-wrapper"] {
+          padding-left: 1rem !important;
+          padding-right: 1rem !important;
+          width: 100% !important;
+          overflow: hidden !important;
+        }
+        .fab-container, [class*="fab-container"] {
+          right: 1rem !important;
+          bottom: 1rem !important;
+          transform: scale(0.85) !important;
+        }
+      }
+      /* Hide wayfinding grid on Location page based on user request */
+      .wayfinding-grid, [class*="wayfinding-grid"] {
+        display: none !important;
+      }
+      /* Hide old Svelte containers before inline replacement */
+      .hero-container, #services, #about, #location, footer.premium-footer, .fab-container, .chat-window {
+        display: none !important;
+      }
+    </style>
   </head>
-  <body>
+  <body class="splash-active">
 
     <!-- Splash Screen -->
     <div id="splash-screen">
-      <svg class="splash-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Dark Green Link (Top & Left) -->
-        <path class="dark-green" d="M 60 52 L 60 16 Q 60 10 54 10 L 46 10 Q 40 10 40 16 L 40 40 L 16 40 Q 10 40 10 46 L 10 54 Q 10 60 16 60 L 52 60" stroke="#256c1a" stroke-width="3" />
-        <!-- Light Green Link (Bottom & Right) -->
-        <path class="light-green" d="M 40 48 L 40 84 Q 40 90 46 90 L 54 90 Q 60 90 60 84 L 60 60 L 84 60 Q 90 60 90 54 L 90 46 Q 90 40 84 40 L 48 40" stroke="#8bc34a" stroke-width="3" />
-      </svg>
+      <div class="splash-typewriter">
+        <span class="letter">L</span>
+        <span class="letter">I</span>
+        <span class="letter">N</span>
+        <span class="letter">K</span>
+        <span class="letter">o</span>
+        <span class="letter">d</span>
+        <span class="cursor">|</span>
+      </div>
+      <div class="splash-subtitle">Mariveles Mental Wellness and General Hospital</div>
     </div>
 
-    <script src="/public/js/splash-inline.js"></script>
+    <script src="/sdn/public/js/splash-inline.js?v=<?= time() ?>"></script>
 
     <!-- NAVIGATION -->
     <nav class="navbar" id="navbar">
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 2rem; margin: 0 auto;">
-        <a class="logo" href="/index.php" title="Home">
-          <img src="/public/assets/mmwgh_logo.png" alt="Hospital Logo" />
-          <span class="logo-text">Mariveles Mental Wellness and General Hospital LINKOD</span>
+        <a class="logo" href="/sdn/index.php" title="Home">
+          <img src="/sdn/public/assets/mmwgh_logo.png" alt="Hospital Logo" />
+          <span class="logo-text">Mariveles Mental Wellness<br>and General Hospital</span>
         </a>
 
         <ul class="nav-links" id="navLinks">
-          <li><a href="/index.php" class="active-nav">Home</a></li>
-          <li><a href="#services">Services</a></li>
-          <li><a href="#about">About</a></li>
-          <li><a href="#location">Location</a></li>
-          <li>
-            <button class="btn-nav-secondary" onclick="window.location.href = '/pages/schedules.php'">View Schedule</button>
-          </li>
-          <li>
-            <button class="btn-nav-primary" onclick="window.location.href = '/pages/department-select.php'">Book Appointment</button>
+          <li><a href="/sdn/index.php" class="active-nav">Home</a></li>
+          <li class="nav-dropdown">
+            <a href="#services-new" class="nav-dropdown-toggle" style="cursor: default;">
+              Services
+              <svg class="nav-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </a>
+            <div class="dropdown-content">
+              <a href="/sdn/pages/department-select.php" style="color: #047023;">Book Appointment</a>
+              <a href="/sdn/pages/schedules.php" style="color: #047023;">View Schedule</a>
+            </div>
           </li>
           <li class="nav-dropdown">
-            <button class="btn-signin">Sign In</button>
+            <a href="#about-new" class="nav-dropdown-toggle" style="cursor: default;">
+              About
+              <svg class="nav-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </a>
             <div class="dropdown-content">
-              <a href="/pages/login.php?role=staff">as Medical Staff</a>
-              <a href="/pages/login.php?role=admin">as Administrator</a>
+              <a href="#footer-new" style="color: #047023;">Contact Us</a>
             </div>
+          </li>
+          <li><a href="#location-new">Location</a></li>
+          <li>
+            <button class="btn-login" onclick="window.location.href = '/sdn/pages/login.php'">Login</button>
           </li>
         </ul>
 
@@ -64,16 +139,38 @@
       </div>
     </nav>
 
+    <!-- Injected Pure HTML Overrides -->
+    <?php include 'hero-inline.php'; ?>
+    <?php include 'services-inline.php'; ?>
+    <?php include 'about-inline.php'; ?>
+    <?php include 'location-inline.php'; ?>
+    <?php include 'footer-inline.php'; ?>
+    <?php include 'chatbot-inline.php'; ?>
+
     <!-- Svelte Component Mount Point -->
     <div id="app"></div>
-    <!-- Compiled Svelte Assets -->
-    <script type="module" crossorigin src="/dist/assets/main.js"></script>
-    <link rel="stylesheet" crossorigin href="/dist/assets/main.css">
+
+    <!-- Compiled Svelte Assets with Cache-busting -->
+    <script type="module" crossorigin src="/sdn/dist/assets/main.js?v=<?= time() ?>"></script>
+    <link rel="stylesheet" crossorigin href="/sdn/dist/assets/main.css?v=<?= time() ?>">
 
 
 
-    <script src="/public/js/utils.js"></script>
-    <script src="/public/js/navigation.js"></script>
-    <script src="/public/js/landing.js"></script>
+    <script src="/sdn/public/js/utils.js"></script>
+    <script src="/sdn/public/js/navigation.js"></script>
+    <script src="/sdn/public/js/landing.js?v=<?= time() ?>"></script>
+    <!-- AOS Library JS and Init -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        AOS.init({
+          duration: 1000,
+          easing: 'ease-in-out',
+          once: false,
+          mirror: true,
+          offset: 50
+        });
+      });
+    </script>
   </body>
 </html>

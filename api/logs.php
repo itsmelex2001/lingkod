@@ -11,7 +11,7 @@ session_start();
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
 
-requireAuth();
+requireRole('admin');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? (getBody()['action'] ?? '');
@@ -64,8 +64,12 @@ if ($method === 'GET' && $action === 'export') {
     exit;
 }
 
-// ── DELETE or POST {action:'clear'}: clear all logs ──────────────────────────
+// ── DELETE or POST {action:'clear'}: clear all logs (admin only) ─────────────
 if ($method === 'DELETE' || ($method === 'POST' && $action === 'clear')) {
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        respondErr('Access denied. Administrator privileges required.', 403);
+    }
+
     $pdo->exec("DELETE FROM system_logs");
 
     // Re-insert one record so the log isn't empty

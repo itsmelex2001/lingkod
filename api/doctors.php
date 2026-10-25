@@ -69,7 +69,7 @@ if ($method === 'GET') {
         respondOk(['data' => $stmt->fetchAll()]);
     }
 
-    // Schedule view (public — unchanged behaviour)
+    // Schedule view (public)
     if ($dept) {
         $stmt = $pdo->prepare(
             "SELECT id, name, specialization, department,
@@ -77,10 +77,10 @@ if ($method === 'GET') {
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
                     total_slots, booked_slots, status, schedule_date
              FROM doctors
-             WHERE department = ? AND schedule_date = CURDATE()
+             WHERE (LOWER(department) = LOWER(?) OR LOWER(department) LIKE CONCAT('%', LOWER(?), '%'))
              ORDER BY schedule_start ASC"
         );
-        $stmt->execute([$dept]);
+        $stmt->execute([$dept, $dept]);
     } else {
         $stmt = $pdo->query(
             "SELECT id, name, specialization, department,
@@ -88,7 +88,6 @@ if ($method === 'GET') {
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
                     total_slots, booked_slots, status, schedule_date
              FROM doctors
-             WHERE schedule_date = CURDATE()
              ORDER BY department, schedule_start ASC"
         );
     }
@@ -113,11 +112,43 @@ if ($method === 'POST' && $isAdmin) {
     $b      = getBody();
     $action = $b['action'] ?? '';
 
+    $allowedSpecializations = [
+        'Internal Medicine',
+        'Family Medicine & General Practice',
+        'Family Medicine & Routine Check-ups',
+        'Routine Check-ups & Preventative Care',
+        'Preventative Care & Routine Check-ups',
+        'Chronic Disease Management',
+        'Pediatric Care',
+        'General Surgery & Minor Procedures',
+        'Clinical Neurology',
+        'Headache & Migraine Management',
+        'Stroke Rehabilitation',
+        'Epilepsy & Seizure Disorders',
+        'Movement Disorders',
+        'Neuromuscular Medicine',
+        'Adult Psychiatry',
+        'Child & Adolescent Psychiatry',
+        'Substance Abuse & Addiction Treatment',
+        'Anxiety & Depression Management',
+        'Geriatric Psychiatry',
+        'Clinical Neuropsychiatry'
+    ];
+
     // ── CREATE doctor ────────────────────────────────────────────────────────
     if ($action === 'create') {
         $name           = trim($b['name'] ?? '');
         $specialization = trim($b['specialization'] ?? '');
-        $department     = trim($b['department'] ?? '');
+        $departmentRaw = trim($b['department'] ?? '');
+        $deptMap = [
+            'psychiatry'         => 'psychiatry',
+            'opu psychiatry'     => 'psychiatry',
+            'neurology'          => 'neurology',
+            'general'            => 'general',
+            'general medicine'   => 'general',
+            'general management' => 'general'
+        ];
+        $department = $deptMap[strtolower($departmentRaw)] ?? strtolower($departmentRaw);
         $schedStart     = trim($b['schedule_start'] ?? '');
         $schedEnd       = trim($b['schedule_end'] ?? '');
         $totalSlots     = (int) ($b['total_slots'] ?? 20);
@@ -127,7 +158,19 @@ if ($method === 'POST' && $isAdmin) {
         }
 
         if (!in_array($department, ['psychiatry', 'neurology', 'general'])) {
-            respondErr('Invalid department.');
+            respondErr('Invalid department. Must be psychiatry, neurology, or general.');
+        }
+
+        $matchedSpec = false;
+        foreach ($allowedSpecializations as $as) {
+            if (strcasecmp($as, $specialization) === 0) {
+                $specialization = $as; // Canonical case
+                $matchedSpec = true;
+                break;
+            }
+        }
+        if (!$matchedSpec) {
+            respondErr("Invalid clinical specialization '$specialization'. Only approved hospital medical specializations are permitted (arbitrary or non-medical fields such as Veterinarian/VET are strictly prohibited).");
         }
 
         $stmt = $pdo->prepare(
@@ -156,7 +199,42 @@ if ($method === 'POST' && $isAdmin) {
 
         foreach (['name', 'specialization', 'department', 'schedule_start', 'schedule_end', 'total_slots', 'status'] as $field) {
             if (isset($b[$field])) {
-                $val = $field === 'total_slots' ? (int) $b[$field] : trim($b[$field]);
+                if ($field === 'total_slots') {
+                    $val = (int) $b[$field];
+                } elseif ($field === 'department') {
+                    $deptMap = [
+                        'psychiatry'         => 'psychiatry',
+                        'opu psychiatry'     => 'psychiatry',
+                        'neurology'          => 'neurology',
+                        'general'            => 'general',
+                        'general medicine'   => 'general',
+                        'general management' => 'general'
+                    ];
+                    $val = $deptMap[strtolower(trim($b[$field]))] ?? strtolower(trim($b[$field]));
+                    if (!in_array($val, ['psychiatry', 'neurology', 'general'])) {
+                        respondErr('Invalid department. Must be psychiatry, neurology, or general.');
+                    }
+                } elseif ($field === 'specialization') {
+                    $matchedSpec = false;
+                    foreach ($allowedSpecializations as $as) {
+                        if (strcasecmp($as, trim($b['specialization'])) === 0) {
+                            $val = $as;
+                            $matchedSpec = true;
+                            break;
+                        }
+                    }
+                    if (!$matchedSpec) {
+                        respondErr("Invalid clinical specialization '{$b['specialization']}'. Only approved hospital medical specializations are permitted.");
+                    }
+                } elseif ($field === 'status') {
+                    $val = strtolower(trim($b[$field]));
+                    $validStatuses = ['available', 'booked', 'leave', 'in_clinic', 'on_break', 'emergency'];
+                    if (!in_array($val, $validStatuses)) {
+                        respondErr("Invalid status '$val'. Allowed statuses: " . implode(', ', $validStatuses));
+                    }
+                } else {
+                    $val = trim($b[$field]);
+                }
                 $updates[] = "$field = ?";
                 $params[] = $val;
             }

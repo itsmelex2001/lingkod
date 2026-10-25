@@ -24,11 +24,12 @@
 .modal-box {
   background: var(--white);
   width: 100%;
-  max-width: 780px;
+  max-width: 800px;
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
   overflow: hidden;
   animation: slideUp 0.3s ease;
+  position: relative;
 }
 
 @keyframes slideUp {
@@ -42,37 +43,94 @@
   }
 }
 
-/* --- Print / Modal Content Layout --- */
+/* --- Print / Modal Content Layout (Strict Single-Page Portrait) --- */
 #printArea {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: #222;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1e293b;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.print-watermark {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 470px;
+  max-width: 72%;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-watermark img {
+  width: 100%;
+  height: auto;
+  display: block;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .print-header {
-  background: var(--deep-green);
-  color: white;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin: 0;
   padding: 0;
-  border-bottom: 4px solid var(--primary-green);
+  background: #0d4a36;
+  color: white;
+  border-bottom: 3px solid #10b981;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  box-sizing: border-box;
 }
 
 .print-header-inner {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 24px;
+  padding: 12px 24px;
+  box-sizing: border-box;
 }
 
 .print-header-badge {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  background: rgba(46, 204, 113, 0.22);
-  border: 1.5px solid rgba(46, 204, 113, 0.5);
+  background: #ffffff;
+  border: 1.5px solid rgba(16, 185, 129, 0.5);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #a8f0c0;
+  padding: 2px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.print-header-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.print-header-badge svg {
+  width: 20px;
+  height: 20px;
+  color: #0d4a36;
 }
 
 .print-header-content {
@@ -80,59 +138,78 @@
   min-width: 0;
 }
 
+.print-sub-header {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #a8f0c0;
+  margin-bottom: 1px;
+  line-height: 1.2;
+}
+
 .print-clinic-name {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.2px;
-  margin-bottom: 5px;
+  margin: 0 0 2px 0;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .print-meta-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .print-ref,
 .print-date {
-  font-size: 0.77rem;
-  opacity: 0.82;
+  font-size: 0.72rem;
+  opacity: 0.92;
   margin: 0;
   white-space: nowrap;
 }
 
 .print-meta-sep {
-  font-size: 0.77rem;
+  font-size: 0.72rem;
   opacity: 0.5;
 }
 
 .print-body {
-  padding: 16px 28px 18px;
+  position: relative;
+  z-index: 1;
+  padding: 14px 24px 16px;
+  box-sizing: border-box;
 }
 
 .print-section {
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #e2e8f0;
 }
 
 .print-section:last-of-type {
   border-bottom: none;
+  margin-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .print-section-title {
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: var(--dark-green);
-  border-left: 3px solid var(--primary-green);
-  padding-left: 7px;
-  margin-bottom: 8px;
+  letter-spacing: 0.8px;
+  color: #065f46;
+  background: transparent !important;
+  border-left: 3px solid #10b981;
+  padding: 1px 6px;
+  border-radius: 0;
+  margin-bottom: 6px;
 }
 
 .print-row {
@@ -142,6 +219,10 @@
   margin-bottom: 6px;
 }
 
+.print-row:last-child {
+  margin-bottom: 0;
+}
+
 .print-field {
   flex: 1 1 calc(50% - 16px);
   display: flex;
@@ -149,74 +230,84 @@
   gap: 2px;
 }
 
-.print-field.full, .print-field.full-width {
+.print-field.full, 
+.print-field.full-width {
   flex: 1 1 100%;
 }
 
 .print-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #888;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  line-height: 1.2;
 }
 
 .print-value {
-  font-size: 0.85rem;
-  color: #222;
-  background: var(--light-bg);
-  padding: 5px 8px;
-  border-radius: 4px;
-  min-height: 26px;
-  border: 1px solid var(--border-color);
+  font-size: 0.83rem;
+  color: #0f172a;
+  background: transparent !important;
+  padding: 2px 2px 4px 2px;
+  border: none !important;
+  border-bottom: 1.5px solid #94a3b8 !important;
+  border-radius: 0 !important;
+  min-height: 22px;
   word-break: break-word;
-  line-height: 1.4;
+  line-height: 1.35;
+  font-weight: 600;
+  box-sizing: border-box;
 }
 
 .print-signature-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  margin-top: 16px;
-  margin-bottom: 10px;
+  gap: 14px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  page-break-inside: avoid;
 }
 
 .print-sig-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 
 .print-sig-line {
   width: 100%;
   height: 1px;
-  background: #bbb;
-  margin-top: 32px;
+  background: #94a3b8;
+  margin-top: 22px;
 }
 
 .print-sig-block p {
-  font-size: 0.72rem;
-  color: #666;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #475569;
   text-align: center;
+  margin: 0;
 }
 
 .print-footer-note {
   text-align: center;
-  font-size: 0.72rem;
-  color: #aaa;
-  padding: 8px 0 2px;
-  border-top: 1px dashed #ddd;
-  margin-top: 6px;
+  font-size: 0.64rem;
+  color: #94a3b8;
+  padding: 4px 0 0;
+  border-top: 1px dashed #e2e8f0;
+  margin-top: 4px;
+  page-break-before: avoid;
 }
 
 .modal-actions {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 28px 22px;
+  padding: 14px 24px 20px;
   border-top: 1px solid var(--border-color);
   background: var(--light-bg);
+  box-sizing: border-box;
 }
 
 .modal-optional-row {
@@ -374,6 +465,7 @@
   color: var(--dark-green);
   border-left: 3px solid var(--primary-green);
   padding-left: 7px;
+  background: transparent !important;
   margin-bottom: 9px;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
@@ -391,95 +483,331 @@
 .pdf-value {
   font-size: 0.82rem;
   color: #222;
-  background: #f4f9f6;
-  padding: 5px 8px;
-  border-radius: 4px;
-  border: 1px solid #dcece2;
-  min-height: 24px;
+  background: transparent !important;
+  padding: 2px 2px 4px 2px;
+  border: none !important;
+  border-bottom: 1.5px solid #94a3b8 !important;
+  border-radius: 0 !important;
+  min-height: 22px;
   line-height: 1.4;
   word-break: break-word;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
-/* --- PRINT MEDIA QUERY --- */
+/* --- PRINT MEDIA QUERY (Strict Single-Page Full Paper Fit - Top to Bottom & Full Width) --- */
 @media print {
-  * {
+  @page {
+    size: portrait;
+    margin: 4mm 6mm;
+  }
+
+  *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
+    box-sizing: border-box !important;
   }
 
-  body {
-    margin: 0;
-    padding: 0;
-    background: white;
+  html, body {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    font-size: 11px !important;
   }
 
-  body * {
+  /* 1. Completely remove all background page elements from layout so they occupy ZERO pages */
+  body > *:not(#summaryModal),
+  .registration-container,
+  .navbar,
+  footer,
+  #successToast,
+  #pdfContainer,
+  .modal-actions,
+  .no-print {
+    display: none !important;
     visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
-  #printArea,
+  /* 2. Make #summaryModal and .modal-box static, non-fixed, full width and full height */
+  #summaryModal,
+  .modal-overlay#summaryModal {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    z-index: auto !important;
+  }
+
+  #summaryModal .modal-box {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  /* 3. #printArea widens edge-to-edge and stretches full height from top to bottom */
+  #printArea {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    visibility: visible !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 262mm !important;
+    height: 262mm !important;
+    max-height: 262mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    border: 1.5px solid #0d4a36 !important;
+    border-radius: 6px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    break-inside: avoid !important;
+    break-after: avoid !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
   #printArea * {
     visibility: visible !important;
   }
 
-  #printArea {
-    position: static !important;
+  .print-watermark {
+    display: flex !important;
+    visibility: visible !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 560px !important;
+    max-width: 82% !important;
+    opacity: 0.18 !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    user-select: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-watermark img {
+    display: block !important;
+    visibility: visible !important;
     width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-header {
+    position: relative !important;
+    z-index: 2 !important;
+    width: 100% !important;
+    margin: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    background: var(--deep-green) !important;
+    background: #0d4a36 !important;
     color: white !important;
-    page-break-after: avoid;
+    padding: 0 !important;
+    border-bottom: 3px solid #10b981 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    flex-shrink: 0 !important;
+  }
+
+  .print-header-inner {
+    padding: 14px 22px !important;
+    gap: 14px !important;
+  }
+
+  .print-header-badge {
+    width: 46px !important;
+    height: 46px !important;
+    background: #ffffff !important;
+    border: 1.5px solid rgba(16, 185, 129, 0.5) !important;
+    border-radius: 6px !important;
+    padding: 2px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-header-logo-img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-sub-header {
+    font-size: 0.65rem !important;
+    color: #a8f0c0 !important;
+    letter-spacing: 1.2px !important;
+  }
+
+  .print-clinic-name {
+    font-size: 1.2rem !important;
+    color: #ffffff !important;
+    margin: 0 0 2px 0 !important;
+    font-weight: 700 !important;
+  }
+
+  .print-meta-row {
+    gap: 12px !important;
+  }
+
+  .print-ref,
+  .print-date {
+    font-size: 0.76rem !important;
+    color: #e2e8f0 !important;
   }
 
   .print-body {
-    page-break-inside: avoid;
+    position: relative !important;
+    z-index: 1 !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 18px 26px 14px !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .print-section {
-    page-break-inside: avoid;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 10px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1.2px dashed #cbd5e1 !important;
+  }
+
+  .print-section:last-of-type {
+    border-bottom: none !important;
+    margin-bottom: 4px !important;
+    padding-bottom: 2px !important;
+  }
+
+  .print-section-title {
+    background: transparent !important;
+    color: #065f46 !important;
+    border-left: 3.5px solid #10b981 !important;
+    padding: 2px 8px !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.8px !important;
+    margin-bottom: 6px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-row {
+    gap: 8px 18px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .print-field {
+    flex: 1 1 calc(50% - 18px) !important;
+    gap: 2px !important;
+  }
+
+  .print-field.full,
+  .print-field.full-width {
+    flex: 1 1 100% !important;
+  }
+
+  .print-label {
+    font-size: 0.64rem !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    margin-bottom: 2px !important;
+    letter-spacing: 0.5px !important;
   }
 
   .print-value {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    background: var(--light-bg) !important;
-    border: 1px solid var(--border-color) !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1.5px solid #64748b !important;
+    border-radius: 0 !important;
+    color: #0f172a !important;
+    font-size: 0.86rem !important;
+    font-weight: 600 !important;
+    padding: 2px 2px 4px 2px !important;
+    min-height: 22px !important;
+    line-height: 1.35 !important;
+  }
+
+  .print-signature-row {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: 18px !important;
+    margin-bottom: 8px !important;
+    gap: 20px !important;
+  }
+
+  .print-sig-line {
+    margin-top: 28px !important;
+    background: #64748b !important;
+    height: 1.2px !important;
+  }
+
+  .print-sig-block p {
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    margin-top: 4px !important;
   }
 
   .print-footer-note {
-    page-break-before: avoid;
-  }
-
-  .no-print {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  @page {
-    margin: 5mm;
-    size: A4 portrait;
-  }
-  
-  html, body {
-    height: auto;
-    font-size: 11px; /* Slightly reduce base font size to fit on one page */
-  }
-  
-  #printArea {
-    transform: scale(0.95);
-    transform-origin: top center;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    font-size: 0.66rem !important;
+    padding-top: 8px !important;
+    margin-top: 6px !important;
+    color: #64748b !important;
+    border-top: 1px dashed #cbd5e1 !important;
   }
 }
 
@@ -500,9 +828,31 @@
   background: #fff;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: #222;
+  overflow: hidden;
+}
+
+#pdfContainer .print-watermark {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 470px;
+  max-width: 72%;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
+}
+
+#pdfContainer .print-watermark img {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 #pdf-header {
+  position: relative;
+  z-index: 2;
   background: var(--deep-green);
   color: white;
   padding: 16px 28px;
@@ -513,17 +863,16 @@
 }
 
 .pdf-header-logo {
-  width: 38px;
-  height: 38px;
-  background: rgba(46, 204, 113, 0.35);
+  width: 40px;
+  height: 40px;
+  background: #ffffff;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
-  font-weight: 900;
-  color: var(--primary-green);
+  padding: 2px;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .pdf-header-title {
@@ -540,6 +889,8 @@
 }
 
 .pdf-body-padding {
+  position: relative;
+  z-index: 1;
   padding: 18px 28px 22px;
 }
 

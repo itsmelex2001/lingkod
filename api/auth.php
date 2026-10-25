@@ -20,7 +20,13 @@ $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 // ── CHECK SESSION ────────────────────────────────────────────────────────────
 if ($action === 'check') {
     if (!empty($_SESSION['user'])) {
-        respondOk(['loggedIn' => true, 'role' => $_SESSION['role'], 'user' => $_SESSION['user']]);
+        $_SESSION['last_activity'] = time();
+        respondOk([
+            'loggedIn'   => true, 
+            'role'       => $_SESSION['role'], 
+            'user'       => $_SESSION['user'],
+            'csrf_token' => getCsrfToken()
+        ]);
     }
     respondOk(['loggedIn' => false]);
 }
@@ -62,7 +68,27 @@ if ($method === 'POST') {
         respondErr('Username and password are required.');
     }
 
-    $stmt = $pdo->prepare("SELECT id, username, password, role, status, full_name, department FROM users WHERE username = ? LIMIT 1");
+    // Rate limiting: check failed attempts in the last 15 minutes
+    try {
+        $rateStmt = $pdo->prepare(
+            "SELECT COUNT(*) FROM login_history 
+             WHERE (ip_address = ? OR username = ?) 
+               AND status = 'failed' 
+               AND login_time > DATE_SUB(NOW(), INTERVAL 15 MINUTE)"
+        );
+        $rateStmt->execute([$ip, $username]);
+        $recentFailed = (int) $rateStmt->fetchColumn();
+
+        if ($recentFailed >= 5) {
+            addLog($pdo, 'warning', 'Rate Limit Triggered', $username,
+                   "Too many failed login attempts from IP $ip for user '$username'.");
+            respondErr('Too many failed login attempts. Please wait 15 minutes before trying again.', 429);
+        }
+    } catch (Exception $e) {
+        // If table query fails, continue gracefully
+    }
+
+    $stmt = $pdo->prepare("SELECT id, username, password, role, status, full_name, department, profile_image FROM users WHERE username = ? LIMIT 1");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
@@ -86,6 +112,8 @@ if ($method === 'POST') {
         $_SESSION['role'] = $user['role'];
         $_SESSION['full_name'] = $user['full_name'];
         $_SESSION['department'] = $user['department'];
+        $_SESSION['profile_image'] = $user['profile_image'] ?? null;
+        $_SESSION['last_activity'] = time();
 
         // Update user's last_login and login_count
         $updateStmt = $pdo->prepare(
@@ -96,7 +124,10 @@ if ($method === 'POST') {
         addLog($pdo, 'info', 'System Login', $user['username'],
                "{$user['username']} successfully logged into the portal from $ip.");
 
-        respondOk(['role' => $user['role']]);
+        respondOk([
+            'role'       => $user['role'],
+            'csrf_token' => getCsrfToken()
+        ]);
     }
 
     // Log failed login attempt

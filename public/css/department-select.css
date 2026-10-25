@@ -1,22 +1,23 @@
 /* department-select.css */
 body {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
-  background: url('/public/assets/hospital_hero_bg.jpg') center/cover fixed;
+  background: #fdfdfd;
   z-index: 0;
 }
 
-body::before {
-  content: '';
-  position: fixed; /* Cover entire viewport */
+.page-bg-overlay {
+  position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(18, 53, 36, 0.85); /* Dark green tint */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: url('/sdn/public/assets/bookanappointment_bg.png') center bottom / cover no-repeat;
+  opacity: 1;
   z-index: -1;
+  /* Mask to fade into white at the top, same as About */
+  mask-image: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.6) 30%, black 70%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.6) 30%, black 70%);
 }
 
 .select-container {
@@ -35,17 +36,18 @@ body::before {
 }
 
 .select-header h1 {
-  font-size: 2.4rem;
-  color: #ffffff; /* White for dark background */
+  font-family: 'Impact', sans-serif;
+  font-size: 3rem;
+  color: #0c3915;
   margin-bottom: 0.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  letter-spacing: 1px;
 }
 
 .select-header p {
+  font-family: 'Inter', sans-serif;
   font-size: 1.1rem;
-  color: #e2ece6;
+  color: #374151;
+  font-weight: 500;
   margin-bottom: 0;
 }
 
@@ -64,13 +66,12 @@ body::before {
 }
 
 .dept-card {
-  background: rgba(255, 255, 255, 0.95); /* Glassy white */
-  border-radius: 20px;
-  padding: 40px 24px 30px; /* More top/bottom padding */
-  min-height: 400px; /* Long portrait box */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: #ffffff;
+  border-radius: 60px; /* Pill style */
+  padding: 40px 24px 40px; 
+  min-height: 400px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+  transition: all 0.3s ease;
   cursor: pointer;
   text-decoration: none;
   display: flex;
@@ -79,27 +80,24 @@ body::before {
   justify-content: center;
   text-align: center;
   position: relative;
-  backdrop-filter: blur(8px);
 }
 
 .dept-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  border-color: #ffffff;
+  transform: translateY(-8px);
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.18);
 }
 
 .icon-wrapper {
-  width: 96px; /* Significantly larger icon wrapper */
+  width: 96px; 
   height: 96px;
-  background: #f0fdf4;
-  color: var(--primary-green, #286b46);
-  border-radius: 24px; /* More rounded squircle */
+  background: #f0fdf4; /* Light green tint */
+  color: #104d1e;
+  border-radius: 24px; 
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 10px rgba(40, 107, 70, 0.1);
 }
 
 .icon-wrapper svg { 
@@ -108,22 +106,24 @@ body::before {
 }
 
 .dept-card:hover .icon-wrapper {
-  background: var(--primary-green, #286b46);
-  color: white;
-  transform: scale(1.1);
-  box-shadow: 0 8px 16px rgba(40, 107, 70, 0.3);
+  background: #104d1e;
+  color: #ffffff;
+  transform: scale(1.05);
 }
 
 .dept-card h3 {
-  font-size: 1.15rem; /* Adjusted text size */
-  color: #183527;
+  font-family: 'Impact', sans-serif;
+  font-size: 1.8rem;
+  color: #0c3915;
   margin-bottom: 0.5rem;
-  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .dept-card p {
-  color: #475569;
-  font-size: 0.85rem;
+  font-family: 'Inter', sans-serif;
+  color: #374151;
+  font-weight: 500;
+  font-size: 0.9rem;
   line-height: 1.5;
   margin-bottom: 0;
 }
@@ -132,17 +132,17 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #e2ece6; /* Lighter color for dark background */
+  color: #0c3915; 
   background-color: transparent;
   padding: 8px 16px 8px 0;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.95rem;
   transition: all 0.2s ease;
 }
 
 .btn-back:hover {
-  color: #ffffff;
+  color: #104d1e;
   transform: translateX(-4px);
 }
 

@@ -1,0 +1,21 @@
+# Prevent directory browsing
+Options -Indexes
+
+# Deny access to all hidden files (like .env, .git, .gitignore)
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to database scripts, archives, development executables and logs
+<FilesMatch "\.(sql|bak|log|ini|zip|rar|tar|gz|exe|cs|ps1)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Specifically deny direct HTTP access to developer debug/test files in webroot
+<FilesMatch "^(check-users|check_db|check_depts|dump_schema|run_sql|setup|test.*|test_.*|migrate_status|fix_.*)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+

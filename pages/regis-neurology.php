@@ -5,179 +5,251 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Registration</title>
-    <link rel="stylesheet" href="/public/css/global.css?v=9" />
-    <link rel="stylesheet" href="/public/css/navigation.css?v=9" />
-    <link rel="stylesheet" href="/public/css/forms.css" />
-    <link rel="stylesheet" href="/public/css/modal-export.css" />
+    <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
+    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
+    <link rel="stylesheet" href="/sdn/public/css/forms.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/modal-export.css?v=<?= time() ?>" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   </head>
   <body>
-    <div style="max-width: 1000px; width: 90%; margin: 2rem auto 0;">
-      <?php
-      if (isset($_GET['source']) && $_GET['source'] === 'home') {
-          $backUrl = '/index.php';
-      } elseif (isset($_GET['source']) && $_GET['source'] === 'schedules') {
-          $backUrl = '/pages/schedules.php';
-      } else {
-          $backUrl = '/pages/department-select.php';
-      }
-      ?>
-      <a href="<?= htmlspecialchars($backUrl) ?>" class="btn-back">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-      </a>
-    </div>
-    <div class="registration-container" style="margin-top: 1rem;">
-      <h2>Neurology Registration</h2>
+    <?php require_once __DIR__ . '/privacy-consent-modal.php'; ?>
+    <?php
+    if (isset($_GET['source']) && $_GET['source'] === 'dept') {
+        $backUrl = '/sdn/pages/department-select.php';
+    } elseif (isset($_GET['source']) && $_GET['source'] === 'schedules') {
+        $backUrl = '/sdn/pages/schedules.php';
+    } else {
+        $backUrl = '/sdn/pages/department-select.php';
+    }
+    ?>
+    <div class="registration-container">
+      <div class="reg-header-bar">
+        <div class="reg-header-left">
+          <a href="<?= htmlspecialchars($backUrl) ?>" class="btn-back" title="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </a>
+          <div>
+            <h2>Neurology Patient Registration</h2>
+            <p style="margin:2px 0 0 0; font-size:0.83rem; color:#64748b;">Clinical neurological consultations, headache care, and specialized testing.</p>
+          </div>
+        </div>
+        <div class="reg-header-right">
+          <label class="checkbox-label" style="margin: 0; padding: 6px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+            <input type="checkbox" id="inquiryOnly" />
+            <span style="font-size: 0.88rem; font-weight: 600; color: #166534;">Inquiry Only</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Returning Patient Verification Box -->
+      <?php require_once __DIR__ . '/returning-patient-verify-box.php'; ?>
+
+      <?php if (!empty($_GET['service']) || !empty($_GET['spec'])): ?>
+      <div class="service-selected-banner">
+        <div class="banner-badge">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Selected Service</span>
+        </div>
+        <div class="banner-text">
+          <strong><?= htmlspecialchars($_GET['service'] ?? $_GET['spec']) ?></strong>
+          <?php if (!empty($_GET['doctor'])): ?>
+            <span class="banner-doc">• Attending Physician: <strong><?= htmlspecialchars($_GET['doctor']) ?></strong></span>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <form id="regForm">
         <input type="hidden" id="department" value="neurology" />
+        <!-- Anti-bot honeypot field -->
+        <input type="text" id="website_url" name="website_url" style="display:none !important; position:absolute; left:-9999px;" tabindex="-1" autocomplete="off" />
 
-        <div class="form-section">
-          <h3>Personal Information</h3>
-          <div class="grid-row">
-            <div class="form-group">
-              <label>Full Name <span class="asterisk">*</span></label>
-              <input id="fullName" type="text" placeholder="Enter full name" maxlength="100" required />
-            </div>
-            <div class="form-group">
-              <label>HRN</label>
-              <input type="text" id="hrn" placeholder="Auto-generated" readonly />
+        <div class="form-landscape-grid">
+          <!-- Column 1: Personal Information -->
+          <div class="form-landscape-col">
+            <div class="form-section flex-1">
+              <h3><span class="sec-num">1</span> Personal Information</h3>
+              <div class="grid-row name-grid-row" style="grid-template-columns: 1fr 1fr 85px;">
+                <div class="form-group">
+                  <label>First Name <span class="asterisk">*</span></label>
+                  <input id="firstName" type="text" placeholder="First Name" maxlength="60" required />
+                </div>
+                <div class="form-group">
+                  <label>Last Name <span class="asterisk">*</span></label>
+                  <input id="lastName" type="text" placeholder="Last Name" maxlength="60" required />
+                </div>
+                <div class="form-group">
+                  <label>M.I. <span style="font-weight:400; font-size:0.75rem; color:#94a3b8;">(Opt)</span></label>
+                  <input type="text" id="middleInitial" placeholder="e.g. B" maxlength="5" />
+                </div>
+              </div>
+              <input type="hidden" id="fullName" />
+
+              <div class="grid-row">
+                <div class="form-group">
+                  <label>HRN</label>
+                  <input type="text" id="hrn" placeholder="Auto-generated" readonly tabindex="-1" />
+                </div>
+                <div class="form-group">
+                  <label>Gender <span class="asterisk">*</span></label>
+                  <select id="gender" required>
+                    <option value="" disabled selected>Select gender...</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid-row">
+                <div class="form-group">
+                  <label>Birthdate <span class="asterisk">*</span></label>
+                  <input type="date" id="birthdate" min="<?= date('Y-m-d', strtotime('-120 years')) ?>" max="<?= date('Y-m-d') ?>" required />
+                </div>
+                <div class="form-group">
+                  <label>Age</label>
+                  <input type="number" id="age" placeholder="Age" readonly tabindex="-1" />
+                </div>
+              </div>
+
+              <div class="grid-row">
+                <div class="form-group">
+                  <label>Contact Number <span class="asterisk">*</span></label>
+                  <input id="contactNumber" type="tel" placeholder="09XXXXXXXXX" pattern="^(09|\+639)\d{9}$" maxlength="13" title="Format: 09XXXXXXXXX or +639XXXXXXXXX" required />
+                </div>
+                <div class="form-group">
+                  <label>Email Address</label>
+                  <input id="emailAddress" type="email" placeholder="Optional" maxlength="100" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Complete Address <span class="asterisk">*</span></label>
+                <input id="address" type="text" placeholder="Enter full address" maxlength="255" required />
+              </div>
+
+              <div class="form-group" id="groupCompanion">
+                <label>Accompanying companion? <span class="asterisk">*</span></label>
+                <div class="radio-group">
+                  <label><input type="radio" name="companion" value="yes" /> Yes</label>
+                  <label><input type="radio" name="companion" value="no" checked /> No</label>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="grid-row">
-            <div class="form-group">
-              <label>Gender <span class="asterisk">*</span></label>
-              <select id="gender" required>
-                <option value="" disabled selected>Select gender...</option>
-                <option>Male</option>
-                <option>Female</option>
-                <option>Other</option>
-              </select>
+          <!-- Column 2: Medical Information -->
+          <div class="form-landscape-col">
+            <div class="form-section flex-1" id="secMedicalInfo">
+              <h3><span class="sec-num">2</span> Medical Information</h3>
+              <div class="form-group" id="groupChiefComplaints">
+                <label id="lblChiefComplaints">Health Concerns <span class="asterisk">*</span></label>
+                <select id="chiefComplaints" required>
+                  <option value="" disabled selected>Select primary neurological concern...</option>
+                  <option value="Migraine, Tension & Chronic Severe Headaches">Migraine, Tension &amp; Chronic Severe Headaches</option>
+                  <option value="Stroke Recovery, Hemiparesis & Post-CVA Care">Stroke Recovery, Hemiparesis &amp; Post-CVA Care</option>
+                  <option value="Epilepsy, Seizures & Unexplained Loss of Consciousness">Epilepsy, Seizures &amp; Unexplained Loss of Consciousness</option>
+                  <option value="Parkinson's Disease, Hand Tremors & Movement Disorders">Parkinson's Disease, Hand Tremors &amp; Movement Disorders</option>
+                  <option value="Numbness, Tingling & Peripheral Neuropathy">Numbness, Tingling &amp; Peripheral Neuropathy</option>
+                  <option value="Chronic Dizziness, Vertigo & Loss of Balance">Chronic Dizziness, Vertigo &amp; Loss of Balance</option>
+                  <option value="Memory Decline, Cognitive Impairment & Dementia Evaluation">Memory Decline, Cognitive Impairment &amp; Dementia Evaluation</option>
+                  <option value="Facial Weakness / Bell's Palsy">Facial Weakness / Bell's Palsy</option>
+                  <option value="Nerve Compression / Sciatica / Radiculopathy">Nerve Compression / Sciatica / Radiculopathy</option>
+                  <option value="Other">Other Neurological Symptoms / Concern (specify below)</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="groupConsultationNature">
+                <label>Nature of Consultation <span class="asterisk">*</span></label>
+                <select id="consultationAbout" required>
+                  <option value="" disabled selected>Select nature of consultation...</option>
+                  <option>Follow-up Checkup</option>
+                  <option>Initial Evaluation</option>
+                  <option>Laboratory Results Review</option>
+                  <option>Medication Refill</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Description of disease/illness or symptoms</label>
+                <textarea id="illnessDescription" placeholder="Additional details, notes, or inquiry description..." rows="3" style="min-height: 75px;"></textarea>
+              </div>
             </div>
           </div>
 
-          <div class="grid-row">
-            <div class="form-group">
-              <label>Birthdate <span class="asterisk">*</span></label>
-              <input type="date" id="birthdate" max="<?= date('Y-m-d') ?>" required />
-            </div>
-            <div class="form-group">
-              <label>Age</label>
-              <input type="number" id="age" placeholder="Age" readonly />
-            </div>
-          </div>
+          <!-- Column 3: Appointment Details -->
+          <div class="form-landscape-col">
+            <div class="form-section flex-1" id="secAppointmentDetails">
+              <h3><span class="sec-num">3</span> Appointment Details</h3>
+              <div class="grid-row">
+                <div class="form-group">
+                  <label>Type of Client <span class="asterisk">*</span></label>
+                  <select id="patientType" required>
+                    <option value="" disabled selected>Select client type...</option>
+                    <option value="first-time">First Time Patient</option>
+                    <option value="returning">Returning Patient</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Type of Appointment <span class="asterisk">*</span></label>
+                  <select id="appointmentType" required>
+                    <option value="online" selected>Online Scheduled Appointment</option>
+                  </select>
+                </div>
+              </div>
 
-          <div class="grid-row">
-            <div class="form-group">
-              <label>Contact Number <span class="asterisk">*</span></label>
-              <input id="contactNumber" type="tel" placeholder="09XXXXXXXXX" pattern="^(09|\+639)\d{9}$" maxlength="13" title="Format: 09XXXXXXXXX or +639XXXXXXXXX" required />
-            </div>
-            <div class="form-group">
-              <label>Email Address</label>
-              <input id="emailAddress" type="email" placeholder="Optional" maxlength="100" />
-            </div>
-          </div>
+              <div class="form-group">
+                <label>Consultation Mode <span class="asterisk">*</span></label>
+                <select id="consultationMode" required>
+                  <option value="" disabled selected>Select mode...</option>
+                  <option>Face-to-Face</option>
+                  <option>E-consultation</option>
+                </select>
+              </div>
 
-          <div class="form-group">
-            <label>Complete Address <span class="asterisk">*</span></label>
-            <input id="address" type="text" placeholder="Enter full address" maxlength="255" required />
-          </div>
+              <div class="grid-row">
+                <div class="form-group">
+                  <label>Appointment Date <span class="asterisk">*</span></label>
+                  <input type="date" id="appointmentDate" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>" required />
+                </div>
+                <div class="form-group">
+                  <label>Appointment Time <span class="asterisk">*</span></label>
+                  <input type="time" id="appointmentTime" required />
+                </div>
+              </div>
 
-          <div class="form-group">
-            <label>Is there anyone else accompanying the patient? <span class="asterisk">*</span></label>
-            <div class="radio-group">
-              <label><input type="radio" name="companion" value="yes" /> Yes</label>
-              <label><input type="radio" name="companion" value="no" checked /> No</label>
+              <div class="form-group">
+                <label>Referral Source</label>
+                <input id="referralSource" type="text" placeholder="Optional" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="form-section">
-          <h3>Medical Information</h3>
-          <div class="form-group">
-            <label>Health Concerns <span class="asterisk">*</span></label>
-            <textarea id="chiefComplaints" placeholder="Describe main symptoms" rows="3" required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Nature of Consultation <span class="asterisk">*</span></label>
-            <select id="consultationAbout" required>
-              <option value="" disabled selected>Select nature of consultation...</option>
-              <option>Follow-up Checkup</option>
-              <option>Initial Evaluation</option>
-              <option>Laboratory Results Review</option>
-              <option>Medication Refill</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Brief description of the disease/illness or symptoms</label>
-            <textarea id="illnessDescription" placeholder="Optional" rows="3"></textarea>
-          </div>
+        <div class="form-landscape-footer">
+          <p class="required-legend"><span class="asterisk">*</span> Indicates a required field</p>
+          <button type="submit" class="btn-submit">Confirm Registration</button>
         </div>
-
-        <div class="form-section">
-          <h3>Appointment Details</h3>
-          <div class="grid-row">
-            <div class="form-group">
-              <label>Type of Client <span class="asterisk">*</span></label>
-              <select id="patientType" required>
-                <option value="" disabled selected>Select client type...</option>
-                <option value="first-time">First Time Patient</option>
-                <option value="returning">Returning Patient</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Type of Appointment <span class="asterisk">*</span></label>
-              <select id="appointmentType" required>
-                <option value="" disabled selected>Select appointment type...</option>
-                <option value="walk-in">Walk-in</option>
-                <option value="online">Online</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid-row">
-            <div class="form-group">
-              <label>Consultation Mode <span class="asterisk">*</span></label>
-              <select id="consultationMode" required>
-                <option value="" disabled selected>Select mode...</option>
-                <option>Face-to-Face</option>
-                <option>E-consultation</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Appointment Date <span class="asterisk">*</span></label>
-              <input type="date" id="appointmentDate" min="<?= date('Y-m-d') ?>" required />
-            </div>
-            <div class="form-group">
-              <label>Appointment Time <span class="asterisk">*</span></label>
-              <input type="time" id="appointmentTime" required />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Referral Source</label>
-            <input id="referralSource" type="text" placeholder="Optional" />
-          </div>
-        </div>
-
-        <p class="required-legend"><span class="asterisk">*</span> Indicates a required field</p>
-        <button type="submit" class="btn-submit">Confirm</button>
       </form>
     </div>
 
+    <!-- MODAL CONFIRMATION (Recreated Portrait Layout) -->
     <div id="summaryModal" class="modal-overlay">
       <div class="modal-box">
         <div id="printArea">
+          <!-- MMWGH Background Watermark -->
+          <div class="print-watermark" aria-hidden="true">
+            <img src="/sdn/public/assets/mmwgh_logo.png" alt="MMWGH Logo Watermark" />
+          </div>
+
           <div class="print-header">
             <div class="print-header-inner">
               <div class="print-header-badge">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <img src="/sdn/public/assets/mmwgh_logo.png" alt="MMWGH Logo" class="print-header-logo-img" />
               </div>
               <div class="print-header-content">
-                <h1 class="print-clinic-name">Patient Registration Form</h1>
+                <div class="print-sub-header">MARIVELES MENTAL WELLNESS AND GENERAL HOSPITAL • SDN EMR</div>
+                <h1 class="print-clinic-name">Neurology Patient Registration</h1>
                 <div class="print-meta-row">
                   <p class="print-ref">Ref No: <strong id="refNumber"></strong></p>
                   <span class="print-meta-sep">·</span>
@@ -191,7 +263,7 @@
             <div class="print-section">
               <div class="print-section-title">Department</div>
               <div class="print-row">
-                <div class="print-field">
+                <div class="print-field full">
                   <span class="print-label">Selected Department</span>
                   <span class="print-value" id="p-department"></span>
                 </div>
@@ -206,8 +278,18 @@
                   <span class="print-value" id="p-fullName"></span>
                 </div>
                 <div class="print-field">
+                  <span class="print-label">Middle Initial</span>
+                  <span class="print-value" id="p-middleInitial"></span>
+                </div>
+              </div>
+              <div class="print-row">
+                <div class="print-field">
                   <span class="print-label">Gender</span>
                   <span class="print-value" id="p-gender"></span>
+                </div>
+                <div class="print-field">
+                  <span class="print-label">HRN</span>
+                  <span class="print-value" id="p-hrn"></span>
                 </div>
               </div>
               <div class="print-row">
@@ -253,7 +335,7 @@
                 </div>
               </div>
               <div class="print-row">
-                <div class="print-field">
+                <div class="print-field full">
                   <span class="print-label">Nature of Consultation</span>
                   <span class="print-value" id="p-consultation"></span>
                 </div>
@@ -280,24 +362,44 @@
               </div>
               <div class="print-row">
                 <div class="print-field">
+                  <span class="print-label">Inquiry Only</span>
+                  <span class="print-value" id="p-inquiryOnly">No</span>
+                </div>
+                <div class="print-field">
                   <span class="print-label">Consultation Mode</span>
                   <span class="print-value" id="p-mode"></span>
                 </div>
+              </div>
                 <div class="print-field">
                   <span class="print-label">Appointment Date</span>
                   <span class="print-value" id="p-appointmentDate"></span>
                 </div>
               </div>
               <div class="print-row">
-                <div class="print-field">
+                <div class="print-field full">
                   <span class="print-label">Referral Source</span>
                   <span class="print-value" id="p-referral"></span>
                 </div>
               </div>
             </div>
 
+            <div class="print-signature-row">
+              <div class="print-sig-block">
+                <div class="print-sig-line"></div>
+                <p>Patient / Informant Signature</p>
+              </div>
+              <div class="print-sig-block">
+                <div class="print-sig-line"></div>
+                <p>Triage / Attending Staff</p>
+              </div>
+              <div class="print-sig-block">
+                <div class="print-sig-line"></div>
+                <p>Date & Verification Stamp</p>
+              </div>
+            </div>
+
             <div class="print-footer-note">
-              This registration form is for medical facility use only. Please present this document upon arrival.
+              Official Patient Registration Copy • SDN Integrated Healthcare System • Please present this document upon arrival.
             </div>
           </div>
         </div>
@@ -335,10 +437,15 @@
     </div>
 
     <div id="pdfContainer">
+      <div class="print-watermark" aria-hidden="true">
+        <img src="/sdn/public/assets/mmwgh_logo.png" alt="MMWGH Logo Watermark" />
+      </div>
       <div id="pdf-header">
-        <div class="pdf-header-logo">+</div>
+        <div class="pdf-header-logo">
+          <img src="/sdn/public/assets/mmwgh_logo.png" alt="MMWGH Logo" class="print-header-logo-img" />
+        </div>
         <div>
-          <div class="pdf-header-title">Patient Registration Form</div>
+          <div class="pdf-header-title">Neurology Patient Registration</div>
           <div class="pdf-header-meta">Reference No: <strong id="pdf-refNumber"></strong></div>
           <div class="pdf-header-meta">Date Submitted: <strong id="pdf-submittedDate"></strong></div>
         </div>
@@ -476,10 +583,10 @@
       </div>
     </div>
 
-    <script src="/public/js/utils.js"></script>
-    <script src="/public/js/navigation.js"></script>
-    <script src="/public/js/print-pdf-setup.js"></script>
-    <script src="/public/js/regis-neurology.js"></script>
-    <script src="/public/js/modal-export.js"></script>
+    <script src="/sdn/public/js/utils.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/navigation.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/print-pdf-setup.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/regis-neurology.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/modal-export.js?v=<?= time() ?>"></script>
   </body>
 </html>

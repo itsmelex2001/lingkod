@@ -1,8 +1,8 @@
 // utils.js — shared utility functions
 // ── CONFIGURE THIS to match your XAMPP project folder name ──────────────────
-//    If your project is at: http://localhost/sdn/  → keep '/api'
+//    If your project is at: http://localhost/sdn/  → keep '/sdn/api'
 //    If renamed to 'myproject':                   → change to '/myproject/api'
-const API_BASE = '/api';
+const API_BASE = '/sdn/api';
 
 // ── Date & value helpers ─────────────────────────────────────────────────────
 
@@ -50,6 +50,141 @@ function showToast(message = 'Action completed successfully.', type = 'success')
   }, 4000);
 }
 
+// ── Custom Notice Modal UI (replaces browser alert) ──────────────────────────
+function showNoticeModal(message, title = 'Registration Notice', type = 'info') {
+  let modal = document.getElementById('customNoticeModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'customNoticeModal';
+    modal.className = 'custom-notice-modal';
+    modal.innerHTML = `
+      <div class="custom-notice-box">
+        <div class="custom-notice-header">
+          <div class="custom-notice-icon ${type}">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="custom-notice-text">
+            <h4 class="custom-notice-title" id="noticeTitle">${title}</h4>
+            <p class="custom-notice-msg" id="noticeMsg">${message}</p>
+          </div>
+        </div>
+        <div class="custom-notice-actions">
+          <button type="button" class="custom-notice-btn" id="noticeBtnOk">Understood</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const btn = modal.querySelector('#noticeBtnOk');
+    const closeNotice = () => {
+      modal.classList.remove('show');
+    };
+    btn.addEventListener('click', closeNotice);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeNotice();
+    });
+  } else {
+    const titleEl = modal.querySelector('#noticeTitle');
+    const msgEl = modal.querySelector('#noticeMsg');
+    const iconEl = modal.querySelector('.custom-notice-icon');
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+    if (iconEl) iconEl.className = `custom-notice-icon ${type}`;
+  }
+
+  requestAnimationFrame(() => {
+    modal.classList.add('show');
+    const btn = modal.querySelector('#noticeBtnOk');
+    if (btn) btn.focus();
+  });
+}
+
+// ── Executive First-Time Patient Notice Modal UI ─────────────────────────────
+function showFirstTimePatientNotice(onClose) {
+  let modal = document.getElementById('firstTimePatientModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'firstTimePatientModal';
+    modal.className = 'ftp-modal-overlay';
+    modal.innerHTML = `
+      <div class="ftp-modal-card" role="dialog" aria-modal="true" aria-labelledby="ftpTitle">
+        <div class="ftp-modal-header">
+          <div class="ftp-badge-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <div class="ftp-header-text">
+            <span class="ftp-tag">Hospital Registration Policy</span>
+            <h3 class="ftp-title" id="ftpTitle">First-Time Patient Consultation</h3>
+          </div>
+          <button type="button" class="ftp-btn-close" id="ftpCloseBtn" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="ftp-modal-body">
+          <p class="ftp-notice-desc">
+            Welcome to <strong>MMWGH LINKod</strong>. In accordance with clinical assessment protocols, all <strong>first-time patients</strong> must undergo an initial on-site physical evaluation to establish an official hospital medical record.
+          </p>
+
+          <div class="ftp-policy-card">
+            <div class="ftp-policy-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Automatic Presets Applied:</span>
+            </div>
+            <div class="ftp-policy-grid">
+              <div class="ftp-policy-item">
+                <span class="ftp-policy-label">Appointment Type</span>
+                <span class="ftp-policy-value"><span class="ftp-dot"></span> Walk-in</span>
+              </div>
+              <div class="ftp-policy-item">
+                <span class="ftp-policy-label">Consultation Mode</span>
+                <span class="ftp-policy-value"><span class="ftp-dot"></span> Face-to-Face</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ftp-policy-note">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Online consultations and teleconsultation slots will become unlocked for your follow-up visits once your hospital record is active.</span>
+          </div>
+        </div>
+
+        <div class="ftp-modal-footer">
+          <button type="button" class="ftp-btn-primary" id="ftpAcknowledgeBtn">
+            <span>Understood &amp; Proceed</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeModal = () => {
+      modal.classList.remove('show');
+      setTimeout(() => { modal.style.display = 'none'; }, 280);
+      if (typeof onClose === 'function') onClose();
+    };
+
+    modal.querySelector('#ftpCloseBtn').addEventListener('click', closeModal);
+    modal.querySelector('#ftpAcknowledgeBtn').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => {
+    modal.classList.add('show');
+    const ackBtn = modal.querySelector('#ftpAcknowledgeBtn');
+    if (ackBtn) ackBtn.focus();
+  });
+}
+
 function showSuccessToast(msg) { showToast(msg); }
 
 // ── Auth guard: redirect to login if not authenticated ───────────────────────
@@ -59,17 +194,20 @@ async function requireLogin(expectedRole = null) {
     const res  = await fetch(`${API_BASE}/auth.php?action=check`);
     const data = await res.json();
     if (!data.loggedIn) {
-      window.location.href = '/pages/login.php';
+      window.location.href = '/sdn/pages/login.php';
       return false;
+    }
+    if (data.csrf_token) {
+      window.CSRF_TOKEN = data.csrf_token;
     }
     if (expectedRole && data.role !== expectedRole) {
       alert('Access denied: insufficient permissions.');
-      window.location.href = '/pages/login.php';
+      window.location.href = '/sdn/pages/login.php';
       return false;
     }
     return data;
   } catch {
-    window.location.href = '/pages/login.php';
+    window.location.href = '/sdn/pages/login.php';
     return false;
   }
 }

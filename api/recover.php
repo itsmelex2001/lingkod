@@ -13,6 +13,16 @@ if ($method !== 'POST') respondErr('Method not allowed.', 405);
 $body = getBody();
 $action = $body['action'] ?? '';
 
+// Rate limiting: Maximum 5 recovery attempts per 15 minutes per session
+if (session_status() === PHP_SESSION_NONE) session_start();
+if (!isset($_SESSION['recovery_attempts'])) $_SESSION['recovery_attempts'] = [];
+$now = time();
+$_SESSION['recovery_attempts'] = array_filter($_SESSION['recovery_attempts'], fn($t) => ($now - $t) < 900);
+if (count($_SESSION['recovery_attempts']) >= 5) {
+    respondErr('Too many recovery attempts. Please wait 15 minutes before trying again.', 429);
+}
+$_SESSION['recovery_attempts'][] = $now;
+
 // 1. Request Code
 if ($action === 'request_code') {
     $username = trim($body['username'] ?? '');
