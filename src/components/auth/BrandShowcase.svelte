@@ -5,7 +5,7 @@
 
 <div class="brand-showcase">
   <h1>{welcomeText}</h1>
-  <img src="/sdn/public/assets/linkod_brush.png" alt="Linkod" class="linkod-brush" />
+  <img src="/sdn/public/assets/linkod_brush.png" alt="LINGKOD" class="linkod-brush" />
   <p>{tagline}</p>
 </div>
 

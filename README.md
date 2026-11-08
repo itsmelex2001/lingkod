@@ -1,5 +1,5 @@
-# MMWGH LINKod — Service Delivery Network (SDN)
-### Localized Network and Knowledge-base for Online Service Delivery
+# MMWGH LINGKod — Service Delivery Network (SDN)
+### Localized Integrated Network for Governance, Knowledge, and Operation in Digital Healthcare
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=flat&logo=php&logoColor=white)](https://php.net/)
 [![Svelte Version](https://img.shields.io/badge/Svelte-5.x-FF3E00?style=flat&logo=svelte&logoColor=white)](https://svelte.dev/)
@@ -11,10 +11,10 @@
 
 ## 📌 Executive Overview
 
-**MMWGH LINKod** is an enterprise clinical appointment scheduling, triage management, electronic medical record (EMR) tracking, and inter-department referral system developed for the **Mariveles Mental Wellness and General Hospital (MMWGH)**. 
+**MMWGH LINGKod** is an enterprise clinical appointment scheduling, triage management, electronic medical record (EMR) tracking, and inter-department referral system developed for the **Mariveles Mental Wellness and General Hospital (MMWGH)**. 
 
 The platform bridges public patient access, clinical nursing triage, attending physician consultations, and administrative health analytics across hospital departments:
-- **General Management & Primary Care**
+- **General Medical & Primary Care**
 - **Neurology Specialization**
 - **Outpatient Psychiatry Unit (OPU)**
 

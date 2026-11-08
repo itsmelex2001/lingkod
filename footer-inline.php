@@ -5,8 +5,10 @@
   <div class="footer-bg-section-inline">
     <div class="footer-bg-overlay-inline"></div>
     <div class="footer-bg-content-inline">
-      <h2 class="footer-script-title-inline">Why Choose Us?</h2>
-      <p class="footer-desc-inline">
+      <h2 class="footer-script-title-inline">
+        <img src="/sdn/public/assets/why_choose_us_brush.png?v=<?= time() ?>" alt="Why Choose Us?" class="why-choose-us-brush-inline" />
+      </h2>
+      <p class="footer-desc-inline" data-i18n="why_body">
         Located in Mariveles, Bataan, we are a Department of Health (DOH) specialty hospital dedicated to providing accessible, high-quality mental health and general healthcare services delivered by skilled medical professionals with compassion and integrity.
       </p>
     </div>
@@ -18,44 +20,51 @@
     <!-- Dark Green Box -->
     <div class="footer-dark-box-inline">
       <!-- Col 1 -->
-      <div class="footer-col-inline">
-        <h2 class="footer-logo-inline">MMWGH<br>LINKod</h2>
-        <div class="footer-accent-line"></div>
-        <p class="footer-tagline-main-inline">A Localized Network and Knowledge-base for<br>Online Service Delivery</p>
-        <p class="footer-tagline-sub-inline">Dedicated to your health, driven by excellence.</p>
+      <div class="footer-col-inline footer-col-brand-inline">
+        <h2 class="footer-logo-inline">MMWGH<br>LINGKod</h2>
+        <div class="footer-accent-line footer-accent-brand"></div>
+        <p class="footer-tagline-main-inline" data-i18n-html="footer_tagline">A Localized Network and Knowledge-base for<br>Online Service Delivery</p>
+        <p class="footer-tagline-sub-inline" data-i18n="footer_tagline_sub">Dedicated to your health, driven by excellence.</p>
       </div>
 
       <!-- Col 2 -->
-      <div class="footer-col-inline">
-        <h3 class="footer-heading-inline">Quick Links</h3>
-        <div class="footer-accent-line"></div>
+      <div class="footer-col-inline footer-col-links-inline">
+        <h3 class="footer-heading-inline" data-i18n="footer_links">Quick Links</h3>
+        <div class="footer-accent-line footer-accent-links"></div>
         <ul class="footer-links-inline">
-          <li><a href="#about-new">About Us</a></li>
-          <li><a href="#services-new">Services</a></li>
-          <li><a href="#location-new">Location</a></li>
-          <li><a href="/sdn/pages/schedules.php">Schedules</a></li>
-          <li><a href="/sdn/pages/department-select.php" class="highlight-link-inline">Book Appointment</a></li>
+          <li><a href="#about-new" data-i18n="footer_about">About Us</a></li>
+          <li><a href="#services-new" data-i18n="footer_services">Services</a></li>
+          <li><a href="#location-new" data-i18n="footer_location">Location</a></li>
+          <li><a href="/sdn/pages/schedules.php" target="_blank" rel="noopener noreferrer" data-i18n="footer_schedules">Schedules</a></li>
+          <li><a href="/sdn/pages/department-select.php" class="highlight-link-inline" data-i18n="footer_book">Book Appointment</a></li>
         </ul>
       </div>
 
       <!-- Col 3 -->
-      <div class="footer-col-inline">
-        <h3 class="footer-heading-inline">Contact Information</h3>
-        <div class="footer-accent-line"></div>
+      <div class="footer-col-inline footer-col-contact-inline">
+        <h3 class="footer-heading-inline" data-i18n="footer_contact">Contact Information</h3>
+        <div class="footer-accent-line footer-accent-contact"></div>
         <div class="contact-info-inline">
-          <p>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>
-            <span>Mariveles, Bataan<br>Central Luzon, Philippines</span>
+          <p class="contact-loc-row-inline">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="contact-pin-svg-inline">
+              <path fill-rule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+            </svg>
+            <span>Mariveles, Bataan<br><span class="contact-loc-indent-inline">Central Luzon, Philippines</span></span>
           </p>
-          <p style="align-items: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+          <p class="contact-mail-row-inline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="m3.5 6.5 8.5 6 8.5-6" />
+            </svg>
             <span>info@mmwgh.gov.ph</span>
           </p>
         </div>
 
         <button class="emergency-btn-inline" onclick="window.location.href='tel:09614311824'">
           <div class="emergency-icon-inline">
-            <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px; height:20px;"><path d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px; height:24px;">
+              <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clip-rule="evenodd" />
+            </svg>
           </div>
           <div class="emergency-text-inline">
             <div class="emergency-number-inline">0961-431-1824</div>
@@ -64,15 +73,27 @@
         </button>
       </div>
     </div>
-
-    <!-- Copyright -->
-    <div class="footer-copyright-inline">
-      &copy; 2026Service Delivery Network (LINKod). All Rights Reserved.
-    </div>
   </div>
 </footer>
 
 <style>
+  @font-face {
+    font-family: 'Avallon Alt';
+    src: url('/sdn/public/assets/Avallon.ttf') format('truetype'),
+         local('Avallon Alt'), local('Avallon-Alt'), local('AvallonAlt'), local('Avallon');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Avallon';
+    src: url('/sdn/public/assets/Avallon.ttf') format('truetype'),
+         local('Avallon'), local('Avallon Regular'), local('Avallon-Regular');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
   /* Base sections */
   .footer-bg-section-inline {
     position: relative;
@@ -102,11 +123,24 @@
   }
   
   .footer-script-title-inline {
-    font-family: 'Kaushan Script', cursive;
-    color: #ffffff;
-    font-size: 4rem;
-    margin-bottom: 1.5rem;
-    font-weight: 400;
+    font-family: 'Avallon Alt', 'Avallon', 'Kaushan Script', cursive !important;
+    color: #ffffff !important;
+    font-size: clamp(2.8rem, 5vw, 4.2rem) !important;
+    margin-bottom: 0.85rem !important;
+    font-weight: 400 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .why-choose-us-brush-inline {
+    height: clamp(80px, 8.5vw, 120px);
+    width: auto;
+    max-width: 90vw;
+    object-fit: contain;
+    display: inline-block;
+    user-select: none;
+    filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.7));
   }
   .footer-desc-inline {
     font-family: 'Inter', sans-serif;
@@ -120,24 +154,25 @@
   .footer-overlap-wrapper-inline {
     width: 100%;
     margin-top: -80px; /* Pulls the entire section up over the image */
-    background: linear-gradient(to bottom, transparent 80px, #a1d6a3 80px);
+    background: linear-gradient(to bottom, transparent 80px, #b7cfb3 80px);
     position: relative;
     z-index: 10;
-    padding-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
   }
 
   /* Dark Green Box */
   .footer-dark-box-inline {
-    background-color: #091b05; /* Exact shade from mockup */
-    width: 100%; /* No spaces on left/right */
-    border-radius: 60px;
-    padding: 4rem 10%; /* Percentage padding to center content */
+    background-color: #0e4b06; /* Rich forest green from reference */
+    width: 100%;
+    border-radius: 56px;
+    padding: 3rem 11.5% 2.5rem;
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1fr;
-    gap: 3rem;
+    grid-template-columns: 1.35fr 0.95fr 1.2fr;
+    gap: 2.5rem;
     color: white;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-    margin-bottom: 3rem;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.22);
+    margin-bottom: 1.35rem;
+    box-sizing: border-box;
   }
 
   /* Columns & Typography */
@@ -146,139 +181,166 @@
     flex-direction: column;
   }
   .footer-accent-line {
-    width: 60px;
-    height: 3px;
-    background-color: #8bc34a;
-    margin-bottom: 2rem;
+    height: 2.5px;
+    background-color: #9ae682;
+    margin-bottom: 1.65rem;
+  }
+  .footer-accent-brand {
+    width: 96px;
+    margin-left: 16px;
+  }
+  .footer-accent-links {
+    width: 48px;
+    margin-left: 6px;
+  }
+  .footer-accent-contact {
+    width: 92px;
+    margin-left: 16px;
   }
   .footer-logo-inline {
     font-family: 'Montserrat', sans-serif;
-    font-size: 3rem;
-    font-weight: 900;
-    line-height: 1.1;
-    margin-bottom: 0.5rem; /* Reduced to bring accent line closer */
-    letter-spacing: 1px;
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1.08;
+    margin: 0 0 0.7rem 0;
+    letter-spacing: 0.5px;
     color: #ffffff !important;
   }
   .footer-tagline-main-inline {
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 500;
-    line-height: 1.6;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.45;
     color: #e2e8f0;
-    margin-bottom: 1rem;
+    margin: 0 0 0.85rem 0;
   }
   .footer-tagline-sub-inline {
     font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.62rem;
+    font-weight: 400;
     font-style: italic;
-    color: #8bc34a;
+    color: #b9e6b2;
+    margin: 0;
   }
 
   .footer-heading-inline {
     font-family: 'Montserrat', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem; /* Reduced to bring accent line closer */
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin: 0.15rem 0 0.55rem 0;
     color: #ffffff !important;
   }
 
   .footer-links-inline {
     list-style: none;
-    padding: 0;
+    padding: 0 0 0 12px;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.55rem;
   }
   .footer-links-inline a {
     color: #e2e8f0;
     text-decoration: none;
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.78rem;
+    font-weight: 400;
     transition: color 0.2s;
   }
   .footer-links-inline a:hover {
-    color: #8bc34a;
+    color: #9ae682;
   }
   .highlight-link-inline {
-    color: #8bc34a !important;
+    color: #a3e695 !important;
     font-weight: 700 !important;
   }
 
+  .contact-info-inline {
+    padding-left: 20px;
+  }
   .contact-info-inline p {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    margin-bottom: 1.2rem;
+    margin: 0 0 0.95rem 0;
     color: #e2e8f0;
-    line-height: 1.4;
-    font-size: 0.9rem;
+    line-height: 1.38;
+    font-size: 0.78rem;
     font-family: 'Inter', sans-serif;
-    font-weight: 500;
+    font-weight: 400;
+  }
+  .contact-mail-row-inline {
+    align-items: center !important;
+  }
+  .contact-loc-indent-inline {
+    display: inline-block;
+    padding-left: 16px;
   }
   .contact-info-inline svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     color: #ffffff;
     flex-shrink: 0;
-    margin-top: 2px;
+    margin-top: 1px;
   }
 
   /* Emergency Button */
   .emergency-btn-inline {
-    background-color: #dc2626; /* bright red */
-    border-radius: 40px;
-    padding: 0.5rem 1.5rem 0.5rem 0.5rem;
+    background-color: #d60000;
+    border-radius: 999px;
+    padding: 0.65rem 1.65rem 0.65rem 1.05rem;
     display: inline-flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.85rem;
     border: none;
     color: white;
-    margin-top: 1rem;
+    margin-top: 0.35rem;
+    margin-left: 5.5rem;
     cursor: pointer;
     transition: transform 0.2s, background-color 0.2s;
     width: fit-content;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
   }
   .emergency-btn-inline:hover {
     background-color: #b91c1c;
-    transform: scale(1.05);
+    transform: scale(1.04);
   }
   .emergency-icon-inline {
     background-color: #ffffff;
-    color: #dc2626;
-    width: 45px;
-    height: 45px;
+    color: #d60000;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-shrink: 0;
   }
   .emergency-text-inline {
     text-align: left;
   }
   .emergency-number-inline {
     font-family: 'Montserrat', sans-serif;
-    font-size: 1.2rem;
-    font-weight: 900;
-    line-height: 1;
-    margin-bottom: 0.1rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 0.12rem;
+    letter-spacing: 0.3px;
   }
   .emergency-label-inline {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 800;
     line-height: 1;
+    letter-spacing: 0.4px;
   }
 
   /* Copyright */
   .footer-copyright-inline {
     text-align: center;
     font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    color: #475569;
+    font-size: 0.78rem;
+    color: #4b5e48;
     font-weight: 500;
   }
 

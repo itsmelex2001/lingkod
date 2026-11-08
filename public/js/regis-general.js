@@ -1,4 +1,4 @@
-// regis-general.js — General Management Registration & Dynamic Inquiry Form
+// regis-general.js — General Medical Registration & Dynamic Inquiry Form
 
 document.addEventListener("DOMContentLoaded", () => {
   const birthdateInput = document.getElementById("birthdate");
@@ -160,10 +160,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (scheduledTimeInput) scheduledTimeInput.required = true;
 
       if (lblComplaint) {
-        lblComplaint.innerHTML = `Health Concerns <span class="asterisk">*</span>`;
+        lblComplaint.innerHTML = `Chief Complaint <span class="asterisk">*</span>`;
       }
       if (remarksTextarea) {
-        remarksTextarea.placeholder = "Additional observations, symptoms, or inquiry details (optional)...";
+        remarksTextarea.placeholder = "Additional observations, chief complaint, or inquiry details (optional)...";
         remarksTextarea.rows = 2;
       }
       if (submitBtn) {
@@ -406,14 +406,19 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!firstInvalidEl) firstInvalidEl = contactInput;
       }
 
-      // ── Step G: Health Concern / Inquiry Question
+      // ── Step G: Chief Complaint / Inquiry Question
       if (!complaintSelect.value.trim()) {
-        markFieldError(complaintSelect, isInquiry ? "Please select inquiry subject." : "Please select primary health concern.");
+        markFieldError(complaintSelect, isInquiry ? "Please select inquiry subject." : "Please select primary chief complaint.");
         if (!firstInvalidEl) firstInvalidEl = complaintSelect;
       }
 
       // If any field failed validation, scroll to and focus the FIRST invalid field only
       if (firstInvalidEl) {
+        const parentPhase = firstInvalidEl.closest(".form-phase");
+        if (parentPhase && typeof window.jumpToPhase === "function") {
+          const pNum = parseInt(parentPhase.dataset.phase, 10);
+          if (pNum) window.jumpToPhase(pNum);
+        }
         firstInvalidEl.scrollIntoView({ behavior: "smooth", block: "center" });
         firstInvalidEl.focus();
         return;
@@ -462,7 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
         specialty: (lockedSpecialtyInput && lockedSpecialtyInput.value.trim()) || (specialtySelect ? specialtySelect.value.trim() : "") || effectiveService || "",
         appointment_date: isInquiry ? null : scheduledDateInput.value.trim(),
         scheduled_time: isInquiry ? null : scheduledTimeInput.value.trim(),
-        assigned_doctor: doctorParam || null,
+        assigned_doctor: null,
         website_url: document.getElementById("website_url")?.value || ""
       };
 

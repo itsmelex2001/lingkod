@@ -139,7 +139,7 @@ function showFirstTimePatientNotice(onClose) {
             <div class="ftp-policy-grid">
               <div class="ftp-policy-item">
                 <span class="ftp-policy-label">Appointment Type</span>
-                <span class="ftp-policy-value"><span class="ftp-dot"></span> Walk-in</span>
+                <span class="ftp-policy-value"><span class="ftp-dot"></span> Appointment Only</span>
               </div>
               <div class="ftp-policy-item">
                 <span class="ftp-policy-label">Consultation Mode</span>
@@ -194,7 +194,9 @@ async function requireLogin(expectedRole = null) {
     const res  = await fetch(`${API_BASE}/auth.php?action=check`);
     const data = await res.json();
     if (!data.loggedIn) {
-      window.location.href = '/sdn/pages/login.php';
+      window.location.href = (expectedRole === 'admin' || expectedRole === 'staff')
+        ? '/sdn/pages/portal@admin$staff_2026.php'
+        : '/sdn/pages/login.php';
       return false;
     }
     if (data.csrf_token) {
@@ -202,12 +204,16 @@ async function requireLogin(expectedRole = null) {
     }
     if (expectedRole && data.role !== expectedRole) {
       alert('Access denied: insufficient permissions.');
-      window.location.href = '/sdn/pages/login.php';
+      window.location.href = (expectedRole === 'admin' || expectedRole === 'staff')
+        ? '/sdn/pages/portal@admin$staff_2026.php'
+        : '/sdn/pages/login.php';
       return false;
     }
     return data;
   } catch {
-    window.location.href = '/sdn/pages/login.php';
+    window.location.href = (expectedRole === 'admin' || expectedRole === 'staff')
+      ? '/sdn/pages/portal@admin$staff_2026.php'
+      : '/sdn/pages/login.php';
     return false;
   }
 }

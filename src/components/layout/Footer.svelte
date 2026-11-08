@@ -39,7 +39,7 @@
     
     <div class="footer-divider"></div>
     <div class="footer-bottom">
-      <p>&copy; 2026 Service Delivery Network (LINKod). All Rights Reserved.</p>
+      <p>&copy; 2026 Service Delivery Network (LINGKOD). All Rights Reserved.</p>
     </div>
   </div>
 </footer>

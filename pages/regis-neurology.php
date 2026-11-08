@@ -1,10 +1,10 @@
 <?php session_start(); ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" class="regis-page">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Patient Registration</title>
+    <title>Neurology Registration | LINGKOD</title>
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/forms.css?v=<?= time() ?>" />
@@ -41,8 +41,6 @@
         </div>
       </div>
 
-      <!-- Returning Patient Verification Box -->
-      <?php require_once __DIR__ . '/returning-patient-verify-box.php'; ?>
 
       <?php if (!empty($_GET['service']) || !empty($_GET['spec'])): ?>
       <div class="service-selected-banner">
@@ -59,78 +57,105 @@
       </div>
       <?php endif; ?>
 
-      <form id="regForm">
+            <!-- 3-Phase Stepper Indicator (Line & Dot) -->
+      <div class="stepper-wrapper">
+        <div class="stepper-line-container">
+          <div class="stepper-line-bg"></div>
+          <div class="stepper-line-fill" id="stepperLineFill" style="width: 0%;"></div>
+        </div>
+        <div class="stepper-steps">
+          <div class="stepper-node active" data-step="1">
+            <div class="stepper-dot"><span class="dot-inner"></span></div>
+            <div class="stepper-text">
+              <span class="stepper-phase-num">Phase 1</span>
+              <span class="stepper-phase-name">Personal Information</span>
+            </div>
+          </div>
+          <div class="stepper-node" data-step="2">
+            <div class="stepper-dot"><span class="dot-inner"></span></div>
+            <div class="stepper-text">
+              <span class="stepper-phase-num">Phase 2</span>
+              <span class="stepper-phase-name">Medical Information</span>
+            </div>
+          </div>
+          <div class="stepper-node" data-step="3">
+            <div class="stepper-dot"><span class="dot-inner"></span></div>
+            <div class="stepper-text">
+              <span class="stepper-phase-num">Phase 3</span>
+              <span class="stepper-phase-name">Appointment Details</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <form id="regForm" novalidate>
         <input type="hidden" id="department" value="neurology" />
         <!-- Anti-bot honeypot field -->
         <input type="text" id="website_url" name="website_url" style="display:none !important; position:absolute; left:-9999px;" tabindex="-1" autocomplete="off" />
 
-        <div class="form-landscape-grid">
-          <!-- Column 1: Personal Information -->
-          <div class="form-landscape-col">
-            <div class="form-section flex-1">
+        <div class="form-phase-container">
+          <!-- Phase 1: Personal Information -->
+          <div class="form-phase active" id="phase1" data-phase="1">
+            <div class="phase-header">
               <h3><span class="sec-num">1</span> Personal Information</h3>
-              <div class="grid-row name-grid-row" style="grid-template-columns: 1fr 1fr 85px;">
-                <div class="form-group">
-                  <label>First Name <span class="asterisk">*</span></label>
-                  <input id="firstName" type="text" placeholder="First Name" maxlength="60" required />
-                </div>
-                <div class="form-group">
-                  <label>Last Name <span class="asterisk">*</span></label>
-                  <input id="lastName" type="text" placeholder="Last Name" maxlength="60" required />
-                </div>
-                <div class="form-group">
-                  <label>M.I. <span style="font-weight:400; font-size:0.75rem; color:#94a3b8;">(Opt)</span></label>
-                  <input type="text" id="middleInitial" placeholder="e.g. B" maxlength="5" />
-                </div>
-              </div>
-              <input type="hidden" id="fullName" />
+              <p class="phase-subtitle">Step 1 of 3 • Patient Demographics</p>
+            </div>
 
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>HRN</label>
-                  <input type="text" id="hrn" placeholder="Auto-generated" readonly tabindex="-1" />
-                </div>
-                <div class="form-group">
-                  <label>Gender <span class="asterisk">*</span></label>
-                  <select id="gender" required>
-                    <option value="" disabled selected>Select gender...</option>
-                    <option>Male</option>
-                    <option>Female</option>
-                    <option>Other</option>
-                  </select>
-                </div>
+            <div class="grid-row name-grid-row" style="grid-template-columns: 1fr 1fr 85px;">
+              <div class="form-group">
+                <label>First Name <span class="asterisk">*</span></label>
+                <input id="firstName" type="text" placeholder="First Name" maxlength="60" required />
               </div>
-
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>Birthdate <span class="asterisk">*</span></label>
-                  <input type="date" id="birthdate" min="<?= date('Y-m-d', strtotime('-120 years')) ?>" max="<?= date('Y-m-d') ?>" required />
-                </div>
-                <div class="form-group">
-                  <label>Age</label>
-                  <input type="number" id="age" placeholder="Age" readonly tabindex="-1" />
-                </div>
+              <div class="form-group">
+                <label>Last Name <span class="asterisk">*</span></label>
+                <input id="lastName" type="text" placeholder="Last Name" maxlength="60" required />
               </div>
-
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>Contact Number <span class="asterisk">*</span></label>
-                  <input id="contactNumber" type="tel" placeholder="09XXXXXXXXX" pattern="^(09|\+639)\d{9}$" maxlength="13" title="Format: 09XXXXXXXXX or +639XXXXXXXXX" required />
-                </div>
-                <div class="form-group">
-                  <label>Email Address</label>
-                  <input id="emailAddress" type="email" placeholder="Optional" maxlength="100" />
-                </div>
+              <div class="form-group">
+                <label>M.I. <span style="font-weight:400; font-size:0.75rem; color:#94a3b8;">(Opt)</span></label>
+                <input type="text" id="middleInitial" placeholder="e.g. B" maxlength="5" />
               </div>
+            </div>
+            <input type="hidden" id="fullName" />
 
+            <div class="grid-row" style="grid-template-columns: 1fr 1.2fr 75px;">
+              <div class="form-group">
+                <label>Gender <span class="asterisk">*</span></label>
+                <select id="gender" required>
+                  <option value="" disabled selected>Select gender...</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Birthdate <span class="asterisk">*</span></label>
+                <input type="date" id="birthdate" min="<?= date('Y-m-d', strtotime('-120 years')) ?>" max="<?= date('Y-m-d') ?>" required />
+              </div>
+              <div class="form-group">
+                <label>Age</label>
+                <input type="number" id="age" placeholder="Age" readonly tabindex="-1" />
+              </div>
+            </div>
+
+            <div class="grid-row">
+              <div class="form-group">
+                <label>Contact Number <span class="asterisk">*</span></label>
+                <input id="contactNumber" type="tel" placeholder="09XXXXXXXXX" pattern="^(09|\+639)\d{9}$" maxlength="13" title="Format: 09XXXXXXXXX or +639XXXXXXXXX" required />
+              </div>
+              <div class="form-group">
+                <label>Email Address</label>
+                <input id="emailAddress" type="email" placeholder="Optional" maxlength="100" />
+              </div>
+            </div>
+
+            <div class="grid-row" style="grid-template-columns: 1.4fr 1fr; align-items: flex-end;">
               <div class="form-group">
                 <label>Complete Address <span class="asterisk">*</span></label>
                 <input id="address" type="text" placeholder="Enter full address" maxlength="255" required />
               </div>
-
               <div class="form-group" id="groupCompanion">
                 <label>Accompanying companion? <span class="asterisk">*</span></label>
-                <div class="radio-group">
+                <div class="radio-group" style="height: 31px; display: flex; align-items: center;">
                   <label><input type="radio" name="companion" value="yes" /> Yes</label>
                   <label><input type="radio" name="companion" value="no" checked /> No</label>
                 </div>
@@ -138,12 +163,16 @@
             </div>
           </div>
 
-          <!-- Column 2: Medical Information -->
-          <div class="form-landscape-col">
-            <div class="form-section flex-1" id="secMedicalInfo">
+          <!-- Phase 2: Medical Information -->
+          <div class="form-phase" id="phase2" data-phase="2" style="display: none;">
+            <div class="phase-header">
               <h3><span class="sec-num">2</span> Medical Information</h3>
+              <p class="phase-subtitle">Step 2 of 3 • Clinical Assessment & Chief Complaint</p>
+            </div>
+
+            <div class="grid-row">
               <div class="form-group" id="groupChiefComplaints">
-                <label id="lblChiefComplaints">Health Concerns <span class="asterisk">*</span></label>
+                <label id="lblChiefComplaints">Chief Complaint <span class="asterisk">*</span></label>
                 <select id="chiefComplaints" required>
                   <option value="" disabled selected>Select primary neurological concern...</option>
                   <option value="Migraine, Tension & Chronic Severe Headaches">Migraine, Tension &amp; Chronic Severe Headaches</option>
@@ -155,7 +184,7 @@
                   <option value="Memory Decline, Cognitive Impairment & Dementia Evaluation">Memory Decline, Cognitive Impairment &amp; Dementia Evaluation</option>
                   <option value="Facial Weakness / Bell's Palsy">Facial Weakness / Bell's Palsy</option>
                   <option value="Nerve Compression / Sciatica / Radiculopathy">Nerve Compression / Sciatica / Radiculopathy</option>
-                  <option value="Other">Other Neurological Symptoms / Concern (specify below)</option>
+                  <option value="Other">Other Neurological Chief Complaint / Concern (specify below)</option>
                 </select>
               </div>
 
@@ -169,35 +198,39 @@
                   <option>Medication Refill</option>
                 </select>
               </div>
+            </div>
 
-              <div class="form-group">
-                <label>Description of disease/illness or symptoms</label>
-                <textarea id="illnessDescription" placeholder="Additional details, notes, or inquiry description..." rows="3" style="min-height: 75px;"></textarea>
-              </div>
+            <div class="form-group">
+              <label>Description of disease/illness or chief complaint</label>
+              <textarea id="illnessDescription" placeholder="Additional details, notes, or chief complaint description..." rows="3" style="min-height: 60px; height: 68px;"></textarea>
             </div>
           </div>
 
-          <!-- Column 3: Appointment Details -->
-          <div class="form-landscape-col">
-            <div class="form-section flex-1" id="secAppointmentDetails">
+          <!-- Phase 3: Appointment Details -->
+          <div class="form-phase" id="phase3" data-phase="3" style="display: none;">
+            <div class="phase-header">
               <h3><span class="sec-num">3</span> Appointment Details</h3>
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>Type of Client <span class="asterisk">*</span></label>
-                  <select id="patientType" required>
-                    <option value="" disabled selected>Select client type...</option>
-                    <option value="first-time">First Time Patient</option>
-                    <option value="returning">Returning Patient</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Type of Appointment <span class="asterisk">*</span></label>
-                  <select id="appointmentType" required>
-                    <option value="online" selected>Online Scheduled Appointment</option>
-                  </select>
-                </div>
-              </div>
+              <p class="phase-subtitle">Step 3 of 3 • Scheduling & Preferences</p>
+            </div>
 
+            <div class="grid-row">
+              <div class="form-group">
+                <label>Type of Client <span class="asterisk">*</span></label>
+                <select id="patientType" required>
+                  <option value="" disabled selected>Select client type...</option>
+                  <option value="first-time">First Time Patient</option>
+                  <option value="returning">Returning Patient</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Type of Appointment <span class="asterisk">*</span></label>
+                <select id="appointmentType" required>
+                  <option value="online" selected>Online Scheduled Appointment</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid-row">
               <div class="form-group">
                 <label>Consultation Mode <span class="asterisk">*</span></label>
                 <select id="consultationMode" required>
@@ -206,29 +239,42 @@
                   <option>E-consultation</option>
                 </select>
               </div>
-
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>Appointment Date <span class="asterisk">*</span></label>
-                  <input type="date" id="appointmentDate" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>" required />
-                </div>
-                <div class="form-group">
-                  <label>Appointment Time <span class="asterisk">*</span></label>
-                  <input type="time" id="appointmentTime" required />
-                </div>
-              </div>
-
               <div class="form-group">
                 <label>Referral Source</label>
                 <input id="referralSource" type="text" placeholder="Optional" />
               </div>
             </div>
+
+            <div class="grid-row">
+              <div class="form-group">
+                <label>Appointment Date <span class="asterisk">*</span></label>
+                <input type="date" id="appointmentDate" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>" required />
+              </div>
+              <div class="form-group">
+                <label>Appointment Time <span class="asterisk">*</span></label>
+                <input type="time" id="appointmentTime" required />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="form-landscape-footer">
-          <p class="required-legend"><span class="asterisk">*</span> Indicates a required field</p>
-          <button type="submit" class="btn-submit">Confirm Registration</button>
+        <div class="form-phase-footer">
+          <div class="footer-left">
+            <button type="button" class="btn-phase-prev" id="btnPrevPhase" style="display: none;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+              <span>Back</span>
+            </button>
+            <p class="required-legend"><span class="asterisk">*</span> Indicates a required field</p>
+          </div>
+          <div class="footer-right">
+            <button type="button" class="btn-phase-next" id="btnNextPhase">
+              <span>Continue to Medical Info</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <button type="submit" class="btn-submit" id="btnSubmitPhase" style="display: none;">
+              Confirm Registration
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -287,10 +333,6 @@
                   <span class="print-label">Gender</span>
                   <span class="print-value" id="p-gender"></span>
                 </div>
-                <div class="print-field">
-                  <span class="print-label">HRN</span>
-                  <span class="print-value" id="p-hrn"></span>
-                </div>
               </div>
               <div class="print-row">
                 <div class="print-field">
@@ -330,7 +372,7 @@
               <div class="print-section-title">Medical Information</div>
               <div class="print-row">
                 <div class="print-field full">
-                  <span class="print-label">Health Concerns</span>
+                  <span class="print-label">Chief Complaint</span>
                   <span class="print-value" id="p-complaints"></span>
                 </div>
               </div>
@@ -586,6 +628,7 @@
     <script src="/sdn/public/js/utils.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/navigation.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/print-pdf-setup.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/regis-stepper.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/regis-neurology.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/modal-export.js?v=<?= time() ?>"></script>
   </body>

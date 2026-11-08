@@ -49,7 +49,7 @@
   <!-- Branding Left Side -->
   <div class="brand-showcase">
     <h1>Welcome to</h1>
-    <img src="/sdn/public/assets/linkod_brush.png" alt="Linkod" class="linkod-brush" />
+    <img src="/sdn/public/assets/linkod_brush.png" alt="LINGKOD" class="linkod-brush" />
     <p>Seamless healthcare access and delivery.</p>
   </div>
 

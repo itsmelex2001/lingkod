@@ -6,14 +6,15 @@ export const DEPARTMENTS = {
   ALL: 'All',
   PSYCHIATRY: 'Psychiatry',
   NEUROLOGY: 'Neurology',
-  GENERAL_MANAGEMENT: 'General Management'
+  GENERAL_MEDICAL: 'General Medical',
+  GENERAL_MANAGEMENT: 'General Medical'
 };
 
 export const DEPARTMENT_LIST = [
   DEPARTMENTS.ALL,
   DEPARTMENTS.PSYCHIATRY,
   DEPARTMENTS.NEUROLOGY,
-  DEPARTMENTS.GENERAL_MANAGEMENT
+  DEPARTMENTS.GENERAL_MEDICAL
 ];
 
 export const DEPARTMENT_METADATA = {
@@ -31,9 +32,9 @@ export const DEPARTMENT_METADATA = {
     badgeColor: '#3b82f6',
     badgeBg: '#eff6ff'
   },
-  [DEPARTMENTS.GENERAL_MANAGEMENT]: {
-    label: 'General Management / Triage',
-    description: 'Routine check-ups, acute primary care, preventative consultations, and general triage.',
+  [DEPARTMENTS.GENERAL_MEDICAL]: {
+    label: 'General Medical / Triage',
+    description: 'Routine check-ups, acute primary care, preventative consultations, and general medical triage.',
     code: 'GEN',
     badgeColor: '#059669',
     badgeBg: '#ecfdf5'

@@ -130,10 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (appointmentTimeInput) appointmentTimeInput.required = true;
 
       if (lblChiefComplaints) {
-        lblChiefComplaints.innerHTML = `Health Concerns <span class="asterisk">*</span>`;
+        lblChiefComplaints.innerHTML = `Chief Complaint <span class="asterisk">*</span>`;
       }
       if (recommendationRemarksTextarea) {
-        recommendationRemarksTextarea.placeholder = "Additional details, recommendations, or symptoms...";
+        recommendationRemarksTextarea.placeholder = "Additional details, recommendations, or chief complaint...";
         recommendationRemarksTextarea.rows = 2;
       }
       if (submitBtn) {
@@ -330,6 +330,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (firstInvalidEl) {
+        const parentPhase = firstInvalidEl.closest(".form-phase");
+        if (parentPhase && typeof window.jumpToPhase === "function") {
+          const pNum = parseInt(parentPhase.dataset.phase, 10);
+          if (pNum) window.jumpToPhase(pNum);
+        }
         firstInvalidEl.scrollIntoView({ behavior: "smooth", block: "center" });
         firstInvalidEl.focus();
         return;
@@ -381,7 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
         appointment_date: isInquiry ? null : appointmentDateInput.value.trim(),
         scheduled_time: isInquiry ? null : appointmentTimeInput.value.trim(),
         referral_source: (document.getElementById("referralSource")?.value || "").trim(),
-        assigned_doctor: doctorParam || null,
+        assigned_doctor: null,
         website_url: document.getElementById("website_url")?.value || ""
       };
 

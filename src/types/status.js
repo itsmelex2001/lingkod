@@ -12,7 +12,7 @@ export const DOCTOR_STATUS = {
 };
 
 export const DOCTOR_STATUS_LABELS = {
-  [DOCTOR_STATUS.AVAILABLE]: 'Available',
+  [DOCTOR_STATUS.AVAILABLE]: 'Open (Subject to Approval)',
   [DOCTOR_STATUS.IN_CLINIC]: 'In Clinic',
   [DOCTOR_STATUS.ON_BREAK]: 'On Break',
   [DOCTOR_STATUS.EMERGENCY]: 'Emergency',
@@ -44,7 +44,7 @@ export const REMINDER_STATUS = {
  * @returns {{ label: string, pillClass: string, isBookable: boolean, buttonText: string }}
  */
 export function getDoctorDisplayStatus(doc) {
-  if (!doc) return { label: 'Available', pillClass: 'bg-avail', isBookable: true, buttonText: 'Book' };
+  if (!doc) return { label: 'Open (Requires Approval)', pillClass: 'bg-avail', isBookable: true, buttonText: 'Book' };
 
   const booked = parseInt(doc.booked_slots || 0, 10);
   const total = parseInt(doc.total_slots || 20, 10);
@@ -101,9 +101,9 @@ export function getDoctorDisplayStatus(doc) {
     };
   }
 
-  // Default: Available
+  // Default: Open (Requires Approval)
   return {
-    label: 'Available',
+    label: 'Open (Requires Approval)',
     pillClass: 'bg-avail',
     isBookable: true,
     buttonText: 'Book'

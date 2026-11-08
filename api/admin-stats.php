@@ -38,41 +38,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Recent system logs for overview
     $alerts = getAdminActivity($pdo, 5);
 
-    // Chart Data Generation
+    // Chart Data Generation (Combined + 3 Departments: General Medical, Neurology, Psychiatry)
     $chartData = [];
     $chartLabels = [];
+    $deptSeries = [
+        'general'    => [],
+        'neurology'  => [],
+        'psychiatry' => []
+    ];
     $chartFilter = $_GET['chart'] ?? 'year';
 
+    $classifyDept = function (?string $raw): string {
+        $c = strtolower(trim($raw ?? ''));
+        if (str_contains($c, 'psych') || str_contains($c, 'opu')) return 'psychiatry';
+        if (str_contains($c, 'neuro')) return 'neurology';
+        return 'general';
+    };
+
     if ($chartFilter === 'year') {
-        $stmt = $pdo->query("SELECT MONTH(created_at) as m, COUNT(*) as c FROM patients WHERE YEAR(created_at) = YEAR(CURDATE()) GROUP BY m");
-        $counts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $stmt = $pdo->query("SELECT MONTH(created_at) as m, department, COUNT(*) as c FROM patients WHERE YEAR(created_at) = YEAR(CURDATE()) GROUP BY m, department");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $counts = [];
+        $deptCounts = ['general' => [], 'neurology' => [], 'psychiatry' => []];
+        foreach ($rows as $r) {
+            $m = (int)$r['m'];
+            $cnt = (int)$r['c'];
+            $dk = $classifyDept($r['department']);
+            $counts[$m] = ($counts[$m] ?? 0) + $cnt;
+            $deptCounts[$dk][$m] = ($deptCounts[$dk][$m] ?? 0) + $cnt;
+        }
         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         for ($i = 1; $i <= 12; $i++) {
             $chartLabels[] = $months[$i - 1];
             $chartData[] = $counts[$i] ?? 0;
+            $deptSeries['general'][]    = $deptCounts['general'][$i] ?? 0;
+            $deptSeries['neurology'][]  = $deptCounts['neurology'][$i] ?? 0;
+            $deptSeries['psychiatry'][] = $deptCounts['psychiatry'][$i] ?? 0;
         }
     } elseif ($chartFilter === 'month') {
-        $stmt = $pdo->query("SELECT DAY(created_at) as d, COUNT(*) as c FROM patients WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) GROUP BY d");
-        $counts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $stmt = $pdo->query("SELECT DAY(created_at) as d, department, COUNT(*) as c FROM patients WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) GROUP BY d, department");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $counts = [];
+        $deptCounts = ['general' => [], 'neurology' => [], 'psychiatry' => []];
+        foreach ($rows as $r) {
+            $d = (int)$r['d'];
+            $cnt = (int)$r['c'];
+            $dk = $classifyDept($r['department']);
+            $counts[$d] = ($counts[$d] ?? 0) + $cnt;
+            $deptCounts[$dk][$d] = ($deptCounts[$dk][$d] ?? 0) + $cnt;
+        }
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, date('m'), date('Y'));
         for ($i = 1; $i <= $daysInMonth; $i++) {
             $chartLabels[] = $i;
             $chartData[] = $counts[$i] ?? 0;
+            $deptSeries['general'][]    = $deptCounts['general'][$i] ?? 0;
+            $deptSeries['neurology'][]  = $deptCounts['neurology'][$i] ?? 0;
+            $deptSeries['psychiatry'][] = $deptCounts['psychiatry'][$i] ?? 0;
         }
     } elseif ($chartFilter === 'week') {
-        // YEARWEEK(..., 1) means week starts on Monday (MySQL standard). 
-        // DAYOFWEEK() returns 1=Sun, 2=Mon... 7=Sat
-        // Let's group by DATE(created_at) for the current week
-        $stmt = $pdo->query("SELECT DATE(created_at) as d, COUNT(*) as c FROM patients WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1) GROUP BY d");
-        $counts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $stmt = $pdo->query("SELECT DATE(created_at) as d, department, COUNT(*) as c FROM patients WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1) GROUP BY d, department");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $counts = [];
+        $deptCounts = ['general' => [], 'neurology' => [], 'psychiatry' => []];
+        foreach ($rows as $r) {
+            $d = $r['d'];
+            $cnt = (int)$r['c'];
+            $dk = $classifyDept($r['department']);
+            $counts[$d] = ($counts[$d] ?? 0) + $cnt;
+            $deptCounts[$dk][$d] = ($deptCounts[$dk][$d] ?? 0) + $cnt;
+        }
         
-        // Generate dates for current week (Monday to Sunday)
         $monday = date('Y-m-d', strtotime('monday this week'));
         $days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         for ($i = 0; $i < 7; $i++) {
             $currentDate = date('Y-m-d', strtotime($monday . " +$i days"));
             $chartLabels[] = $days[$i];
             $chartData[] = $counts[$currentDate] ?? 0;
+            $deptSeries['general'][]    = $deptCounts['general'][$currentDate] ?? 0;
+            $deptSeries['neurology'][]  = $deptCounts['neurology'][$currentDate] ?? 0;
+            $deptSeries['psychiatry'][] = $deptCounts['psychiatry'][$currentDate] ?? 0;
         }
     }
 
@@ -82,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     respondOk([
         'chart_labels' => $chartLabels,
         'chart_data' => $chartData,
+        'chart_datasets' => $deptSeries,
         'active_staff' => $staffStats['active_staff'] ?? 0,
         'todays_patients' => $todaysPatients,
         'pending_actions' => $pendingActions,

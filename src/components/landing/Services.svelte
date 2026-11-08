@@ -5,8 +5,8 @@
   const departments = [
     {
       id: 'general',
-      name: 'General<br>Management',
-      subname: 'General Management unit',
+      name: 'General<br>Medical',
+      subname: 'General Medical unit',
       image: '/sdn/public/assets/6214996979771708504.jpg',
       link: '/sdn/pages/regis-general.php',
       services: [

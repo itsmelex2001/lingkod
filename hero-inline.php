@@ -10,7 +10,7 @@
       <div class="hero-left-col">
         <span class="mmwgh-text-inline">MMWGH</span>
         <h2 class="hero-subtitle-inline">
-          Localized Network and Knowledge-base<br>for Online Service Delivery
+          Localized Integrated Network for Governance,<br>Knowledge, and Operation in Digital Healthcare
         </h2>
       </div>
       
@@ -18,10 +18,23 @@
       <img src="/sdn/public/assets/lingkod_brush.png?v=<?= time() ?>" alt="Lingkod" class="lingkod-brush-inline" />
     </div>
 
-    <p class="hero-description-inline">
+    <p class="hero-description-inline" data-i18n-html="hero_desc">
       Dedicated to promoting total wellness, the hospital delivers quality, compassionate, and patient-centered<br>
       healthcare services to the community and surrounding regions.
     </p>
+
+    <!-- Hero Action Buttons -->
+    <div class="hero-cta-group-inline">
+      <a href="/sdn/pages/department-select.php" class="hero-btn-inline hero-btn-book-inline" onclick="if(typeof openBookingConfirmModal === 'function') openBookingConfirmModal(event);">
+        <span data-i18n="hero_book">Book an Appointment</span>
+      </a>
+      <a href="/sdn/pages/schedules.php" target="_blank" rel="noopener noreferrer" class="hero-btn-inline hero-btn-schedule-inline">
+        <span data-i18n="hero_schedule">View Schedule</span>
+        <svg class="hero-btn-arrow-inline" width="26" height="20" viewBox="0 0 26 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M1 10H24M24 10L16 2M24 10L16 18" stroke="#15803d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
 
   </div>
 </section>
@@ -34,7 +47,7 @@
     background-image: url('/sdn/public/assets/LINKod 2.1.png');
     background-size: cover;
     background-position: center;
-    min-height: 82vh;
+    min-height: calc(100vh - 76px);
     display: flex !important;
     flex-direction: column;
     justify-content: center;
@@ -101,19 +114,12 @@
   .hero-subtitle-inline {
     font-family: 'Inter', sans-serif;
     color: #ffffff;
-    font-size: 1.05rem;
-    font-weight: 800;
-    line-height: 1.4;
-    margin: 0;
-    letter-spacing: 0.5px;
-    /* Exact dark shadowing below the text */
-    text-shadow: 
-      2px 2px 0px rgba(0, 40, 10, 0.9), 
-      -1px -1px 0px rgba(0, 40, 10, 0.9), 
-      1px -1px 0px rgba(0, 40, 10, 0.9), 
-      -1px 1px 0px rgba(0, 40, 10, 0.9), 
-      1px 1px 0px rgba(0, 40, 10, 0.9),
-      3px 5px 12px rgba(0, 0, 0, 0.8);
+    font-size: clamp(0.78rem, 1.12vw, 0.92rem);
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 4px 0 0 2px;
+    letter-spacing: 0.2px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65), 1px 2px 3px rgba(0, 0, 0, 0.5);
   }
 
   /* Authentic Avallon Alt brush script rendering */
@@ -139,6 +145,89 @@
     margin: 35px auto 0;
     text-shadow: 1px 2px 5px rgba(0,0,0,0.5);
     text-align: center;
+  }
+
+  .hero-cta-group-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 36px;
+    flex-wrap: wrap;
+  }
+
+  .hero-btn-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 245px;
+    height: 54px;
+    padding: 0 28px;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    transition:
+      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease,
+      background-color 0.25s ease,
+      color 0.25s ease;
+    will-change: transform, box-shadow;
+  }
+
+  .hero-btn-book-inline {
+    background-color: #009a17;
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    border: 2px solid transparent;
+  }
+
+  .hero-btn-book-inline:hover {
+    background-color: #00b31b;
+    color: #ffffff;
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 14px 28px rgba(0, 154, 23, 0.45), 0 6px 14px rgba(0, 0, 0, 0.28);
+  }
+
+  .hero-btn-book-inline:active {
+    transform: translateY(1px) scale(0.97);
+    background-color: #008013;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  }
+
+  .hero-btn-schedule-inline {
+    background-color: #ffffff;
+    color: #4d7c2b;
+    font-weight: 500;
+    gap: 18px;
+    border: 2px solid transparent;
+  }
+
+  .hero-btn-arrow-inline {
+    display: inline-block;
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    flex-shrink: 0;
+    will-change: transform;
+  }
+
+  .hero-btn-schedule-inline:hover {
+    background-color: #ffffff;
+    color: #15803d;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32);
+  }
+
+  .hero-btn-schedule-inline:hover .hero-btn-arrow-inline {
+    transform: translateX(14px);
+  }
+
+  .hero-btn-schedule-inline:active {
+    transform: translateY(1px) scale(0.97);
+    background-color: #ecfccb;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   }
 
   /* Responsive Adjustments */
@@ -171,6 +260,17 @@
     .hero-description-inline {
       margin-top: 25px;
       font-size: 0.85rem;
+    }
+    .hero-cta-group-inline {
+      flex-direction: column;
+      width: 100%;
+      gap: 14px;
+      margin-top: 26px;
+    }
+    .hero-btn-inline {
+      width: 100%;
+      max-width: 320px;
+      min-width: 0;
     }
   }
 </style>

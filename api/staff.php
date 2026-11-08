@@ -317,7 +317,7 @@ if ($method === 'POST') {
     if (!$patient) respondErr("Patient $patientId not found.", 404);
 
     // Guard: cannot act on rejected or pending patients
-    if ($patient['status'] !== 'approved') {
+    if (!in_array($patient['status'], ['approved', 'arrived', 'ongoing', 'completed'])) {
         respondErr("Action denied: patient is not approved (status: {$patient['status']}).", 403);
     }
 

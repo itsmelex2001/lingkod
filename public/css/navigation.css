@@ -102,11 +102,12 @@
   content: none !important;
 }
 
-/* ── Login button matching screenshot ── */
+/* ── Login & Patient Portal button matching screenshot ── */
 .btn-login,
+.btn-patient-portal,
 .btn-logout {
   margin-left: 12px;
-  padding: 8px 24px;
+  padding: 8px 22px;
   background: #44bd32;
   border: none;
   color: #ffffff;
@@ -121,11 +122,10 @@
 }
 
 .btn-login:hover,
+.btn-patient-portal:hover,
 .btn-logout:hover {
   background: #3eb02c;
   transform: translateY(-1px);
-}
-    transform var(--transition);
 }
 
 .btn-nav-primary,
@@ -144,10 +144,11 @@
   transition: all var(--transition);
 }
 
-/* ── Login button & Nav Primary ── */
+/* ── Login & Patient Portal button & Nav Primary ── */
 .btn-login:hover,
+.btn-patient-portal:hover,
 .btn-nav-primary:hover {
-  background: #7bd362;
+  background: #3eb02c;
   color: var(--white);
   transform: translateY(-1px);
 }
@@ -161,8 +162,35 @@
   background: rgba(46, 204, 113, 0.1);
 }
 
-.btn-login:active {
+.btn-login:active,
+.btn-patient-portal:active {
   background: rgba(46, 204, 113, 0.18);
+}
+
+.btn-patient-portal {
+  margin-left: 10px;
+  padding: 7px 16px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  color: #ffffff;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+  box-shadow: none;
+}
+
+.btn-patient-portal:hover,
+.btn-nav-primary.btn-patient-portal:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #ffffff;
+  color: #ffffff;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-patient-portal:active {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 /* ── Logout button → red on hover ── */
@@ -290,12 +318,23 @@
   }
 
   .btn-login,
+  .btn-patient-portal,
   .btn-logout {
     margin-left: 0;
     width: 100%;
     margin-top: 8px;
     text-align: center;
     padding: 12px 18px;
+  }
+
+  .btn-patient-portal,
+  .btn-patient-portal:hover,
+  .btn-patient-portal:active {
+    color: #0d6b2e;
+    border-color: #b7d7c2;
+    background: #f4faf6;
+    box-shadow: none;
+    transform: none;
   }
 }
 
@@ -404,3 +443,120 @@
   }
 }
 
+
+.navbar {
+  height: 86px;
+}
+
+.logo {
+  height: 86px;
+}
+
+.logo img.logo-ver2-img,
+.logo img.logo-v3-img {
+  height: 124px;
+  max-height: none;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin-left: -10px;
+  margin-right: -21px;
+  transform: translateY(7px);
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+  gap: 1px;
+  transform: translateY(2px);
+}
+
+.logo-title-top {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.16;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+
+.logo-title-bottom {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.12;
+  letter-spacing: 0.3px;
+}
+
+.lang-switch {
+  position: relative;
+  margin-left: 4px;
+}
+
+.lang-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.lang-switch-btn svg {
+  color: #ffffff;
+}
+
+.lang-switch-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 148px;
+  padding: 6px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  z-index: 80;
+}
+
+.lang-switch-menu[hidden] {
+  display: none;
+}
+
+.lang-switch-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lang-switch-option:hover,
+.lang-switch-option.is-selected {
+  background: #f8fafc;
+}
+
+.lang-switch-option.is-selected::after {
+  content: "✓";
+  color: #0f172a;
+  font-weight: 700;
+}

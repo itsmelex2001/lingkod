@@ -28,44 +28,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // IntersectionObserver for scroll spy (updates active link while scrolling)
-  if (window.location.pathname.endsWith("index.php") || window.location.pathname === "/") {
-    const sections = document.querySelectorAll("section[id], main[id]");
-    if (sections.length > 0) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const id = entry.target.getAttribute("id");
-              const correspondingLink = Array.from(allNavLinks).find(
-                (link) => link.getAttribute("href") === `#${id}`
-              );
-              // Also check if we are at the very top (hero section)
-              if (window.scrollY < 100) {
-                const homeLink = Array.from(allNavLinks).find(
-                  (link) => link.getAttribute("href").includes("index.php")
-                );
-                if (homeLink) setActiveLink(homeLink);
-              } else if (correspondingLink) {
-                setActiveLink(correspondingLink);
-              }
-            }
-          });
-        },
-        { rootMargin: "-20% 0px -60% 0px" } // Trigger when section is roughly in the middle
-      );
-      sections.forEach((section) => observer.observe(section));
-      
-      // Fallback for top of page
-      window.addEventListener("scroll", () => {
-        if (window.scrollY < 100) {
-          const homeLink = Array.from(allNavLinks).find(
-            (link) => link.getAttribute("href").includes("index.php")
-          );
-          if (homeLink) setActiveLink(homeLink);
+  // Scroll spy (updates active link while scrolling through Home, Services, About, Location, Contact Us)
+  if (window.location.pathname.endsWith("index.php") || window.location.pathname.endsWith("/sdn/") || window.location.pathname === "/") {
+    const trackedIds = ["hero-new", "services-new", "about-new", "location-new", "footer-new"];
+    const trackedElements = trackedIds
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+
+    function updateActiveNavOnScroll() {
+      if (window.scrollY < 100) {
+        const homeLink = Array.from(allNavLinks).find(
+          (link) => (link.getAttribute("href") || "").includes("index.php")
+        );
+        if (homeLink) setActiveLink(homeLink);
+        return;
+      }
+
+      const triggerY = (navbar?.offsetHeight ?? 76) + window.innerHeight * 0.28;
+      let activeId = "hero-new";
+
+      for (const el of trackedElements) {
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= triggerY) {
+          activeId = el.id;
         }
-      }, { passive: true });
+      }
+
+      // If scrolled near the very bottom of the page, highlight Contact Us (#footer-new)
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 40) {
+        activeId = "footer-new";
+      }
+
+      if (activeId === "hero-new") {
+        const homeLink = Array.from(allNavLinks).find(
+          (link) => (link.getAttribute("href") || "").includes("index.php")
+        );
+        if (homeLink) setActiveLink(homeLink);
+      } else {
+        const correspondingLink = Array.from(allNavLinks).find(
+          (link) => link.getAttribute("href") === `#${activeId}`
+        );
+        if (correspondingLink) setActiveLink(correspondingLink);
+      }
     }
+
+    window.addEventListener("scroll", updateActiveNavOnScroll, { passive: true });
+    updateActiveNavOnScroll();
   }
 
   // ── Mobile menu toggle ────────────────────────────────────────────────

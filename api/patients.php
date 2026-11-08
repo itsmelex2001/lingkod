@@ -24,32 +24,140 @@ $method = $_SERVER['REQUEST_METHOD'];
 // ── GET ─────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
 
+    // Helper: attach previous appointments & visit count for a single patient or list
+    $attachPreviousHistory = function(PDO $pdo, array &$rows, bool $includeFullHistory = false): void {
+        if (empty($rows)) return;
+
+        // Fetch lightweight index of all appointments ordered chronologically
+        try {
+            $allStmt = $pdo->query("SELECT * FROM patients ORDER BY id ASC");
+            $allRecords = $allStmt ? $allStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (Throwable $e) {
+            $allRecords = [];
+        }
+
+        // Group records by canonical patient identity
+        $byIdentity = [];
+        foreach ($allRecords as $rec) {
+            $keys = [];
+            if (!empty($rec['user_id'])) $keys[] = 'u:' . $rec['user_id'];
+            if (!empty($rec['hrn']))     $keys[] = 'h:' . strtolower(trim($rec['hrn']));
+            if (!empty($rec['email']))   $keys[] = 'e:' . strtolower(trim($rec['email']));
+            if (!empty($rec['full_name'])) $keys[] = 'n:' . strtolower(preg_replace('/\s+/', ' ', trim($rec['full_name'])));
+
+            foreach ($keys as $k) {
+                $byIdentity[$k][$rec['id']] = $rec;
+            }
+        }
+
+        foreach ($rows as &$row) {
+            $rowId = (int)($row['id'] ?? 0);
+            $rowPid = $row['patient_id'] ?? '';
+            if (!$rowId && $rowPid) {
+                foreach ($allRecords as $ar) {
+                    if ($ar['patient_id'] === $rowPid) {
+                        $rowId = (int)$ar['id'];
+                        break;
+                    }
+                }
+            }
+
+            $lookupKeys = [];
+            if (!empty($row['user_id']))   $lookupKeys[] = 'u:' . $row['user_id'];
+            if (!empty($row['hrn']))       $lookupKeys[] = 'h:' . strtolower(trim($row['hrn']));
+            if (!empty($row['email']))     $lookupKeys[] = 'e:' . strtolower(trim($row['email']));
+            if (!empty($row['full_name'])) $lookupKeys[] = 'n:' . strtolower(preg_replace('/\s+/', ' ', trim($row['full_name'])));
+
+            $matchedMap = [];
+            foreach ($lookupKeys as $lk) {
+                if (!empty($byIdentity[$lk])) {
+                    foreach ($byIdentity[$lk] as $cid => $crec) {
+                        $matchedMap[$cid] = $crec;
+                    }
+                }
+            }
+
+            // Sort matched records by id ASC (chronological booking order)
+            ksort($matchedMap);
+            $priorList = [];
+            foreach ($matchedMap as $cid => $crec) {
+                if ($cid < $rowId && $crec['patient_id'] !== $rowPid) {
+                    $timeFormatted = !empty($crec['scheduled_time'])
+                        ? date('g:i A', strtotime($crec['scheduled_time']))
+                        : '8:00 AM';
+                    $dateFormatted = !empty($crec['appointment_date'])
+                        ? date('M j, Y', strtotime($crec['appointment_date']))
+                        : date('M j, Y', strtotime($crec['created_at']));
+                    $priorList[] = [
+                        'id'               => (int)$crec['id'],
+                        'patient_id'       => $crec['patient_id'],
+                        'department'       => $crec['department'],
+                        'appointment_date' => $crec['appointment_date'],
+                        'date_formatted'   => $dateFormatted,
+                        'scheduled_time'   => $crec['scheduled_time'],
+                        'time_formatted'   => $timeFormatted,
+                        'status'           => $crec['status'],
+                        'assigned_doctor'  => $crec['assigned_doctor'],
+                        'diagnosis'        => $crec['medical_history_diagnosis'] ?? null,
+                        'treatment'        => $crec['medical_history_treatment'] ?? null,
+                        'prescription'     => $crec['medical_history_prescription'] ?? null,
+                        'medications'      => $crec['active_medications'] ?? null
+                    ];
+                }
+            }
+
+            // Reverse so most recent previous appointment is first
+            $priorList = array_reverse($priorList);
+            $latestPrev = $priorList[0] ?? null;
+
+            $row['visit_count']               = count($matchedMap) ?: 1;
+            $row['previous_appointment_date'] = $latestPrev ? $latestPrev['date_formatted'] : null;
+            $row['previous_appointment_raw']  = $latestPrev ? $latestPrev['appointment_date'] : null;
+            $row['previous_appointment_time'] = $latestPrev ? $latestPrev['time_formatted'] : null;
+            $row['previous_department']       = $latestPrev ? $latestPrev['department'] : null;
+            $row['previous_patient_id']       = $latestPrev ? $latestPrev['patient_id'] : null;
+            $row['previous_status']           = $latestPrev ? $latestPrev['status'] : null;
+            if ($includeFullHistory) {
+                $row['previous_appointments'] = $priorList;
+            }
+        }
+        unset($row);
+    };
+
     // Single patient by ?id=
     if (!empty($_GET['id'])) {
-        $id   = trim($_GET['id']);
-        $stmt = $pdo->prepare(
-            "SELECT patient_id, department, full_name, gender, birthdate, age,
-                    contact_number, email, address, with_companion,
-                    chief_complaints, consultation_nature, illness_description,
-                    patient_type, appointment_type, consultation_mode,
-                    appointment_date, referral_source, status,
-                    assigned_doctor, assigned_date, created_at, updated_at,
-                    receiver, informant, recommendation_remarks, unscheduled_walkin, inquiry_only,
-                    mode_of_inquiry, employee_type, select_type, hrn, specialty, scheduled_time,
-                    medical_history_diagnosis, medical_history_treatment, medical_history_prescription,
-                    active_medications, next_visit_date, reminder_status, reminder_sent_at
-             FROM patients
-             WHERE patient_id = ?
-             ORDER BY id DESC LIMIT 1"
-        );
-        $stmt->execute([$id]);
-        $patient = $stmt->fetch();
+        $id = trim($_GET['id']);
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT * FROM patients
+                 WHERE patient_id = ? OR CAST(id AS CHAR) = ?
+                 ORDER BY id DESC LIMIT 1"
+            );
+            $stmt->execute([$id, $id]);
+            $patient = $stmt->fetch();
+        } catch (Throwable $e) {
+            error_log("Error fetching patient $id: " . $e->getMessage());
+            $patient = null;
+        }
 
         if (!$patient) respondErr("Patient $id not found.", 404);
 
-        $noteStmt = $pdo->prepare("SELECT note, noted_by, created_at FROM progress_notes WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
-        $noteStmt->execute([$id]);
-        $patient['latest_progress_note'] = $noteStmt->fetch() ?: null;
+        try {
+            $notePid = $patient['patient_id'] ?? $id;
+            $noteStmt = $pdo->prepare("SELECT note, noted_by, created_at FROM progress_notes WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
+            $noteStmt->execute([$notePid]);
+            $patient['latest_progress_note'] = $noteStmt->fetch() ?: null;
+        } catch (Throwable $e) {
+            $patient['latest_progress_note'] = null;
+        }
+
+        try {
+            $singleWrap = [$patient];
+            $attachPreviousHistory($pdo, $singleWrap, true);
+            $patient = $singleWrap[0];
+        } catch (Throwable $e) {
+            error_log("Error attaching patient history: " . $e->getMessage());
+        }
 
         respondOk(['data' => $patient]);
     }
@@ -79,11 +187,12 @@ if ($method === 'GET') {
         }
 
         $stmt = $pdo->prepare(
-            "SELECT p.patient_id, p.department, p.full_name, p.gender, p.birthdate, p.age, p.contact_number, p.email,
+            "SELECT p.id, p.user_id, p.patient_id, p.department, p.full_name, p.gender, p.birthdate, p.age, p.contact_number, p.email,
                     p.address, p.chief_complaints, p.consultation_nature, p.illness_description,
                     p.patient_type, p.appointment_type, p.consultation_mode, p.appointment_date,
                     p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
                     p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time,
+                    p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
                     p.reminder_status, p.reminder_sent_at, p.created_at,
                     d.id AS doctor_id, d.status AS doctor_status
              FROM patients p
@@ -92,21 +201,24 @@ if ($method === 'GET') {
              ORDER BY p.created_at DESC"
         );
         $stmt->execute();
-        respondOk(['data' => $stmt->fetchAll()]);
+        $rows = $stmt->fetchAll();
+        $attachPreviousHistory($pdo, $rows, false);
+        respondOk(['data' => $rows]);
     }
 
     $whereClauses = [];
     $params = [];
     
     if (!empty($dept)) {
+        $triagePendingCondition = " OR LOWER(p.department) LIKE '%triage%' OR p.department IS NULL OR p.department = ''";
         if (stripos($dept, 'general') !== false) {
-            $whereClauses[] = "(LOWER(p.department) LIKE '%general%')";
+            $whereClauses[] = "(LOWER(p.department) LIKE '%general%'$triagePendingCondition)";
         } elseif (stripos($dept, 'psychiatry') !== false || stripos($dept, 'opu') !== false) {
-            $whereClauses[] = "(LOWER(p.department) LIKE '%psychiatry%' OR LOWER(p.department) LIKE '%opu%')";
+            $whereClauses[] = "(LOWER(p.department) LIKE '%psychiatry%' OR LOWER(p.department) LIKE '%opu%'$triagePendingCondition)";
         } elseif (stripos($dept, 'neuro') !== false) {
-            $whereClauses[] = "(LOWER(p.department) LIKE '%neuro%')";
+            $whereClauses[] = "(LOWER(p.department) LIKE '%neuro%'$triagePendingCondition)";
         } else {
-            $whereClauses[] = "LOWER(p.department) = LOWER(?)";
+            $whereClauses[] = "(LOWER(p.department) = LOWER(?)$triagePendingCondition)";
             $params[] = $dept;
         }
     }
@@ -122,11 +234,12 @@ if ($method === 'GET') {
     $whereSql = count($whereClauses) > 0 ? "WHERE " . implode(" AND ", $whereClauses) : "";
     
     $stmt = $pdo->prepare(
-        "SELECT p.patient_id, p.department, p.full_name, p.gender, p.birthdate, p.age, p.contact_number, p.email,
+        "SELECT p.id, p.user_id, p.patient_id, p.department, p.full_name, p.gender, p.birthdate, p.age, p.contact_number, p.email,
                 p.address, p.chief_complaints, p.consultation_nature, p.illness_description,
                 p.patient_type, p.appointment_type, p.consultation_mode, p.appointment_date,
                 p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
                 p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.referral_source,
+                p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
                 p.reminder_status, p.reminder_sent_at, p.created_at,
                 d.id AS doctor_id, d.status AS doctor_status
          FROM patients p
@@ -135,7 +248,9 @@ if ($method === 'GET') {
          ORDER BY p.created_at DESC"
     );
     $stmt->execute($params);
-    respondOk(['data' => $stmt->fetchAll()]);
+    $rows = $stmt->fetchAll();
+    $attachPreviousHistory($pdo, $rows, false);
+    respondOk(['data' => $rows]);
 }
 
 // ── POST ────────────────────────────────────────────────────────────────────
@@ -154,7 +269,7 @@ if ($method === 'POST') {
     if ($patientId === '') respondErr('patient_id is required.');
 
     // Verify patient exists
-    $check = $pdo->prepare("SELECT full_name, department, status, inquiry_only, consultation_nature FROM patients WHERE patient_id = ?");
+    $check = $pdo->prepare("SELECT id, patient_id, full_name, email, contact_number, appointment_date, scheduled_time, department, status, inquiry_only, consultation_nature FROM patients WHERE patient_id = ?");
     $check->execute([$patientId]);
     $patient = $check->fetch();
     if (!$patient) respondErr("Patient $patientId not found.", 404);
@@ -171,34 +286,143 @@ if ($method === 'POST') {
     }
 
 function isDeptMatch($d1, $d2): bool {
-    if (!$d1 || !$d2) return false;
+    if (!$d1 || !$d2) return true;
     $a = strtolower(trim($d1));
     $b = strtolower(trim($d2));
+    if ($a === 'triage pending' || $b === 'triage pending' || str_contains($a, 'triage') || str_contains($b, 'triage') || $a === '' || $b === '') return true;
     if ($a === $b) return true;
-    if ((str_contains($a, 'general') || str_contains($a, 'general management')) && (str_contains($b, 'general') || str_contains($b, 'general management'))) return true;
+    if ((str_contains($a, 'general') || str_contains($a, 'general management') || str_contains($a, 'general medical')) && (str_contains($b, 'general') || str_contains($b, 'general management') || str_contains($b, 'general medical'))) return true;
     if ((str_contains($a, 'psychiatry') || str_contains($a, 'opu')) && (str_contains($b, 'psychiatry') || str_contains($b, 'opu'))) return true;
     if (str_contains($a, 'neuro') && str_contains($b, 'neuro')) return true;
     return false;
 }
 
-if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department'], $staffDept)) {
-    respondErr("Unauthorized: This patient is registered to another department.", 403);
+// Allow staff to assign or correct departments for triage routing regardless of initial registration mismatch
+if ($action !== 'assign_department' && $action !== 'update_department') {
+    if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department'], $staffDept)) {
+        respondErr("Unauthorized: This patient is registered to another department.", 403);
+    }
 }
 
     $name = $patient['full_name'];
     $dept = $patient['department'];
+
+    // ── 0. Assign or Correct Department (Triage-led Routing) ─────────────
+    if ($action === 'assign_department' || $action === 'update_department') {
+        $rawNew = trim($body['department'] ?? '');
+        if ($rawNew === '') {
+            respondErr('Department is required.');
+        }
+
+        $d = strtolower($rawNew);
+        if (str_contains($d, 'general') || str_contains($d, 'medical')) {
+            $cleanDept = 'General Medical';
+        } elseif (str_contains($d, 'psych') || str_contains($d, 'opu')) {
+            $cleanDept = 'OPU Psychiatry';
+        } elseif (str_contains($d, 'neuro')) {
+            $cleanDept = 'Neurology';
+        } else {
+            $cleanDept = ucwords($rawNew);
+        }
+
+        $oldDept = $patient['department'] ?: 'Triage Pending';
+        $upd = $pdo->prepare("
+            UPDATE patients
+            SET department = ?, specialty = ?, updated_at = NOW()
+            WHERE patient_id = ?
+        ");
+        $upd->execute([$cleanDept, $cleanDept . ' Consultation', $patientId]);
+
+        try {
+            $pdo->prepare("UPDATE appointments SET department = ? WHERE patient_id = ?")->execute([$cleanDept, $patientId]);
+        } catch (\Throwable $e) {}
+
+        addLog($pdo, 'info', 'Department Assigned/Corrected', $actor,
+               "Staff assigned/corrected department from '{$oldDept}' to '{$cleanDept}' for patient $patientId ($name) based on chief complaint.");
+
+        respondOk([
+            'message'    => "Department for $name assigned to $cleanDept based on chief complaint.",
+            'department' => $cleanDept
+        ]);
+    }
 
     // ── 1. Approve / Accept ──────────────────────────────────────────────
     if ($action === 'approve' || $action === 'accept') {
         if (!in_array($patient['status'], ['pending', 'for_approval', 'for_processing'])) {
             respondErr("Patient is already {$patient['status']}.");
         }
-        $upd = $pdo->prepare(
-            "UPDATE patients SET status = 'approved', updated_at = NOW() WHERE patient_id = ?"
-        );
-        $upd->execute([$patientId]);
+
+        $assignedDept = trim($body['department'] ?? '');
+        if ($assignedDept !== '' && strtolower($assignedDept) !== 'triage pending') {
+            $d = strtolower($assignedDept);
+            if (str_contains($d, 'general') || str_contains($d, 'medical')) {
+                $cleanDept = 'General Medical';
+            } elseif (str_contains($d, 'psych') || str_contains($d, 'opu')) {
+                $cleanDept = 'OPU Psychiatry';
+            } elseif (str_contains($d, 'neuro')) {
+                $cleanDept = 'Neurology';
+            } else {
+                $cleanDept = ucwords($assignedDept);
+            }
+            $dept = $cleanDept;
+
+            $upd = $pdo->prepare("
+                UPDATE patients 
+                SET status = 'approved', department = ?, specialty = ?, updated_at = NOW() 
+                WHERE patient_id = ?
+            ");
+            $upd->execute([$cleanDept, $cleanDept . ' Consultation', $patientId]);
+
+            try {
+                $pdo->prepare("UPDATE appointments SET department = ? WHERE patient_id = ?")->execute([$cleanDept, $patientId]);
+            } catch (\Throwable $e) {}
+        } else {
+            $upd = $pdo->prepare(
+                "UPDATE patients SET status = 'approved', updated_at = NOW() WHERE patient_id = ?"
+            );
+            $upd->execute([$patientId]);
+        }
         addLog($pdo, 'info', 'Patient Approved', $actor,
                "Patient $patientId ($name) was approved and scheduled for $dept.");
+
+        // Dispatch Confirmation Email & SMS (Compliant with Healthcare Privacy Laws)
+        $dateFormatted = !empty($patient['appointment_date'])
+            ? date('M j, Y', strtotime($patient['appointment_date']))
+            : 'Scheduled Clinic Day';
+        $timeFormatted = !empty($patient['scheduled_time'])
+            ? date('g:i A', strtotime($patient['scheduled_time']))
+            : '8:00 AM';
+
+        if (!empty($patient['email'])) {
+            try {
+                require_once __DIR__ . '/services/EmailService.php';
+                EmailService::sendAppointmentEmail(
+                    $patient['email'],
+                    $name,
+                    $dateFormatted,
+                    $timeFormatted,
+                    $patientId,
+                    'confirmed'
+                );
+            } catch (\Throwable $e) {
+                error_log("[patients.php approve] Email error: " . $e->getMessage());
+            }
+        }
+
+        if (!empty($patient['contact_number'])) {
+            try {
+                require_once __DIR__ . '/services/SmsService.php';
+                SmsService::sendConfirmationSms(
+                    $patient['contact_number'],
+                    $dateFormatted,
+                    $timeFormatted,
+                    $patientId
+                );
+            } catch (\Throwable $e) {
+                error_log("[patients.php approve] SMS error: " . $e->getMessage());
+            }
+        }
+
         respondOk(['message' => "$name has been approved and scheduled."]);
     }
 
@@ -241,11 +465,6 @@ if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department
         );
         $upd->execute([$patientId]);
 
-        // Release slot if a doctor was assigned
-        if (!empty($patient['assigned_doctor'])) {
-            $pdo->prepare("UPDATE doctors SET booked_slots = GREATEST(0, booked_slots - 1) WHERE name = ?")->execute([$patient['assigned_doctor']]);
-        }
-
         addLog($pdo, 'info', 'Patient Rejected', $actor,
                "Patient $patientId ($name) registration was rejected.");
         respondOk(['message' => "{$name}'s registration was rejected."]);
@@ -272,8 +491,6 @@ if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department
         );
         $upd->execute([$doctor, $patientId]);
 
-        $pdo->prepare("UPDATE doctors SET booked_slots = booked_slots + 1 WHERE name = ? AND booked_slots < total_slots")->execute([$doctor]);
-
         addLog($pdo, 'info', 'Doctor Assigned', $actor,
                "Dr. $doctor assigned to patient $patientId ($name).");
 
@@ -287,10 +504,6 @@ if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department
         );
         $upd->execute([$patientId]);
 
-        if (!empty($patient['assigned_doctor'])) {
-            $pdo->prepare("UPDATE doctors SET booked_slots = GREATEST(0, booked_slots - 1) WHERE name = ?")->execute([$patient['assigned_doctor']]);
-        }
-
         addLog($pdo, 'info', 'Patient No-Show', $actor,
                "Patient $patientId ($name) marked as no-show.");
         respondOk(['message' => "$name marked as no-show."]);
@@ -303,12 +516,57 @@ if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department
             respondErr("Cannot complete patient visit in current status '{$patient['status']}'. Patient must be actively ongoing in consultation.");
         }
 
-        $diag = trim($body['diagnosis'] ?? '');
-        $rx   = trim($body['prescription'] ?? '');
-        $plan = trim($body['treatment_plan'] ?? '');
-        $note = trim($body['note'] ?? '');
+        $diag         = trim($body['diagnosis'] ?? '');
+        $rx           = trim($body['prescription'] ?? '');
+        $plan         = trim($body['treatment_plan'] ?? '');
+        $note         = trim($body['note'] ?? '');
+        $medName      = trim($body['medicine_name'] ?? '');
+        $medDosage    = trim($body['dosage'] ?? '');
+        $medQuantity  = trim($body['quantity'] ?? '');
 
-        if ($diag !== '' || $rx !== '' || $plan !== '') {
+        // Build structured active_medications JSON if medicine/prescription provided
+        $activeMedsJson = null;
+        if ($medName !== '' || $rx !== '') {
+            $parsedName = $medName;
+            $parsedDose = $medDosage;
+            $parsedQty  = $medQuantity;
+
+            if ($parsedName === '' && $rx !== '') {
+                $lines = preg_split('/\r\n|\r|\n/', $rx);
+                $firstLine = trim($lines[0] ?? '');
+                $firstLine = preg_replace('/^Rx:\s*/i', '', $firstLine);
+                if (preg_match('/^(.*?)\s+#([0-9].*)$/', $firstLine, $m)) {
+                    $parsedName = trim($m[1]);
+                    if ($parsedQty === '') $parsedQty = trim($m[2]);
+                } else {
+                    $parsedName = $firstLine;
+                }
+                foreach ($lines as $ln) {
+                    if (preg_match('/^Sig:\s*(.+)$/i', trim($ln), $sm)) {
+                        if ($parsedDose === '') $parsedDose = trim($sm[1]);
+                    }
+                }
+                if ($parsedDose === '' && count($lines) > 1) {
+                    $parsedDose = trim($lines[1]);
+                }
+            }
+
+            if ($parsedName !== '') {
+                $medPayload = [
+                    'medicine_name' => $parsedName,
+                    'dosage'        => $parsedDose ?: 'Take as directed by physician',
+                    'quantity'      => $parsedQty ?: 'Prescribed supply',
+                    'diagnosis'     => $diag ?: 'Clinical Consultation',
+                    'treatment'     => $plan ?: '',
+                    'prescription'  => $rx,
+                    'recorded_by'   => $actor,
+                    'prescribed_at' => date('Y-m-d H:i:s')
+                ];
+                $activeMedsJson = json_encode($medPayload, JSON_UNESCAPED_UNICODE);
+            }
+        }
+
+        if ($diag !== '' || $rx !== '' || $plan !== '' || $activeMedsJson !== null) {
             $upd = $pdo->prepare(
                 "UPDATE patients 
                  SET status = 'completed', 
@@ -319,12 +577,13 @@ if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department
                      medical_history_diagnosis = COALESCE(?, medical_history_diagnosis),
                      medical_history_treatment = COALESCE(?, medical_history_treatment),
                      medical_history_prescription = COALESCE(?, medical_history_prescription),
+                     active_medications = COALESCE(?, active_medications),
                      medical_history_recorded_by = ?,
                      medical_history_date = NOW(),
                      updated_at = NOW() 
                  WHERE patient_id = ?"
             );
-            $upd->execute([$diag ?: null, $plan ?: null, $rx ?: null, $actor, $patientId]);
+            $upd->execute([$diag ?: null, $plan ?: null, $rx ?: null, $activeMedsJson, $actor, $patientId]);
         } else {
             $upd = $pdo->prepare(
                 "UPDATE patients 

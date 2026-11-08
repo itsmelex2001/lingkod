@@ -13,7 +13,7 @@ $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Portal | Patient Profile</title>
+    <title>Patient Profile | LINGKOD</title>
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/dashboard.css" />
@@ -158,7 +158,7 @@ $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
             </div>
             <div class="info-rows">
               <div class="info-row info-row-block">
-                <span class="info-label">Chief Complaints</span>
+                <span class="info-label">Chief Complaint</span>
                 <span class="info-val info-val-wrap" id="clinicComplaints">—</span>
               </div>
               <div class="info-row info-row-block">

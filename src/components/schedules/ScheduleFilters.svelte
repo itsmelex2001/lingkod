@@ -25,7 +25,7 @@
       on:change={() => dispatch('toggleAvail', showOnlyAvailable)}
     />
     <span class="toggle-box"></span>
-    <span class="toggle-txt">Available Only</span>
+    <span class="toggle-txt">Open Schedules Only</span>
   </label>
 </div>
 

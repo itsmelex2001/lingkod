@@ -15,7 +15,7 @@
     </div>
 
     <h2 class="hero-subtitle">
-      Localized Network and Knowledge-base<br>for Online Service Delivery
+      Localized Integrated Network for Governance,<br>Knowledge, and Operation in Digital Healthcare
     </h2>
 
     <p class="hero-description">

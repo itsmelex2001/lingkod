@@ -3,7 +3,7 @@
  * api/registration.php
  *
  * POST — submit a new patient registration form or inquiry.
- * Handles Neurology, Psychiatry, and General Management dynamically.
+ * Handles Neurology, Psychiatry, and General Medical dynamically.
  * Enforces MMWGH advance booking regulations, doctor shift restrictions,
  * double-booking prevention, returning patient linking, and status flow.
  */
@@ -34,7 +34,18 @@ if (empty($b['department'])) {
     respondErr("Field 'department' is required.");
 }
 
-$isWalkinQuick = !empty($b['unscheduled_walkin']) || !empty($b['is_walkin']);
+$isStaffUser = (!empty($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'staff'], true))
+            || (!empty($_SESSION['user_role']) && in_array($_SESSION['user_role'], ['admin', 'staff'], true));
+$patientType = !empty($b['patient_type']) ? trim($b['patient_type']) : 'first-time';
+
+// Enforce 'Appointment Only' for new patients (no walk-ins via the public portal)
+if (!$isStaffUser || $patientType === 'first-time') {
+    $b['unscheduled_walkin'] = 0;
+    $b['is_walkin'] = 0;
+    $b['appointment_type'] = 'online';
+}
+
+$isWalkinQuick = $isStaffUser && (!empty($b['unscheduled_walkin']) || !empty($b['is_walkin']));
 $isInquiryOnly = !empty($b['inquiry_only']);
 
 // ── 3. Validate required fields based on department and mode ─────────────────
@@ -103,59 +114,18 @@ if (!empty($b['appointment_date']) && !$isInquiryOnly && !$isWalkinQuick) {
     $minSched = date('Y-m-d', strtotime('+1 day'));
     $maxSched = date('Y-m-d', strtotime('+1 year'));
     if ($b['appointment_date'] < $minSched) {
-        respondErr("MMWGH Appointment Regulation: Online consultations require advance booking (at least 1 day in advance, starting $minSched). For same-day immediate consultations, please proceed directly to the hospital triage as a Walk-in.");
+        respondErr("MMWGH Appointment Regulation: Online consultations require advance booking (at least 1 day in advance, starting $minSched). First-time patients are accepted by Appointment Only.");
     }
     if ($b['appointment_date'] > $maxSched) {
         respondErr("Scheduled Date cannot be more than 1 year in the future (max $maxSched).");
     }
 }
 
-// ── 6. Doctor Shift End & Time Restriction Check ─────────────────────────────
-$assignedDoctor = !empty($b['assigned_doctor']) ? trim($b['assigned_doctor']) : (!empty($b['doctor']) ? trim($b['doctor']) : null);
+// ── 6. Initial Booking Doctor & Time Setup ──────────────────────────────────
+// Initial booking leaves attending doctor null until the day of consultation
+$assignedDoctor = null;
+$assignedDate   = null;
 $scheduledTime  = !empty($b['scheduled_time']) ? trim($b['scheduled_time']) : null;
-
-if ($assignedDoctor && $scheduledTime && !$isInquiryOnly) {
-    $docStmt = $pdo->prepare("SELECT name, schedule_start, schedule_end, total_slots, booked_slots, status FROM doctors WHERE name = ? LIMIT 1");
-    $docStmt->execute([$assignedDoctor]);
-    $docInfo = $docStmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($docInfo && !empty($docInfo['schedule_start']) && !empty($docInfo['schedule_end'])) {
-        $startTime = substr($docInfo['schedule_start'], 0, 5);
-        $endTime   = substr($docInfo['schedule_end'], 0, 5);
-        $reqTime   = substr($scheduledTime, 0, 5);
-
-        // Calculate 30-minute cutoff prior to shift end
-        $endParts = explode(':', $endTime);
-        $endMinTotal = ((int)$endParts[0] * 60) + (int)$endParts[1] - 30;
-        $cutoffTime = sprintf('%02d:%02d', floor($endMinTotal / 60), $endMinTotal % 60);
-
-        if ($reqTime < $startTime) {
-            respondErr("Cannot schedule appointment: {$reqTime} is earlier than Dr. {$docInfo['name']}'s shift start time ({$startTime}).");
-        }
-        if ($reqTime > $cutoffTime) {
-            respondErr("Strict Booking Restriction: Appointments cannot be booked within 30 minutes of shift end or outside working hours. Dr. {$docInfo['name']}'s shift ends at {$endTime} (Last available booking slot: {$cutoffTime}).");
-        }
-    }
-}
-
-// ── 7. Double-Booking Prevention Protocol ─────────────────────────────────────
-// Ensure no two patients can claim the exact same doctor + date + time slot
-if ($assignedDoctor && !empty($b['appointment_date']) && $scheduledTime && !$isInquiryOnly) {
-    $doubleStmt = $pdo->prepare(
-        "SELECT COUNT(*) FROM patients
-         WHERE assigned_doctor = ?
-           AND appointment_date = ?
-           AND scheduled_time = ?
-           AND status NOT IN ('rejected', 'cancelled', 'no-show')"
-    );
-    $doubleStmt->execute([$assignedDoctor, $b['appointment_date'], $scheduledTime]);
-    $existingCount = (int) $doubleStmt->fetchColumn();
-
-    if ($existingCount > 0) {
-        $formattedTime = date('h:i A', strtotime($scheduledTime));
-        respondErr("Double-Booking Conflict: The requested slot ({$formattedTime}) on {$b['appointment_date']} with {$assignedDoctor} has already been reserved by another patient. Please choose an alternative time slot or doctor.", 409);
-    }
-}
 
 // ── 8. Generate Unique Patient ID ────────────────────────────────────────────
 function generatePatientId(PDO $pdo): string {
@@ -172,7 +142,7 @@ function generatePatientId(PDO $pdo): string {
 
 $rawDept = strtolower(trim($b['department'] ?? ''));
 if (str_contains($rawDept, 'general')) {
-    $dept = 'General Management';
+    $dept = 'General Medical';
 } elseif (str_contains($rawDept, 'psychiatry') || str_contains($rawDept, 'opu')) {
     $dept = 'OPU Psychiatry';
 } elseif (str_contains($rawDept, 'neuro')) {
@@ -191,9 +161,19 @@ if (!empty($b['birthdate'])) {
     $age   = (int) $birth->diff($today)->y;
 }
 
-// Check returning patient verification
-$verifiedPatientId = !empty($b['verified_patient_id']) ? trim($b['verified_patient_id']) : null;
-$patientType = !empty($b['patient_type']) ? trim($b['patient_type']) : ($verifiedPatientId ? 'returning' : 'first-time');
+$guardianName    = !empty($b['guardian_name']) ? trim($b['guardian_name']) : null;
+$guardianContact = !empty($b['guardian_contact_number']) ? trim($b['guardian_contact_number']) : null;
+
+if ($age !== null && $age < 18 && !$isInquiryOnly && !$isWalkinQuick) {
+    if (empty($guardianName)) {
+        respondErr('Parent / Guardian name is required for minors (under 18 years old).');
+    }
+    if (empty($guardianContact)) {
+        respondErr('Guardian contact number is required for minors (under 18 years old).');
+    }
+}
+
+$patientType = !empty($b['patient_type']) ? trim($b['patient_type']) : 'first-time';
 
 // ── 9. Post-Booking Initial Status ───────────────────────────────────────────
 // Per Phase 4: Appointments must never be marked 'completed' prematurely!
@@ -206,12 +186,21 @@ try {
 
     $patientId = generatePatientId($pdo);
 
+    // Resolve user account link
+    $userId = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? null;
+    $validEmail = filter_var(trim($b['email'] ?? ''), FILTER_VALIDATE_EMAIL) ?: null;
+    if (!$userId && $validEmail) {
+        $uStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        $uStmt->execute([$validEmail]);
+        $userId = $uStmt->fetchColumn() ?: null;
+    }
+
     // If returning patient has an existing HRN, inherit it; otherwise generate standard HRN
     $hrn = !empty($b['hrn']) ? trim($b['hrn']) : ('HRN-' . substr($patientId, 3));
 
     $sql = "INSERT INTO patients
-              (patient_id, department, full_name, first_name, last_name, middle_initial, gender, birthdate, age,
-               contact_number, email, address, with_companion,
+              (patient_id, user_id, department, full_name, first_name, last_name, middle_initial, gender, birthdate, age,
+               contact_number, email, address, with_companion, guardian_name, guardian_contact_number,
                chief_complaints, consultation_nature, illness_description,
                patient_type, appointment_type, consultation_mode,
                appointment_date, referral_source, status,
@@ -219,15 +208,19 @@ try {
                receiver, informant, recommendation_remarks, unscheduled_walkin, inquiry_only,
                mode_of_inquiry, employee_type, select_type, hrn, specialty, scheduled_time)
             VALUES
-              (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+              (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                ?, ?,
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $clean = fn(?string $val) => ($val !== null && trim($val) !== '') ? strip_tags(trim($val)) : null;
+
+    $cleanGuardianName = ($age !== null && $age < 18) ? $clean($guardianName) : null;
+    $cleanGuardianContact = ($age !== null && $age < 18) ? $clean($guardianContact) : null;
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         $patientId,
+        $userId,
         $dept,
         $fullName,
         $firstName !== '' ? strip_tags($firstName) : null,
@@ -237,9 +230,11 @@ try {
         $b['birthdate'] ?? null,
         $age,
         $clean($b['contact_number'] ?? null),
-        filter_var(trim($b['email'] ?? ''), FILTER_VALIDATE_EMAIL) ?: null,
+        $validEmail,
         $clean($b['address'] ?? null),
         isset($b['with_companion']) && $b['with_companion'] === 'yes' ? 1 : 0,
+        $cleanGuardianName,
+        $cleanGuardianContact,
         $clean($b['chief_complaints'] ?? null),
         $clean($b['consultation_nature'] ?? ($isInquiryOnly ? 'General Inquiry' : null)),
         $clean($b['illness_description'] ?? null),
@@ -266,16 +261,8 @@ try {
         $scheduledTime
     ]);
 
-    // Update doctor's booked slots if doctor assigned and not inquiry
-    if ($assignedDoctor && !$isInquiryOnly) {
-        $docStmt = $pdo->prepare("UPDATE doctors SET booked_slots = booked_slots + 1 WHERE name = ? AND booked_slots < total_slots");
-        $docStmt->execute([$assignedDoctor]);
-    }
-
     // Add progress note linking returning records or initial entry
-    $noteText = $verifiedPatientId 
-        ? "Returning Patient Check-up Registered (Synced to Previous Master Record $verifiedPatientId). Status: For Approval."
-        : ($isInquiryOnly ? "General Inquiry Submitted. Awaiting review." : "Online Appointment Pre-Registration Submitted. Status: For Approval.");
+    $noteText = $isInquiryOnly ? "General Inquiry Submitted. Awaiting review." : "Online Appointment Pre-Registration Submitted. Status: For Approval.";
 
     $noteStmt = $pdo->prepare(
         "INSERT INTO progress_notes (patient_id, note, noted_by) VALUES (?, ?, 'System')"

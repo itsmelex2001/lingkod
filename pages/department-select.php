@@ -1,18 +1,31 @@
-<?php session_start(); ?>
+<?php 
+session_start(); 
+if (!empty($_SESSION['patient_logged_in'])) {
+    header('Location: /sdn/pages/patient-book-appointment.php');
+    exit;
+}
+?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book an Appointment | MMWGH LINKod</title>
+  <title>Book an Appointment | MMWGH LINGKOD</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
   <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=<?= time() ?>" />
   
   <style>
+    html, body {
+      height: 100vh;
+      overflow: hidden !important;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       position: relative;
@@ -32,91 +45,43 @@
     }
 
     .main-container {
-      max-width: 1400px;
-      margin: 1.5rem auto 4rem;
-      padding: 0 1.5rem;
+      max-width: 1360px;
+      height: calc(100vh - 76px);
+      margin: 0 auto;
+      padding: 1.25rem 1.5rem 1.75rem;
       flex: 1;
       width: 95%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
     }
 
     /* ── Executive Page Header ── */
     .page-header {
       text-align: center;
-      margin-bottom: 2.75rem;
+      margin-bottom: 1.75rem;
       position: relative;
-    }
-    
-    .header-badge-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: #e6f7ef;
-      border: 1px solid #a7f3d0;
-      color: #065f46;
-      padding: 5px 14px;
-      border-radius: 30px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.6px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.1);
-    }
-
-    .header-badge-pill .pulse-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #10b981;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
-      animation: pulseAnim 2s infinite ease-in-out;
-    }
-
-    @keyframes pulseAnim {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.3); opacity: 0.7; }
+      flex-shrink: 0;
     }
 
     .page-header h1 {
       font-family: 'Poppins', sans-serif;
-      font-size: 2.85rem;
+      font-size: 2.65rem;
       font-weight: 800;
       color: #064e3b;
-      margin: 0 0 0.5rem 0;
+      margin: 0 0 0.45rem 0;
       letter-spacing: -0.6px;
       line-height: 1.15;
     }
 
     .page-header p {
-      font-size: 1.05rem;
+      font-size: 1rem;
       color: #475569;
       font-weight: 500;
-      max-width: 680px;
-      margin: 0 auto 1.25rem;
+      max-width: 660px;
+      margin: 0 auto;
       line-height: 1.5;
-    }
-
-    .header-features-strip {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .feat-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid #cbd5e1;
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #334155;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
 
     /* ── Professional Department Cards Grid ── */
@@ -147,7 +112,7 @@
 
     .dept-card-media {
       position: relative;
-      height: 200px;
+      height: 185px;
       overflow: hidden;
       background: #0f172a;
     }
@@ -175,41 +140,8 @@
       background: linear-gradient(180deg, rgba(6, 78, 59, 0.1) 0%, rgba(6, 78, 59, 0.65) 100%);
     }
 
-    .dept-card-media .dept-tagline-badge {
-      position: absolute;
-      top: 14px;
-      left: 14px;
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(6px);
-      color: #065f46;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    .dept-card-media .dept-count-badge {
-      position: absolute;
-      bottom: 12px;
-      right: 14px;
-      background: rgba(16, 185, 129, 0.9);
-      color: #ffffff;
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
     .dept-card-body {
-      padding: 1.5rem;
+      padding: 1.35rem 1.45rem;
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -233,29 +165,16 @@
       line-height: 1.25;
     }
 
-    .dept-status-pill {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      background: #dcfce7;
-      color: #166534;
-      padding: 3px 8px;
-      border-radius: 12px;
-      border: 1px solid #bbf7d0;
-      white-space: nowrap;
-    }
-
     .dept-card-desc {
       font-size: 0.88rem;
       color: #64748b;
       line-height: 1.5;
-      margin: 0 0 1.25rem 0;
+      margin: 0 0 1.1rem 0;
       flex: 1;
     }
 
     .dept-card-footer {
-      padding-top: 14px;
+      padding-top: 12px;
       border-top: 1px solid #f1f5f9;
       display: flex;
       align-items: center;
@@ -296,10 +215,16 @@
     .services-detail {
       background: #ffffff;
       border-radius: 22px;
-      padding: 2.2rem 2.6rem;
+      padding: 1.85rem 2.2rem;
+      max-height: calc(100vh - 115px);
+      overflow-y: auto;
+      scrollbar-width: none;
       box-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.07), 0 2px 8px rgba(0, 0, 0, 0.02);
       border: 1.5px solid #e2e8f0;
       animation: fadeIn 0.3s ease;
+    }
+    .services-detail::-webkit-scrollbar {
+      display: none;
     }
 
     @keyframes fadeIn {
@@ -651,26 +576,16 @@
   <div class="page-bg-overlay"></div>
 
   <nav class="navbar relative z-10" style="border-bottom: 1px solid rgba(0,0,0,0.05); justify-content: flex-start;">
-    <a href="/sdn/index.php" id="nav-back-link" class="btn-back" style="margin: 0; gap: 8px; color: white; display:flex; align-items:center; text-decoration:none; cursor: pointer;">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-      <span style="font-size: 1rem; font-weight: 600;">Back</span>
+    <a href="/sdn/index.php" id="nav-back-link" class="btn-back" aria-label="Back" title="Back" style="margin: 0; width: 42px; height: 42px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.35); color: white; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; transition: all 0.2s ease;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
     </a>
   </nav>
 
   <div class="main-container relative z-10">
 
     <div class="page-header" id="page-header">
-      <div class="header-badge-pill">
-        <span class="pulse-dot"></span>
-        MMWGH LINKod Appointment System
-      </div>
       <h1>Book an Appointment</h1>
-      <p>Select a specialized clinical department below to view available medical services, attending doctors, and consultation schedules.</p>
-      <div class="header-features-strip">
-        <span class="feat-chip">⚡ Instant Pre-Registration</span>
-        <span class="feat-chip">🩺 Board-Certified Specialists</span>
-        <span class="feat-chip">📋 Walk-in & Scheduled Consultations</span>
-      </div>
+      <p>Select a specialized clinical department below to book your appointment directly.</p>
     </div>
 
     <!-- Department Cards Grid -->
@@ -679,146 +594,44 @@
         $departments = [
           [
             'id' => 'general',
-            'name' => 'General Management',
-            'tagline' => 'Primary Care & Outpatient',
+            'name' => 'General Medical',
             'desc' => 'Comprehensive preventative health check-ups, family medicine, pediatric care, internal medicine, and minor surgical procedures.',
             'image' => '/sdn/public/assets/generalmngmnt_img(orig).jpeg',
-            'link' => '/sdn/pages/regis-general.php',
-            'services' => [
-              [
-                'title' => 'Routine Check-ups & Preventative Care',
-                'doctor' => 'Dr. Antonio Ramos',
-                'spec' => 'Routine Check-ups & Preventative Care',
-                'sched' => '08:30 AM - 04:00 PM'
-              ],
-              [
-                'title' => 'Internal Medicine',
-                'doctor' => 'Dr. Maria Santos',
-                'spec' => 'Internal Medicine',
-                'sched' => '08:00 AM - 04:00 PM'
-              ],
-              [
-                'title' => 'Family Medicine & General Practice',
-                'doctor' => 'Dr. Juan Dela Cruz',
-                'spec' => 'Family Medicine & General Practice',
-                'sched' => '08:00 AM - 04:00 PM'
-              ],
-              [
-                'title' => 'Chronic Disease Management',
-                'doctor' => 'Dr. Elena Fernandez',
-                'spec' => 'Chronic Disease Management',
-                'sched' => '09:00 AM - 04:30 PM'
-              ],
-              [
-                'title' => 'Pediatric Care',
-                'doctor' => 'Dr. Benjamin Cruz',
-                'spec' => 'Pediatric Care',
-                'sched' => '08:30 AM - 03:30 PM'
-              ],
-              [
-                'title' => 'General Surgery & Minor Procedures',
-                'doctor' => 'Dr. Ricardo De Leon',
-                'spec' => 'General Surgery & Minor Procedures',
-                'sched' => '10:00 AM - 04:00 PM'
-              ]
-            ]
+            'link' => '/sdn/pages/regis-general.php?source=dept'
           ],
           [
             'id' => 'neurology',
             'name' => 'Neurology',
-            'tagline' => 'Neurological Sciences',
             'desc' => 'Specialized neurological clinical care, headache and migraine treatment, stroke rehabilitation, movement disorders, and diagnostic consultations.',
             'image' => '/sdn/public/assets/neurology_img(orig).jpeg',
-            'link' => '/sdn/pages/regis-neurology.php',
-            'services' => [
-              [
-                'title' => 'Headache & Migraine Management',
-                'doctor' => 'Dr. Robert Tan',
-                'spec' => 'Headache & Migraine Management',
-                'sched' => '08:00 AM - 02:00 PM'
-              ],
-              [
-                'title' => 'Stroke Rehabilitation',
-                'doctor' => 'Dr. Catherine Gomez',
-                'spec' => 'Stroke Rehabilitation',
-                'sched' => '09:00 AM - 03:30 PM'
-              ],
-              [
-                'title' => 'Epilepsy & Seizure Disorders',
-                'doctor' => 'Dr. Dominic Bautista',
-                'spec' => 'Epilepsy & Seizure Disorders',
-                'sched' => '10:00 AM - 04:00 PM'
-              ],
-              [
-                'title' => 'Movement Disorders',
-                'doctor' => 'Dr. Karen Villanueva',
-                'spec' => 'Movement Disorders',
-                'sched' => '08:30 AM - 02:30 PM'
-              ],
-              [
-                'title' => 'Clinical Neurology Consultation',
-                'doctor' => 'Dr. Emilio Cruz',
-                'spec' => 'Clinical Neurology',
-                'sched' => '09:00 AM - 04:00 PM'
-              ]
-            ]
+            'link' => '/sdn/pages/regis-neurology.php?source=dept'
           ],
           [
             'id' => 'psychiatry',
             'name' => 'OPU Psychiatry',
-            'tagline' => 'Outpatient Psychiatry',
             'desc' => 'Expert psychiatric consultations, adult and adolescent mental health, therapy, anxiety and depression management, and addiction care.',
             'image' => '/sdn/public/assets/psychiatry_img(orig).jpeg',
-            'link' => '/sdn/pages/regis-psychiatry.php',
-            'services' => [
-              [
-                'title' => 'Adult Psychiatry',
-                'doctor' => 'Dr. Alan Magno',
-                'spec' => 'Adult Psychiatry',
-                'sched' => '08:00 AM - 02:30 PM'
-              ],
-              [
-                'title' => 'Child & Adolescent Psychiatry',
-                'doctor' => 'Dr. Sarah Reyes',
-                'spec' => 'Child & Adolescent Psychiatry',
-                'sched' => '01:00 PM - 05:00 PM'
-              ],
-              [
-                'title' => 'Substance Abuse & Addiction Treatment',
-                'doctor' => 'Dr. Gabriel Mendoza',
-                'spec' => 'Substance Abuse & Addiction Treatment',
-                'sched' => '08:00 AM - 03:00 PM'
-              ],
-              [
-                'title' => 'Anxiety & Depression Management',
-                'doctor' => 'Dr. Patricia Lim',
-                'spec' => 'Anxiety & Depression Management',
-                'sched' => '09:00 AM - 04:00 PM'
-              ]
-            ]
+            'link' => '/sdn/pages/regis-psychiatry.php?source=dept'
           ]
         ];
       ?>
       <?php foreach($departments as $dept): ?>
         <div 
           class="dept-card" 
-          onclick="showDepartmentDetail(<?= htmlspecialchars(json_encode($dept)) ?>)"
+          onclick="handleDeptSelection('<?= htmlspecialchars($dept['link']) ?>')"
         >
           <div class="dept-card-media">
             <div class="dept-card-img" style="background-image: url('<?= $dept['image'] ?>');"></div>
             <div class="dept-card-media-overlay"></div>
-            <span class="dept-tagline-badge"><?= $dept['tagline'] ?></span>
-            <span class="dept-count-badge">🩺 <?= count($dept['services']) ?> Services</span>
           </div>
           <div class="dept-card-body">
             <div class="dept-card-title-row">
               <h3 class="dept-card-title"><?= $dept['name'] ?></h3>
-              <span class="dept-status-pill">Available</span>
             </div>
             <p class="dept-card-desc"><?= $dept['desc'] ?></p>
             <div class="dept-card-footer">
               <div class="dept-card-cta-btn">
-                <span>View Services & Doctors</span>
+                <span>Book Appointment</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
               </div>
             </div>
@@ -827,168 +640,21 @@
       <?php endforeach; ?>
     </div>
 
-    <!-- Detail View (Hidden by default) -->
-    <div id="services-detail" class="services-detail" style="display: none;">
-      <div class="detail-header">
-        <div id="detail-header-image" class="header-image"></div>
-        <div class="detail-header-text" style="flex: 1;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;">
-            <div class="dept-eyebrow-pill" style="margin-bottom: 0;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              Specialized Clinical Care
-            </div>
-            <span id="detail-count-chip" class="dept-count-chip">
-              <span class="pulse-dot-sm"></span>
-              <span id="detail-count-text"></span>
-            </span>
-          </div>
-          <h2 id="detail-header-title"></h2>
-          <p class="detail-header-sub">Specialized clinical consultations, attending physicians, and appointment schedules.</p>
-        </div>
-      </div>
-      
-      <div id="detail-services-list" class="services-list">
-        <!-- Populated by JS -->
-      </div>
-    </div>
-
   </div>
 
+  <?php include __DIR__ . '/patient-booking-modal.php'; ?>
   <script>
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function getServiceIcon(title) {
-      const t = (title || '').toLowerCase();
-      if (t.includes('pediatric') || t.includes('child')) {
-        return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"></path><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>`;
+    function handleDeptSelection(deptUrl) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('patient') === 'new') {
+        window.location.href = deptUrl;
+        return;
       }
-      if (t.includes('surgery') || t.includes('procedure')) {
-        return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>`;
+      const newBtn = document.getElementById('pbcBtnNewPatient');
+      if (newBtn) {
+        newBtn.href = deptUrl;
       }
-      if (t.includes('brain') || t.includes('neuro') || t.includes('headache') || t.includes('stroke') || t.includes('epilepsy') || t.includes('movement')) {
-        return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-5.04z"></path><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-5.04z"></path></svg>`;
-      }
-      if (t.includes('psychiatry') || t.includes('counseling') || t.includes('therapy') || t.includes('mental') || t.includes('anxiety') || t.includes('depression') || t.includes('crisis') || t.includes('substance') || t.includes('addiction')) {
-        return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6a6 6 0 0 1 6 6c0 3.3-2.7 6-6 6"></path><circle cx="12" cy="2" r="2"></circle></svg>`;
-      }
-      if (t.includes('chronic') || t.includes('internal') || t.includes('heart') || t.includes('pulse')) {
-        return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>`;
-      }
-      if (t.includes('preventative') || t.includes('check-up') || t.includes('routine')) {
-        return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>`;
-      }
-      // General practice / clinic icon
-      return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"></path><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"></path><circle cx="20" cy="10" r="2"></circle></svg>`;
-    }
-
-    function showDepartmentDetail(dept) {
-      document.getElementById('tiles-grid').style.display = 'none';
-      document.getElementById('page-header').style.display = 'none';
-      
-      const detailView = document.getElementById('services-detail');
-      
-      document.getElementById('detail-header-image').style.backgroundImage = `url('${dept.image}')`;
-      document.getElementById('detail-header-title').innerText = dept.name + ' Department';
-      document.getElementById('detail-count-text').innerText = dept.services.length + ' Available Services';
-      
-      const list = document.getElementById('detail-services-list');
-      list.innerHTML = '';
-      
-      dept.services.forEach(item => {
-        const title = typeof item === 'string' ? item : item.title;
-        const doctor = item.doctor || '';
-        const spec = item.spec || '';
-        const sched = item.sched || '';
-
-        const divItem = document.createElement('div');
-        divItem.className = 'service-item';
-
-        divItem.innerHTML = `
-          <!-- Top Row: Icon + Title + Live Status -->
-          <div class="service-top-wrap">
-            <div class="service-icon-box" title="${escapeHtml(title)}">
-              ${getServiceIcon(title)}
-            </div>
-            <div class="service-title-area">
-              <div class="service-title-row">
-                <h3 class="service-name">${escapeHtml(title)}</h3>
-                <span class="service-status-pill"><span class="status-live-dot"></span> Available</span>
-              </div>
-              <p class="service-dept-tag">MMWGH Clinical Care • ${escapeHtml(dept.name)}</p>
-            </div>
-          </div>
-
-          <!-- Middle Row: Attending Physician Card -->
-          <div class="service-doctor-card">
-            <div class="doc-avatar-chip">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            </div>
-            <div class="doc-info-col">
-              <div class="doc-label-row">
-                <span class="doc-label-tag">Attending Physician</span>
-                <span class="doc-badge-verified">Specialist</span>
-              </div>
-              <div class="doc-name-text">${escapeHtml(doctor || 'Department Specialist')}</div>
-              ${spec ? `<div class="doc-spec-text">${escapeHtml(spec)}</div>` : ''}
-            </div>
-          </div>
-
-          <!-- Bottom Row: Consultation Schedule & Book CTA -->
-          <div class="service-bottom-row">
-            <div class="service-sched-chip">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              <span>Consultation: <strong>${escapeHtml(sched || 'Regular Clinic Hours')}</strong></span>
-            </div>
-            <button class="book-btn" type="button">
-              <span>Book Appointment</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-            </button>
-          </div>
-        `;
-
-        const btn = divItem.querySelector('.book-btn');
-        btn.onclick = () => {
-          const queryParams = new URLSearchParams({
-            service: title,
-            spec: spec || title,
-            doctor: doctor,
-            source: 'dept'
-          });
-          window.location.href = dept.link + '?' + queryParams.toString();
-        };
-
-        list.appendChild(divItem);
-      });
-      
-      detailView.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    
-    function hideDepartmentDetail() {
-      document.getElementById('services-detail').style.display = 'none';
-      document.getElementById('tiles-grid').style.display = 'grid';
-      document.getElementById('page-header').style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Nav Back Link handles detail view closure or home redirection
-    const navBackLink = document.getElementById('nav-back-link');
-    if (navBackLink) {
-      navBackLink.addEventListener('click', function(e) {
-        const detailView = document.getElementById('services-detail');
-        if (detailView && detailView.style.display !== 'none') {
-          e.preventDefault();
-          hideDepartmentDetail();
-        }
-      });
+      openBookingConfirmModal();
     }
   </script>
 </body>

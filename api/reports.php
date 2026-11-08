@@ -4,7 +4,7 @@
  *
  * Comprehensive Admin Consolidated Reporting & Analytics Engine.
  * Pulls and consolidates patient records from all 3 core hospital departments:
- *   - General Management
+ *   - General Medical
  *   - Neurology
  *   - OPU Psychiatry
  *
@@ -35,16 +35,16 @@ $role = $_SESSION['role'] ?? 'staff';
 // Standardized Department Normalizer
 function normalizeDepartmentName(?string $raw): string {
     $clean = strtolower(trim($raw ?? ''));
-    if (strpos($clean, 'psych') !== false) {
-        return 'OPU Psychiatry';
+    if (strpos($clean, 'psych') !== false || strpos($clean, 'opu') !== false) {
+        return 'Psychiatry';
     }
     if (strpos($clean, 'neuro') !== false) {
         return 'Neurology';
     }
     if (strpos($clean, 'general') !== false || strpos($clean, 'cardio') !== false) {
-        return 'General Management';
+        return 'General Medical';
     }
-    return 'General Management';
+    return 'General Medical';
 }
 
 $range      = trim($_GET['range'] ?? 'all'); // 'daily', 'monthly', 'all'
@@ -111,8 +111,8 @@ $forApprovalCount = 0;
 $approvedCount = 0;
 
 $deptStats = [
-    'General Management' => [
-        'name' => 'General Management',
+    'General Medical' => [
+        'name' => 'General Medical',
         'total' => 0,
         'completed' => 0,
         'walkin' => 0,
@@ -133,8 +133,8 @@ $deptStats = [
         'for_approval' => 0,
         'completion_rate' => 0.0
     ],
-    'OPU Psychiatry' => [
-        'name' => 'OPU Psychiatry',
+    'Psychiatry' => [
+        'name' => 'Psychiatry',
         'total' => 0,
         'completed' => 0,
         'walkin' => 0,
@@ -272,7 +272,7 @@ if ($exportCsv) {
         ob_end_clean();
     }
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="MMWGH_Consolidated_Report_' . date('Ymd_His') . '.csv"');
+    header('Content-Disposition: attachment; filename="MMWGH_All_Time_Report_' . date('Ymd_His') . '.csv"');
     $out = fopen('php://output', 'w');
     
     // Header row

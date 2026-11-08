@@ -228,7 +228,7 @@ function isSameDepartment(deptA, deptB) {
     let a = deptA.toLowerCase().trim();
     let b = deptB.toLowerCase().trim();
     if (a === b) return true;
-    if ((a.includes('general') || a.includes('general management')) && (b.includes('general') || b.includes('general management'))) return true;
+    if ((a.includes('general') || a.includes('general management') || a.includes('general medical')) && (b.includes('general') || b.includes('general management') || b.includes('general medical'))) return true;
     if ((a.includes('psychiatry') || a.includes('opu')) && (b.includes('psychiatry') || b.includes('opu'))) return true;
     if (a.includes('neuro') && b.includes('neuro')) return true;
     return false;
@@ -301,18 +301,6 @@ async function loadDepartmentDoctors() {
     }
 }
 
-let currentModuleTab = 'online'; // 'online' | 'inquiry' | 'walkin' | 'noshow'
-
-function switchQueueModule(tab) {
-    currentModuleTab = tab;
-    document.querySelectorAll('.module-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (tab === 'online') document.getElementById('tabModuleOnline')?.classList.add('active');
-    else if (tab === 'inquiry') document.getElementById('tabModuleInquiry')?.classList.add('active');
-    else if (tab === 'walkin') document.getElementById('tabModuleWalkin')?.classList.add('active');
-    else if (tab === 'noshow') document.getElementById('tabModuleNoshow')?.classList.add('active');
-    renderQueueTable();
-}
-
 async function loadQueue() {
     try {
         const res = await fetch('/sdn/api/patients.php?_=' + Date.now()).then(r => r.json());
@@ -324,34 +312,6 @@ async function loadQueue() {
                 deptPatients = (filtered.length > 0 || res.data.length === 0) ? filtered : res.data;
             }
             cachedQueuePatients = deptPatients;
-
-            // Compute and update module tab counters
-            let onlineCount = 0;
-            let inquiryCount = 0;
-            let walkinCount = 0;
-            let noshowCount = 0;
-            (deptPatients || []).forEach(p => {
-                const isNoshow = (p.status === 'no-show' || p.status === 'rejected');
-                const isInquiry = !!(p.inquiry_only == 1 || p.inquiry_only === true || p.consultation_nature === 'General Inquiry');
-                if (isNoshow) {
-                    noshowCount++;
-                } else if (isInquiry) {
-                    inquiryCount++;
-                } else if (p.unscheduled_walkin || p.appointment_type === 'walk-in') {
-                    walkinCount++;
-                } else {
-                    onlineCount++;
-                }
-            });
-            const elOnline = document.getElementById('countOnlineBooker');
-            const elInquiry = document.getElementById('countInquiryQueue');
-            const elWalkin = document.getElementById('countWalkinQueue');
-            const elNoshow = document.getElementById('countNoshowRegistry');
-            if (elOnline) elOnline.textContent = onlineCount;
-            if (elInquiry) elInquiry.textContent = inquiryCount;
-            if (elWalkin) elWalkin.textContent = walkinCount;
-            if (elNoshow) elNoshow.textContent = noshowCount;
-
             renderQueueTable();
         } else {
             cachedQueuePatients = [];
@@ -371,18 +331,6 @@ function renderQueueTable() {
     if (!tbody) return;
 
     let list = cachedQueuePatients || [];
-
-    // 1. Separate Module Views: Online vs Inquiry vs Walk-in vs No-Show Registry
-    if (currentModuleTab === 'walkin') {
-        list = list.filter(p => (p.unscheduled_walkin || p.appointment_type === 'walk-in') && p.status !== 'no-show' && p.status !== 'rejected');
-    } else if (currentModuleTab === 'noshow') {
-        list = list.filter(p => p.status === 'no-show' || p.status === 'rejected');
-    } else if (currentModuleTab === 'inquiry') {
-        list = list.filter(p => (p.inquiry_only == 1 || p.inquiry_only === true || p.consultation_nature === 'General Inquiry') && p.status !== 'no-show' && p.status !== 'rejected');
-    } else {
-        // 'online' - standard scheduled appointments
-        list = list.filter(p => (!p.unscheduled_walkin && p.appointment_type !== 'walk-in' && !p.inquiry_only && p.consultation_nature !== 'General Inquiry') && p.status !== 'no-show' && p.status !== 'rejected');
-    }
 
     // 2. Status Filter
     if (currentQueueStatusFilter !== 'all') {
@@ -404,11 +352,7 @@ function renderQueueTable() {
     }
 
     if(list.length === 0) {
-        let emptyLabel = 'No patients found';
-        if (currentModuleTab === 'walkin') emptyLabel = 'No active walk-in patients in queue';
-        else if (currentModuleTab === 'noshow') emptyLabel = 'No no-show records found';
-        else if (currentModuleTab === 'inquiry') emptyLabel = 'No active patient inquiries found';
-        else emptyLabel = 'No online appointment bookings found';
+        let emptyLabel = 'No consultations for this department';
 
         const catLabel = currentQueueStatusFilter === 'all' ? '' : ` (${currentQueueStatusFilter.toUpperCase()})`;
         const searchNotice = currentQueueSearchQuery ? ` matching "${escapeHtml(currentQueueSearchQuery)}"` : '';
@@ -417,20 +361,6 @@ function renderQueueTable() {
         return;
     }
 
-    // Concurrency / Double-booking detection across active slots
-    const slotCountMap = {};
-    (cachedQueuePatients || []).forEach(p => {
-        if (p.status !== 'no-show' && p.status !== 'rejected' && p.status !== 'cancelled') {
-            const doc = (p.assigned_doctor || '').trim().toLowerCase();
-            const date = (p.appointment_date || '').trim();
-            const time = (p.scheduled_time || '').trim().toLowerCase();
-            if (doc && doc !== 'none' && date && time) {
-                const key = `${date}___${time}___${doc}`;
-                slotCountMap[key] = (slotCountMap[key] || 0) + 1;
-            }
-        }
-    });
-    
     tbody.innerHTML = list.map(p => {
         let badge = 'badge-yellow';
         let statusLabel = (p.status || '').replace(/_/g, ' ').toUpperCase();
@@ -457,19 +387,6 @@ function renderQueueTable() {
         let safeAppType = escapeHtml(p.appointment_type || (isWalkin ? 'Walk-in' : 'Scheduled'));
         let safeDoctor = escapeHtml(p.assigned_doctor || 'None');
 
-        // Check for double-booking conflict
-        const docKey = (p.assigned_doctor || '').trim().toLowerCase();
-        const dateKey = (p.appointment_date || '').trim();
-        const timeKey = (p.scheduled_time || '').trim().toLowerCase();
-        const slotKey = `${dateKey}___${timeKey}___${docKey}`;
-        const hasDoubleBooking = !isInquiry && !!(slotCountMap[slotKey] && slotCountMap[slotKey] > 1);
-        const doubleBookingBadge = hasDoubleBooking ? `
-            <div class="badge-double-booking" onclick="openDoubleBookingProtocolModal()" title="Concurrent booking conflict detected on this doctor & time slot. Click for protocol.">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px; vertical-align:-1px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                <span>Double Booking</span>
-            </div>
-        ` : '';
-        
         // ── Automated SMS Reminder Cell (Unified Professional Layout) ──
         let remStatus = p.reminder_status || 'Pending';
         let smsCellHtml = '';
@@ -737,7 +654,7 @@ function renderQueueTable() {
         return `
         <tr>
             <td>
-                <strong style="color:var(--deep-green); font-size:1.02rem;">${safeName}</strong> ${bookTypeBadge} ${doubleBookingBadge}<br>
+                <strong style="color:var(--deep-green); font-size:1.02rem;">${safeName}</strong> ${bookTypeBadge}<br>
                 <small style="color:var(--muted)">ID: ${safeId} &bull; ${isInquiry ? 'General Inquiry' : safeAppType}</small>
             </td>
             <td>
@@ -1072,10 +989,10 @@ async function openPatientDetailsModal(patient_id) {
                 <div class="patient-verify-card" style="margin-bottom:0;">
                     <h3>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        <span>Clinical Complaints & Symptoms</span>
+                        <span>Chief Complaint</span>
                     </h3>
                     <div class="verify-item" style="margin-bottom:12px;">
-                        <label>Chief Complaints</label>
+                        <label>Chief Complaint</label>
                         <p style="background:#ffffff; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; font-weight:500;">
                             ${escapeHtml(p.chief_complaints || 'None listed')}
                         </p>
@@ -1807,7 +1724,7 @@ async function submitWalkin() {
         return flagFieldError('walkinName', 'Please provide the patient Full Name.');
     }
     if (!complaints) {
-        return flagFieldError('walkinComplaints', 'Please describe the Chief Complaints.');
+        return flagFieldError('walkinComplaints', 'Please describe the Chief Complaint.');
     }
 
     try {
@@ -2411,14 +2328,6 @@ async function submitStaffProfilePage(event) {
             }
         });
     }
-}
-
-function openDoubleBookingProtocolModal() {
-    document.getElementById('doubleBookingModal')?.classList.add('show');
-}
-
-function closeDoubleBookingProtocolModal() {
-    document.getElementById('doubleBookingModal')?.classList.remove('show');
 }
 
 async function loadEMR() {

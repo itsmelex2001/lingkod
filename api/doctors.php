@@ -43,16 +43,15 @@ if ($method === 'GET') {
     if ($mode === 'manage') {
         $stmt = $pdo->query(
             "SELECT id, name, specialization, department, schedule_start, schedule_end,
-                    total_slots, booked_slots, status, schedule_date
+                    total_slots, status, schedule_date
              FROM doctors
              ORDER BY department, name ASC"
         );
         $data = $stmt->fetchAll();
         
         foreach ($data as &$doc) {
-            $doc['fill_percent'] = $doc['total_slots'] > 0
-                ? round(($doc['booked_slots'] / $doc['total_slots']) * 100)
-                : 0;
+            $doc['total_slots'] = isset($doc['total_slots']) ? (int)$doc['total_slots'] : 20;
+            $doc['fill_percent'] = 0;
         }
         unset($doc);
         
@@ -75,7 +74,7 @@ if ($method === 'GET') {
             "SELECT id, name, specialization, department,
                     TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
-                    total_slots, booked_slots, status, schedule_date
+                    status, schedule_date
              FROM doctors
              WHERE (LOWER(department) = LOWER(?) OR LOWER(department) LIKE CONCAT('%', LOWER(?), '%'))
              ORDER BY schedule_start ASC"
@@ -86,7 +85,7 @@ if ($method === 'GET') {
             "SELECT id, name, specialization, department,
                     TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
-                    total_slots, booked_slots, status, schedule_date
+                    status, schedule_date
              FROM doctors
              ORDER BY department, schedule_start ASC"
         );
@@ -94,13 +93,8 @@ if ($method === 'GET') {
 
     $doctors = $stmt->fetchAll();
 
-    // Compute slot fill percentage
     foreach ($doctors as &$doc) {
-        $doc['booked_slots'] = (int) $doc['booked_slots'];
-        $doc['total_slots']  = (int) $doc['total_slots'];
-        $doc['fill_percent'] = $doc['total_slots'] > 0
-            ? round(($doc['booked_slots'] / $doc['total_slots']) * 100)
-            : 0;
+        $doc['fill_percent'] = 0;
     }
     unset($doc);
 
@@ -139,45 +133,38 @@ if ($method === 'POST' && $isAdmin) {
     if ($action === 'create') {
         $name           = trim($b['name'] ?? '');
         $specialization = trim($b['specialization'] ?? '');
-        $departmentRaw = trim($b['department'] ?? '');
+        $departmentRaw  = trim($b['department'] ?? '');
         $deptMap = [
             'psychiatry'         => 'psychiatry',
             'opu psychiatry'     => 'psychiatry',
             'neurology'          => 'neurology',
             'general'            => 'general',
+            'general medical'    => 'general',
             'general medicine'   => 'general',
             'general management' => 'general'
         ];
         $department = $deptMap[strtolower($departmentRaw)] ?? strtolower($departmentRaw);
-        $schedStart     = trim($b['schedule_start'] ?? '');
-        $schedEnd       = trim($b['schedule_end'] ?? '');
-        $totalSlots     = (int) ($b['total_slots'] ?? 20);
+        $totalSlots = isset($b['total_slots']) && $b['total_slots'] !== '' ? (int) $b['total_slots'] : 20;
+        $statusRaw  = strtolower(trim($b['status'] ?? 'in'));
+        $status     = in_array($statusRaw, ['in', 'out'], true) ? $statusRaw : 'in';
 
         if ($name === '' || $specialization === '' || $department === '') {
-            respondErr('name, specialization, and department are required.');
+            respondErr('Please fill in all required fields.');
+        }
+
+        if ($totalSlots < 1 || $totalSlots > 100) {
+            respondErr('Total daily slots must be between 1 and 100.');
         }
 
         if (!in_array($department, ['psychiatry', 'neurology', 'general'])) {
             respondErr('Invalid department. Must be psychiatry, neurology, or general.');
         }
 
-        $matchedSpec = false;
-        foreach ($allowedSpecializations as $as) {
-            if (strcasecmp($as, $specialization) === 0) {
-                $specialization = $as; // Canonical case
-                $matchedSpec = true;
-                break;
-            }
-        }
-        if (!$matchedSpec) {
-            respondErr("Invalid clinical specialization '$specialization'. Only approved hospital medical specializations are permitted (arbitrary or non-medical fields such as Veterinarian/VET are strictly prohibited).");
-        }
-
         $stmt = $pdo->prepare(
-            "INSERT INTO doctors (name, specialization, department, schedule_start, schedule_end, total_slots, status, schedule_date)
-             VALUES (?, ?, ?, ?, ?, ?, 'available', CURDATE())"
+            "INSERT INTO doctors (name, specialization, department, total_slots, status, schedule_date)
+             VALUES (?, ?, ?, ?, ?, CURDATE())"
         );
-        $stmt->execute([$name, $specialization, $department, $schedStart ?: null, $schedEnd ?: null, $totalSlots]);
+        $stmt->execute([$name, $specialization, $department, $totalSlots, $status]);
 
         addLog($pdo, 'info', 'Doctor Added', $actor,
                "New doctor '$name' ($specialization) added to $department department.");
@@ -197,16 +184,15 @@ if ($method === 'POST' && $isAdmin) {
         $updates = [];
         $params  = [];
 
-        foreach (['name', 'specialization', 'department', 'schedule_start', 'schedule_end', 'total_slots', 'status'] as $field) {
+        foreach (['name', 'specialization', 'department', 'total_slots', 'status'] as $field) {
             if (isset($b[$field])) {
-                if ($field === 'total_slots') {
-                    $val = (int) $b[$field];
-                } elseif ($field === 'department') {
+                if ($field === 'department') {
                     $deptMap = [
                         'psychiatry'         => 'psychiatry',
                         'opu psychiatry'     => 'psychiatry',
                         'neurology'          => 'neurology',
                         'general'            => 'general',
+                        'general medical'    => 'general',
                         'general medicine'   => 'general',
                         'general management' => 'general'
                     ];
@@ -215,22 +201,20 @@ if ($method === 'POST' && $isAdmin) {
                         respondErr('Invalid department. Must be psychiatry, neurology, or general.');
                     }
                 } elseif ($field === 'specialization') {
-                    $matchedSpec = false;
-                    foreach ($allowedSpecializations as $as) {
-                        if (strcasecmp($as, trim($b['specialization'])) === 0) {
-                            $val = $as;
-                            $matchedSpec = true;
-                            break;
-                        }
+                    $val = trim($b['specialization']);
+                    if ($val === '') {
+                        respondErr('Specialization cannot be empty.');
                     }
-                    if (!$matchedSpec) {
-                        respondErr("Invalid clinical specialization '{$b['specialization']}'. Only approved hospital medical specializations are permitted.");
+                } elseif ($field === 'total_slots') {
+                    $val = (int) $b['total_slots'];
+                    if ($val < 1 || $val > 100) {
+                        respondErr('Total daily slots must be between 1 and 100.');
                     }
                 } elseif ($field === 'status') {
                     $val = strtolower(trim($b[$field]));
-                    $validStatuses = ['available', 'booked', 'leave', 'in_clinic', 'on_break', 'emergency'];
+                    $validStatuses = ['in', 'out', 'available', 'booked', 'leave', 'in_clinic', 'on_break', 'emergency', 'active'];
                     if (!in_array($val, $validStatuses)) {
-                        respondErr("Invalid status '$val'. Allowed statuses: " . implode(', ', $validStatuses));
+                        respondErr("Invalid status '$val'.");
                     }
                 } else {
                     $val = trim($b[$field]);
@@ -256,10 +240,10 @@ if ($method === 'POST' && $isAdmin) {
     // ── TOGGLE LEAVE ─────────────────────────────────────────────────────────
     if ($action === 'toggle_leave') {
         $id     = $b['id'] ?? '';
-        $status = $b['status'] ?? '';
+        $status = strtolower(trim($b['status'] ?? ''));
 
         if ($id === '') respondErr('id is required.');
-        if (!in_array($status, ['available', 'leave', 'booked'])) {
+        if (!in_array($status, ['in', 'out', 'available', 'leave', 'booked'])) {
             respondErr('Invalid status.');
         }
 
@@ -271,11 +255,11 @@ if ($method === 'POST' && $isAdmin) {
         $stmt = $pdo->prepare("UPDATE doctors SET status = ? WHERE id = ?");
         $stmt->execute([$status, $id]);
 
-        $action_txt = $status === 'leave' ? 'marked on leave' : 'marked as ' . $status;
-        addLog($pdo, 'info', 'Doctor Leave Status', $actor,
+        $action_txt = ($status === 'out' || $status === 'leave') ? 'marked OUT' : 'marked IN';
+        addLog($pdo, 'info', 'Doctor Status Updated', $actor,
                "Doctor '{$doctor['name']}' $action_txt.");
 
-        respondOk(['message' => "Doctor's status updated to $status."]);
+        respondOk(['message' => "Doctor's status updated to " . strtoupper($status) . "."]);
     }
 
     respondErr("Unknown action '$action'.");

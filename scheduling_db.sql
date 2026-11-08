@@ -25,13 +25,17 @@ USE `scheduling_db`;
 CREATE TABLE IF NOT EXISTS `users` (
   `id`          INT AUTO_INCREMENT PRIMARY KEY,
   `username`    VARCHAR(50)  NOT NULL UNIQUE,
+  `email`       VARCHAR(120) DEFAULT NULL UNIQUE,
   `password`    VARCHAR(255) NOT NULL,
-  `role`        ENUM('admin','staff') NOT NULL DEFAULT 'staff',
+  `role`        ENUM('admin','staff','doctor','nurse','patient') NOT NULL DEFAULT 'staff',
   `status`      ENUM('active','inactive') NOT NULL DEFAULT 'active',
   `department`  VARCHAR(100) DEFAULT NULL,
+  `patient_id`  INT DEFAULT NULL,
   `last_login`  TIMESTAMP NULL DEFAULT NULL,
   `login_count` INT NOT NULL DEFAULT 0,
-  `created_at`  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `created_at`  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_users_role` (`role`),
+  INDEX `idx_users_patient_id` (`patient_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -40,6 +44,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 CREATE TABLE IF NOT EXISTS `patients` (
   `id`                  INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id`             INT DEFAULT NULL,
   `patient_id`          VARCHAR(20)  NOT NULL UNIQUE,
   `department`          VARCHAR(60),
   `full_name`           VARCHAR(100) NOT NULL,
@@ -48,6 +53,11 @@ CREATE TABLE IF NOT EXISTS `patients` (
   `age`                 TINYINT UNSIGNED,
   `contact_number`      VARCHAR(25),
   `email`               VARCHAR(120),
+  `password`            VARCHAR(255) DEFAULT NULL,
+  `email_verified`      TINYINT(1) NOT NULL DEFAULT 0,
+  `verification_token`  VARCHAR(64) DEFAULT NULL,
+  `reset_token`         VARCHAR(64) DEFAULT NULL,
+  `reset_token_expires_at` DATETIME DEFAULT NULL,
   `address`             TEXT,
   `with_companion`      TINYINT(1) NOT NULL DEFAULT 0,
   `chief_complaints`    TEXT,
@@ -62,7 +72,9 @@ CREATE TABLE IF NOT EXISTS `patients` (
   `assigned_doctor`     VARCHAR(100),
   `assigned_date`       DATE,
   `created_at`          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at`          TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `updated_at`          TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_patients_user_id` (`user_id`),
+  INDEX `idx_patients_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -76,9 +88,7 @@ CREATE TABLE IF NOT EXISTS `doctors` (
   `department`     ENUM('psychiatry','neurology','general') NOT NULL,
   `schedule_start` TIME,
   `schedule_end`   TIME,
-  `total_slots`    TINYINT UNSIGNED NOT NULL DEFAULT 20,
-  `booked_slots`   TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  `status`         ENUM('available','booked','leave') NOT NULL DEFAULT 'available',
+  `status`         VARCHAR(30) NOT NULL DEFAULT 'active',
   `schedule_date`  DATE,
   `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -176,9 +186,6 @@ CREATE OR REPLACE VIEW `v_doctor_summary` AS
 SELECT
   d.id, d.name, d.specialization, d.department,
   d.schedule_start, d.schedule_end,
-  d.total_slots, d.booked_slots,
-  ROUND((d.booked_slots / d.total_slots * 100), 0) AS load_percentage,
-  (d.total_slots - d.booked_slots) AS available_slots,
   d.status, d.schedule_date, d.created_at
 FROM `doctors` d
 ORDER BY d.department, d.name ASC;
@@ -224,11 +231,8 @@ CREATE OR REPLACE VIEW `v_doctor_availability` AS
 SELECT
   d.department,
   COUNT(*) AS total_doctors,
-  SUM(CASE WHEN d.status = 'available' THEN 1 ELSE 0 END) AS available,
-  SUM(CASE WHEN d.status = 'booked'    THEN 1 ELSE 0 END) AS booked,
-  SUM(CASE WHEN d.status = 'leave'     THEN 1 ELSE 0 END) AS on_leave,
-  SUM(d.total_slots)  AS total_slots,
-  SUM(d.booked_slots) AS booked_slots
+  SUM(CASE WHEN d.status = 'available' OR d.status = 'active' THEN 1 ELSE 0 END) AS available,
+  SUM(CASE WHEN d.status = 'leave'     THEN 1 ELSE 0 END) AS on_leave
 FROM `doctors` d
 GROUP BY d.department
 ORDER BY d.department;
@@ -280,13 +284,13 @@ WHERE NOT EXISTS (SELECT 1 FROM `patients` LIMIT 1);
 
 -- Doctors
 INSERT INTO `doctors`
-  (name, specialization, department, schedule_start, schedule_end, total_slots, booked_slots, status, schedule_date)
+  (name, specialization, department, schedule_start, schedule_end, status, schedule_date)
 SELECT * FROM (
-  SELECT 'Dr. Alan Magno',    'Adult Psychiatry',   'psychiatry','08:00:00','12:00:00',20, 9,'available',CURDATE() UNION ALL
-  SELECT 'Dr. Sarah Reyes',   'Child Psychiatry',   'psychiatry','13:00:00','17:00:00',20,20,'booked',   CURDATE() UNION ALL
-  SELECT 'Dr. Emilio Cruz',   'Clinical Neurology', 'neurology', '09:00:00','15:00:00',20,13,'available',CURDATE() UNION ALL
-  SELECT 'Dr. Maria Santos',  'Internal Medicine',  'general',   '08:00:00','16:00:00',20, 6,'available',CURDATE() UNION ALL
-  SELECT 'Dr. Juan Dela Cruz','Family Medicine',    'general',   NULL,      NULL,       20, 0,'leave',    CURDATE()
+  SELECT 'Dr. Alan Magno',    'Adult Psychiatry',   'psychiatry','08:00:00','12:00:00','active',CURDATE() UNION ALL
+  SELECT 'Dr. Sarah Reyes',   'Child Psychiatry',   'psychiatry','13:00:00','17:00:00','active',CURDATE() UNION ALL
+  SELECT 'Dr. Emilio Cruz',   'Clinical Neurology', 'neurology', '09:00:00','15:00:00','active',CURDATE() UNION ALL
+  SELECT 'Dr. Maria Santos',  'Internal Medicine',  'general',   '08:00:00','16:00:00','active',CURDATE() UNION ALL
+  SELECT 'Dr. Juan Dela Cruz','Family Medicine',    'general',   NULL,      NULL,       'leave', CURDATE()
 ) AS d
 WHERE NOT EXISTS (SELECT 1 FROM `doctors` LIMIT 1);
 

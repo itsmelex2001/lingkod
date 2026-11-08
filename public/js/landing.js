@@ -53,10 +53,11 @@
       const fab = document.querySelector('.fab-container');
       if (fab) fab.classList.add('chatbot-hidden');
 
-      // Splash animation runs (~2.5s for typewriter + subtitle fade + pause)
       setTimeout(() => {
-        splash.style.transition = 'opacity 0.6s ease-out';
+        splash.style.transition = 'opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1), transform 0.75s cubic-bezier(0.22, 1, 0.36, 1), filter 0.75s cubic-bezier(0.22, 1, 0.36, 1)';
         splash.style.opacity = '0';
+        splash.style.transform = 'scale3d(1.04, 1.04, 1)';
+        splash.style.filter = 'blur(8px)';
 
         setTimeout(() => {
           splash.style.display = 'none';
@@ -66,8 +67,8 @@
           }
           // Trigger the chatbot pop-up entrance animation!
           triggerChatbotPop();
-        }, 550);
-      }, 2500);
+        }, 700);
+      }, 3100);
     }
   }
 

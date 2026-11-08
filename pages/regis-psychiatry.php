@@ -1,10 +1,10 @@
 <?php session_start(); ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" class="regis-page">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OPU Psychiatry Registration</title>
+    <title>OPU Psychiatry Registration | LINGKOD</title>
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/forms.css?v=<?= time() ?>" />
@@ -42,8 +42,6 @@
         </div>
       </div>
 
-      <!-- Returning Patient Verification Box -->
-      <?php require_once __DIR__ . '/returning-patient-verify-box.php'; ?>
 
       <?php if (!empty($_GET['service']) || !empty($_GET['spec'])): ?>
       <div class="service-selected-banner">
@@ -60,148 +58,191 @@
       </div>
       <?php endif; ?>
 
-      <form id="regForm">
+            <!-- 3-Phase Stepper Indicator (Line & Dot) -->
+      <div class="stepper-wrapper">
+        <div class="stepper-line-container">
+          <div class="stepper-line-bg"></div>
+          <div class="stepper-line-fill" id="stepperLineFill" style="width: 0%;"></div>
+        </div>
+        <div class="stepper-steps">
+          <div class="stepper-node active" data-step="1">
+            <div class="stepper-dot"><span class="dot-inner"></span></div>
+            <div class="stepper-text">
+              <span class="stepper-phase-num">Phase 1</span>
+              <span class="stepper-phase-name">Personal Information</span>
+            </div>
+          </div>
+          <div class="stepper-node" data-step="2">
+            <div class="stepper-dot"><span class="dot-inner"></span></div>
+            <div class="stepper-text">
+              <span class="stepper-phase-num">Phase 2</span>
+              <span class="stepper-phase-name">Medical Information</span>
+            </div>
+          </div>
+          <div class="stepper-node" data-step="3">
+            <div class="stepper-dot"><span class="dot-inner"></span></div>
+            <div class="stepper-text">
+              <span class="stepper-phase-num">Phase 3</span>
+              <span class="stepper-phase-name">Appointment Details</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <form id="regForm" novalidate>
         <input type="hidden" id="department" value="psychiatry" />
         <!-- Anti-bot honeypot field -->
         <input type="text" id="website_url" name="website_url" style="display:none !important; position:absolute; left:-9999px;" tabindex="-1" autocomplete="off" />
 
-        <div class="form-landscape-grid">
-          <!-- Column 1: Inquiry Details & Quick Schedule -->
-          <div class="form-landscape-col">
-            <div class="form-section" id="secInquiryDetails">
-              <h3><span class="sec-num">1</span> Inquiry Details</h3>
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>Date <span class="asterisk">*</span></label>
-                  <input type="date" id="appointmentDate" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>" required />
-                </div>
-                <div class="form-group">
-                  <label>Time <span class="asterisk">*</span></label>
-                  <input type="time" id="appointmentTime" required />
-                </div>
-              </div>
+        <div class="form-phase-container">
+          <!-- Phase 1: Personal Information -->
+          <div class="form-phase active" id="phase1" data-phase="1">
+            <div class="phase-header">
+              <h3><span class="sec-num">1</span> Personal Information</h3>
+              <p class="phase-subtitle">Step 1 of 3 • Patient Demographics</p>
+            </div>
 
+            <div class="grid-row name-grid-row" style="grid-template-columns: 1fr 1fr 85px;">
               <div class="form-group">
-                <label>Receiver</label>
-                <input type="text" id="receiver" placeholder="Staff Name" maxlength="100" />
+                <label>First Name <span class="asterisk">*</span></label>
+                <input type="text" id="firstName" placeholder="First Name" maxlength="60" required />
               </div>
+              <div class="form-group">
+                <label>Last Name <span class="asterisk">*</span></label>
+                <input type="text" id="lastName" placeholder="Last Name" maxlength="60" required />
+              </div>
+              <div class="form-group">
+                <label>M.I. <span style="font-weight:400; font-size:0.75rem; color:#94a3b8;">(Opt)</span></label>
+                <input type="text" id="middleInitial" placeholder="e.g. B" maxlength="5" />
+              </div>
+            </div>
+            <input type="hidden" id="fullName" />
 
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>Type <span class="asterisk">*</span></label>
-                  <select id="appointmentType" required>
-                    <option value="Online Booking" selected>Online Scheduled Appointment</option>
-                    <option value="Referral">Referral</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Referral Source</label>
-                  <input type="text" id="referralSource" placeholder="e.g. OPU Med" maxlength="100" />
-                </div>
+            <div class="grid-row" style="grid-template-columns: 1.1fr 65px 1.1fr;">
+              <div class="form-group">
+                <label>Birthdate <span class="asterisk">*</span></label>
+                <input type="date" id="birthdate" min="<?= date('Y-m-d', strtotime('-120 years')) ?>" max="<?= date('Y-m-d') ?>" required />
+              </div>
+              <div class="form-group">
+                <label>Age</label>
+                <input type="number" id="age" placeholder="Age" readonly tabindex="-1" />
+              </div>
+              <div class="form-group">
+                <label>Informant</label>
+                <input type="text" id="informant" placeholder="Informant (if any)" maxlength="100" />
               </div>
             </div>
 
-            <div class="form-section" id="secQuickSchedule">
-              <h3><span class="sec-num">2</span> Quick Schedule</h3>
-              <div class="quick-schedule-options" style="margin-bottom: 0;">
+            <div class="grid-row">
+              <div class="form-group">
+                <label>New / Old Patient <span class="asterisk">*</span></label>
+                <select id="patientType" required>
+                  <option value="" disabled selected>Select...</option>
+                  <option value="first-time">New Patient</option>
+                  <option value="returning">Old / Returning</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Contact No <span class="asterisk">*</span></label>
+                <input type="tel" id="contactNumber" placeholder="09XXXXXXXXX" pattern="^(09|\+639)\d{9}$" maxlength="13" title="Format: 09XXXXXXXXX or +639XXXXXXXXX" required />
+              </div>
+            </div>
+          </div>
+
+          <!-- Phase 2: Medical Information -->
+          <div class="form-phase" id="phase2" data-phase="2" style="display: none;">
+            <div class="phase-header">
+              <h3><span class="sec-num">2</span> Medical Information</h3>
+              <p class="phase-subtitle">Step 2 of 3 • Clinical Concerns & Mental Wellness Assessment</p>
+            </div>
+
+            <div class="form-group" id="groupChiefComplaints">
+              <label id="lblChiefComplaints">Chief Complaint <span class="asterisk">*</span></label>
+              <select id="chiefComplaints" required>
+                <option value="" disabled selected>Select primary psychiatric / mental health chief complaint...</option>
+                <option value="Generalized Anxiety, Panic Attacks & Phobias">Generalized Anxiety, Panic Attacks &amp; Phobias</option>
+                <option value="Major Depressive Disorder & Persistent Low Mood">Major Depressive Disorder &amp; Persistent Low Mood</option>
+                <option value="Bipolar Disorder & Severe Mood Swings">Bipolar Disorder &amp; Severe Mood Swings</option>
+                <option value="Schizophrenia & Hallucinations / Delusions">Schizophrenia &amp; Hallucinations / Delusions</option>
+                <option value="Sleep Disturbances & Chronic Insomnia">Sleep Disturbances &amp; Chronic Insomnia</option>
+                <option value="Substance Abuse, Addiction Assessment & Recovery">Substance Abuse, Addiction Assessment &amp; Recovery</option>
+                <option value="Trauma, Post-Traumatic Stress (PTSD) & Acute Stress">Trauma, Post-Traumatic Stress (PTSD) &amp; Acute Stress</option>
+                <option value="Child & Adolescent Behavioral / ADHD Concerns">Child &amp; Adolescent Behavioral / ADHD Concerns</option>
+                <option value="Psychiatric Medication Review & Refill Consultation">Psychiatric Medication Review &amp; Refill Consultation</option>
+                <option value="Other">Other Psychiatric / Mental Wellness Evaluation (specify below)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Recommendation / Remarks</label>
+              <textarea id="recommendationRemarks" rows="3" maxlength="1000" placeholder="Additional details, recommendations, or chief complaint..." style="min-height: 60px; height: 68px;"></textarea>
+            </div>
+          </div>
+
+          <!-- Phase 3: Appointment Details -->
+          <div class="form-phase" id="phase3" data-phase="3" style="display: none;">
+            <div class="phase-header">
+              <h3><span class="sec-num">3</span> Appointment Details</h3>
+              <p class="phase-subtitle">Step 3 of 3 • Schedule, Mode & Referral Source</p>
+            </div>
+
+            <div class="grid-row">
+              <div class="form-group">
+                <label>Appointment Date <span class="asterisk">*</span></label>
+                <input type="date" id="appointmentDate" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>" required />
+              </div>
+              <div class="form-group">
+                <label>Appointment Time <span class="asterisk">*</span></label>
+                <input type="time" id="appointmentTime" required />
+              </div>
+            </div>
+
+            <div class="form-section" id="secQuickSchedule" style="margin-bottom: 6px; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;">
+              <label style="font-size: 0.72rem; font-weight: 700; color: #166534; text-transform: uppercase; margin-bottom: 4px; display: block;">Consultation Mode <span class="asterisk">*</span></label>
+              <div class="quick-schedule-options" style="margin-bottom: 0; display: flex; gap: 14px;">
                 <label><input type="radio" name="consultationMode" value="Face-to-Face" required checked> Face to Face</label>
                 <label><input type="radio" name="consultationMode" value="Teleconsultation" required> Teleconsultation</label>
                 <label><input type="radio" name="consultationMode" value="Admission" required> Admission</label>
               </div>
             </div>
-          </div>
 
-          <!-- Column 2: Patient Information -->
-          <div class="form-landscape-col">
-            <div class="form-section flex-1">
-              <h3><span class="sec-num">3</span> Patient Information</h3>
-              <div class="grid-row name-grid-row" style="grid-template-columns: 1fr 1fr 85px;">
-                <div class="form-group">
-                  <label>First Name <span class="asterisk">*</span></label>
-                  <input type="text" id="firstName" placeholder="First Name" maxlength="60" required />
-                </div>
-                <div class="form-group">
-                  <label>Last Name <span class="asterisk">*</span></label>
-                  <input type="text" id="lastName" placeholder="Last Name" maxlength="60" required />
-                </div>
-                <div class="form-group">
-                  <label>M.I. <span style="font-weight:400; font-size:0.75rem; color:#94a3b8;">(Opt)</span></label>
-                  <input type="text" id="middleInitial" placeholder="e.g. B" maxlength="5" />
-                </div>
-              </div>
-              <input type="hidden" id="fullName" />
-
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>Birthdate <span class="asterisk">*</span></label>
-                  <input type="date" id="birthdate" min="<?= date('Y-m-d', strtotime('-120 years')) ?>" max="<?= date('Y-m-d') ?>" required />
-                </div>
-                <div class="form-group">
-                  <label>Age</label>
-                  <input type="number" id="age" placeholder="Age" readonly tabindex="-1" />
-                </div>
-              </div>
-
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>New / Old Patient <span class="asterisk">*</span></label>
-                  <select id="patientType" required>
-                    <option value="" disabled selected>Select...</option>
-                    <option value="first-time">New Patient</option>
-                    <option value="returning">Old / Returning</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Contact No <span class="asterisk">*</span></label>
-                  <input type="tel" id="contactNumber" placeholder="09XXXXXXXXX" pattern="^(09|\+639)\d{9}$" maxlength="13" title="Format: 09XXXXXXXXX or +639XXXXXXXXX" required />
-                </div>
-              </div>
-
-              <div class="grid-row">
-                <div class="form-group">
-                  <label>HRN</label>
-                  <input type="text" id="hrn" placeholder="Auto-generated" readonly tabindex="-1" />
-                </div>
-                <div class="form-group">
-                  <label>Informant</label>
-                  <input type="text" id="informant" placeholder="Name of informant (if any)" maxlength="100" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Column 3: Clinical Concerns & Options -->
-          <div class="form-landscape-col">
-            <div class="form-section flex-1">
-              <h3><span class="sec-num">4</span> Clinical Concerns &amp; Remarks</h3>
-              <div class="form-group" id="groupChiefComplaints">
-                <label id="lblChiefComplaints">Health Concerns <span class="asterisk">*</span></label>
-                <select id="chiefComplaints" required>
-                  <option value="" disabled selected>Select primary psychiatric / mental health concern...</option>
-                  <option value="Generalized Anxiety, Panic Attacks & Phobias">Generalized Anxiety, Panic Attacks &amp; Phobias</option>
-                  <option value="Major Depressive Disorder & Persistent Low Mood">Major Depressive Disorder &amp; Persistent Low Mood</option>
-                  <option value="Bipolar Disorder & Severe Mood Swings">Bipolar Disorder &amp; Severe Mood Swings</option>
-                  <option value="Schizophrenia & Hallucinations / Delusions">Schizophrenia &amp; Hallucinations / Delusions</option>
-                  <option value="Sleep Disturbances & Chronic Insomnia">Sleep Disturbances &amp; Chronic Insomnia</option>
-                  <option value="Substance Abuse, Addiction Assessment & Recovery">Substance Abuse, Addiction Assessment &amp; Recovery</option>
-                  <option value="Trauma, Post-Traumatic Stress (PTSD) & Acute Stress">Trauma, Post-Traumatic Stress (PTSD) &amp; Acute Stress</option>
-                  <option value="Child & Adolescent Behavioral / ADHD Concerns">Child &amp; Adolescent Behavioral / ADHD Concerns</option>
-                  <option value="Psychiatric Medication Review & Refill Consultation">Psychiatric Medication Review &amp; Refill Consultation</option>
-                  <option value="Other">Other Psychiatric / Mental Wellness Evaluation (specify below)</option>
+            <div class="grid-row" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="form-group">
+                <label>Type <span class="asterisk">*</span></label>
+                <select id="appointmentType" required>
+                  <option value="Online Booking" selected>Online Scheduled Appointment</option>
+                  <option value="Referral">Referral</option>
                 </select>
               </div>
-
               <div class="form-group">
-                <label>Recommendation / Remarks</label>
-                <textarea id="recommendationRemarks" rows="2" maxlength="1000" placeholder="Additional details, recommendations, or symptoms..." style="min-height: 55px;"></textarea>
+                <label>Referral Source</label>
+                <input type="text" id="referralSource" placeholder="e.g. OPU Med" maxlength="100" />
+              </div>
+              <div class="form-group">
+                <label>Receiver</label>
+                <input type="text" id="receiver" placeholder="Staff Name" maxlength="100" />
               </div>
             </div>
           </div>
         </div>
 
-        <div class="form-landscape-footer">
-          <p class="required-legend"><span class="asterisk">*</span> Indicates a required field</p>
-          <button type="submit" class="btn-submit">Confirm Registration</button>
+        <div class="form-phase-footer">
+          <div class="footer-left">
+            <button type="button" class="btn-phase-prev" id="btnPrevPhase" style="display: none;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+              <span>Back</span>
+            </button>
+            <p class="required-legend"><span class="asterisk">*</span> Indicates a required field</p>
+          </div>
+          <div class="footer-right">
+            <button type="button" class="btn-phase-next" id="btnNextPhase">
+              <span>Continue to Medical Info</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <button type="submit" class="btn-submit" id="btnSubmitPhase" style="display: none;">
+              Confirm Registration
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -270,10 +311,6 @@
                   <span class="print-label">Middle Initial</span>
                   <span class="print-value" id="p-middleInitial"></span>
                 </div>
-                <div class="print-field">
-                  <span class="print-label">HRN</span>
-                  <span class="print-value" id="p-hrn"></span>
-                </div>
               </div>
               <div class="print-row">
                 <div class="print-field">
@@ -303,7 +340,7 @@
               </div>
               <div class="print-row">
                 <div class="print-field full">
-                  <span class="print-label">Health Concerns</span>
+                  <span class="print-label">Chief Complaint</span>
                   <span class="print-value" id="p-chiefComplaints"></span>
                 </div>
               </div>
@@ -403,6 +440,7 @@
     <script src="/sdn/public/js/utils.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/navigation.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/print-pdf-setup.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/regis-stepper.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/regis-psychiatry.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/modal-export.js?v=<?= time() ?>"></script>
   </body>

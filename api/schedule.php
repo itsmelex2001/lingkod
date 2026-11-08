@@ -25,7 +25,7 @@ $role   = $_SESSION['role'] ?? 'public';
 
       if ($role === 'admin' || $role === 'public' || empty($staffDept)) {
           $stmt = $pdo->query(
-              "SELECT id, name, department, specialization, status, total_slots, booked_slots, schedule_date, schedule_start, schedule_end
+              "SELECT id, name, department, specialization, status, schedule_date, schedule_start, schedule_end
                FROM doctors
                ORDER BY department, name"
           );
@@ -44,7 +44,7 @@ $role   = $_SESSION['role'] ?? 'public';
               $params = [];
           }
           $stmt = $pdo->prepare(
-              "SELECT id, name, department, specialization, status, total_slots, booked_slots, schedule_date, schedule_start, schedule_end
+              "SELECT id, name, department, specialization, status, schedule_date, schedule_start, schedule_end
                FROM doctors
                WHERE $whereDept
                ORDER BY department, name"
@@ -66,8 +66,8 @@ if ($method === 'POST') {
         $doctorId = $b['doctor_id'] ?? null;
         $doctorName = trim($b['doctor_name'] ?? '');
 
-        // Valid statuses: in_clinic, on_break, emergency, leave, available, booked
-        $validStatuses = ['in_clinic', 'on_break', 'emergency', 'leave', 'available', 'booked'];
+        // Valid statuses: in, out, in_clinic, on_break, emergency, leave, available, booked
+        $validStatuses = ['in', 'out', 'in_clinic', 'on_break', 'emergency', 'leave', 'available', 'booked'];
         if (!in_array($status, $validStatuses)) {
             respondErr('Invalid doctor status.');
         }

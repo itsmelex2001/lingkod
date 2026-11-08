@@ -1,4 +1,788 @@
 /* forms.css */
+
+/* == Full-Viewport Registration Layout (no scroll) == */
+@media (min-width: 900px) {
+  html.regis-page,
+  html.regis-page body {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden !important;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html.regis-page body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--light-bg, #f4fbf7);
+  }
+
+  html.regis-page 
+/* -- Minimal 3-Phase Stepper Indicator (Line & Dot) -- */
+.stepper-wrapper {
+  position: relative;
+  max-width: 620px;
+  width: 100%;
+  margin: 4px auto 12px auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.stepper-line-container {
+  position: absolute;
+  top: 10px;
+  left: 55px;
+  right: 55px;
+  height: 2px;
+  z-index: 1;
+}
+
+.stepper-line-bg {
+  position: absolute;
+  inset: 0;
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+.stepper-line-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 2px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stepper-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.stepper-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  user-select: none;
+  transition: all 0.2s ease;
+  min-width: 90px;
+}
+
+.stepper-node.clickable {
+  cursor: pointer;
+}
+
+.stepper-node.clickable:hover .stepper-dot {
+  transform: scale(1.15);
+  border-color: #059669;
+}
+
+.stepper-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+.stepper-dot .dot-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  transition: all 0.25s ease;
+}
+
+.stepper-text {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.stepper-phase-num {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+
+.stepper-phase-name {
+  font-size: 0.77rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+/* Stepper States: Active */
+.stepper-node.active .stepper-dot {
+  border-color: #059669;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.stepper-node.active .stepper-dot .dot-inner {
+  background: #059669;
+  width: 8px;
+  height: 8px;
+}
+
+.stepper-node.active .stepper-phase-num {
+  color: #059669;
+  font-weight: 800;
+}
+
+.stepper-node.active .stepper-phase-name {
+  color: #064e3b;
+  font-weight: 700;
+}
+
+/* Stepper States: Completed */
+.stepper-node.completed .stepper-dot {
+  border-color: #10b981;
+  background: #10b981;
+  box-shadow: none;
+}
+
+.stepper-node.completed .stepper-dot .dot-inner {
+  background: #ffffff;
+  width: 6px;
+  height: 6px;
+}
+
+.stepper-node.completed .stepper-phase-num {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.stepper-node.completed .stepper-phase-name {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* -- Phase Panels Container -- */
+.form-phase-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-phase {
+  display: none;
+  background: #ffffff;
+  border: 1.5px solid #edf4f0;
+  border-radius: 12px;
+  padding: 16px 22px 14px 22px;
+  box-sizing: border-box;
+  animation: phaseSlideIn 0.22s ease-out;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+}
+
+.form-phase.active {
+  display: block;
+}
+
+@keyframes phaseSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.phase-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 7px;
+  border-bottom: 1.5px solid #f0fdf4;
+}
+
+.phase-header h3 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-header .phase-subtitle {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* -- Phase Navigation Footer -- */
+.form-phase-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #edf4f0;
+}
+
+.form-phase-footer .footer-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.form-phase-footer .footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-phase-prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+.btn-phase-prev:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.btn-phase-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  border: none;
+  padding: 6px 20px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 34px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.btn-phase-next:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.32);
+}
+
+.form-phase-footer .btn-submit {
+  height: 34px;
+  padding: 6px 24px;
+  font-size: 0.84rem;
+  margin: 0;
+  border-radius: 8px;
+}
+
+.registration-container {
+    width: 94%;
+    max-width: 960px;
+    max-height: 98vh;
+    margin: auto;
+    padding: 14px 26px 12px;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px -6px rgba(12, 57, 21, 0.1), 0 2px 8px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+  }
+
+  html.regis-page .registration-container form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.regis-page .form-landscape-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1.15fr 1fr !important;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  html.regis-page .form-landscape-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.regis-page .form-landscape-col .form-section {
+    padding: 9px 13px;
+    border-radius: 10px;
+    min-height: 0;
+    margin-bottom: 0;
+  }
+
+  html.regis-page .form-landscape-col .form-section.flex-1 {
+    flex: 1;
+    min-height: 0;
+  }
+
+  html.regis-page .reg-header-bar {
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    gap: 12px;
+  }
+
+  html.regis-page .reg-header-bar h2 {
+    font-size: 1.16rem;
+    line-height: 1.2;
+  }
+
+  html.regis-page .reg-header-bar p {
+    font-size: 0.75rem;
+    margin: 1px 0 0 0;
+  }
+
+  html.regis-page .reg-header-bar .btn-back {
+    width: 30px;
+    height: 30px;
+  }
+
+  html.regis-page .reg-header-bar .btn-back svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  html.regis-page .service-selected-banner {
+    padding: 4px 10px;
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+    gap: 8px;
+  }
+
+  html.regis-page .service-selected-banner .banner-badge {
+    font-size: 0.68rem;
+    padding: 2px 7px;
+  }
+
+  html.regis-page .service-selected-banner .banner-text {
+    font-size: 0.8rem;
+  }
+
+  html.regis-page .form-section h3 {
+    margin-bottom: 5px;
+    font-size: 0.74rem;
+    letter-spacing: 0.4px;
+  }
+
+  html.regis-page .sec-num {
+    width: 17px;
+    height: 17px;
+    font-size: 0.65rem;
+    margin-right: 5px;
+  }
+
+  html.regis-page .form-group {
+    margin-bottom: 4px;
+  }
+
+  html.regis-page .form-group > label,
+  html.regis-page .input-group > label {
+    font-size: 0.71rem;
+    margin-bottom: 2px;
+    font-weight: 600;
+    line-height: 1.15;
+  }
+
+  html.regis-page input,
+  html.regis-page select,
+  html.regis-page textarea {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    height: 31px;
+    box-sizing: border-box;
+  }
+
+  html.regis-page textarea {
+    min-height: 40px;
+    height: 44px;
+    line-height: 1.25;
+    resize: none;
+  }
+
+  html.regis-page .grid-row {
+    gap: 7px;
+    margin-bottom: 4px;
+  }
+
+  html.regis-page .radio-group {
+    margin-top: 2px;
+    gap: 12px;
+  }
+
+  html.regis-page .radio-group label {
+    font-size: 0.78rem;
+  }
+
+  html.regis-page .form-landscape-footer {
+    margin-top: 5px;
+    padding-top: 5px;
+  }
+
+  html.regis-page .form-landscape-footer .required-legend {
+    font-size: 0.71rem;
+    margin: 0;
+  }
+
+  html.regis-page .form-landscape-footer .btn-submit {
+    padding: 5px 20px;
+    font-size: 0.84rem;
+    min-width: 170px;
+    height: 32px;
+    border-radius: 7px;
+  }
+}
+
+
+/* -- Minimal 3-Phase Stepper Indicator (Line & Dot) -- */
+.stepper-wrapper {
+  position: relative;
+  max-width: 620px;
+  width: 100%;
+  margin: 4px auto 12px auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.stepper-line-container {
+  position: absolute;
+  top: 10px;
+  left: 55px;
+  right: 55px;
+  height: 2px;
+  z-index: 1;
+}
+
+.stepper-line-bg {
+  position: absolute;
+  inset: 0;
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+.stepper-line-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 2px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stepper-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.stepper-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  user-select: none;
+  transition: all 0.2s ease;
+  min-width: 90px;
+}
+
+.stepper-node.clickable {
+  cursor: pointer;
+}
+
+.stepper-node.clickable:hover .stepper-dot {
+  transform: scale(1.15);
+  border-color: #059669;
+}
+
+.stepper-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+.stepper-dot .dot-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  transition: all 0.25s ease;
+}
+
+.stepper-text {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.stepper-phase-num {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+
+.stepper-phase-name {
+  font-size: 0.77rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+/* Stepper States: Active */
+.stepper-node.active .stepper-dot {
+  border-color: #059669;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.stepper-node.active .stepper-dot .dot-inner {
+  background: #059669;
+  width: 8px;
+  height: 8px;
+}
+
+.stepper-node.active .stepper-phase-num {
+  color: #059669;
+  font-weight: 800;
+}
+
+.stepper-node.active .stepper-phase-name {
+  color: #064e3b;
+  font-weight: 700;
+}
+
+/* Stepper States: Completed */
+.stepper-node.completed .stepper-dot {
+  border-color: #10b981;
+  background: #10b981;
+  box-shadow: none;
+}
+
+.stepper-node.completed .stepper-dot .dot-inner {
+  background: #ffffff;
+  width: 6px;
+  height: 6px;
+}
+
+.stepper-node.completed .stepper-phase-num {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.stepper-node.completed .stepper-phase-name {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* -- Phase Panels Container -- */
+.form-phase-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-phase {
+  display: none;
+  background: #ffffff;
+  border: 1.5px solid #edf4f0;
+  border-radius: 12px;
+  padding: 16px 22px 14px 22px;
+  box-sizing: border-box;
+  animation: phaseSlideIn 0.22s ease-out;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+}
+
+.form-phase.active {
+  display: block;
+}
+
+@keyframes phaseSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.phase-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 7px;
+  border-bottom: 1.5px solid #f0fdf4;
+}
+
+.phase-header h3 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-header .phase-subtitle {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* -- Phase Navigation Footer -- */
+.form-phase-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #edf4f0;
+}
+
+.form-phase-footer .footer-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.form-phase-footer .footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-phase-prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+.btn-phase-prev:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.btn-phase-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  border: none;
+  padding: 6px 20px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 34px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.btn-phase-next:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.32);
+}
+
+.form-phase-footer .btn-submit {
+  height: 34px;
+  padding: 6px 24px;
+  font-size: 0.84rem;
+  margin: 0;
+  border-radius: 8px;
+}
+
 .registration-container {
   background: var(--white, #ffffff);
   max-width: 1560px;
@@ -600,7 +1384,303 @@ textarea {
 }
 
 @media (max-width: 768px) {
-  .registration-container {
+  
+/* -- Minimal 3-Phase Stepper Indicator (Line & Dot) -- */
+.stepper-wrapper {
+  position: relative;
+  max-width: 620px;
+  width: 100%;
+  margin: 4px auto 12px auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.stepper-line-container {
+  position: absolute;
+  top: 10px;
+  left: 55px;
+  right: 55px;
+  height: 2px;
+  z-index: 1;
+}
+
+.stepper-line-bg {
+  position: absolute;
+  inset: 0;
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+.stepper-line-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 2px;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stepper-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.stepper-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  user-select: none;
+  transition: all 0.2s ease;
+  min-width: 90px;
+}
+
+.stepper-node.clickable {
+  cursor: pointer;
+}
+
+.stepper-node.clickable:hover .stepper-dot {
+  transform: scale(1.15);
+  border-color: #059669;
+}
+
+.stepper-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+.stepper-dot .dot-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  transition: all 0.25s ease;
+}
+
+.stepper-text {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.stepper-phase-num {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+
+.stepper-phase-name {
+  font-size: 0.77rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+/* Stepper States: Active */
+.stepper-node.active .stepper-dot {
+  border-color: #059669;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.stepper-node.active .stepper-dot .dot-inner {
+  background: #059669;
+  width: 8px;
+  height: 8px;
+}
+
+.stepper-node.active .stepper-phase-num {
+  color: #059669;
+  font-weight: 800;
+}
+
+.stepper-node.active .stepper-phase-name {
+  color: #064e3b;
+  font-weight: 700;
+}
+
+/* Stepper States: Completed */
+.stepper-node.completed .stepper-dot {
+  border-color: #10b981;
+  background: #10b981;
+  box-shadow: none;
+}
+
+.stepper-node.completed .stepper-dot .dot-inner {
+  background: #ffffff;
+  width: 6px;
+  height: 6px;
+}
+
+.stepper-node.completed .stepper-phase-num {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.stepper-node.completed .stepper-phase-name {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* -- Phase Panels Container -- */
+.form-phase-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-phase {
+  display: none;
+  background: #ffffff;
+  border: 1.5px solid #edf4f0;
+  border-radius: 12px;
+  padding: 16px 22px 14px 22px;
+  box-sizing: border-box;
+  animation: phaseSlideIn 0.22s ease-out;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+}
+
+.form-phase.active {
+  display: block;
+}
+
+@keyframes phaseSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.phase-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 7px;
+  border-bottom: 1.5px solid #f0fdf4;
+}
+
+.phase-header h3 {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-header .phase-subtitle {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* -- Phase Navigation Footer -- */
+.form-phase-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #edf4f0;
+}
+
+.form-phase-footer .footer-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.form-phase-footer .footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-phase-prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+.btn-phase-prev:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.btn-phase-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  border: none;
+  padding: 6px 20px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 34px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.btn-phase-next:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.32);
+}
+
+.form-phase-footer .btn-submit {
+  height: 34px;
+  padding: 6px 24px;
+  font-size: 0.84rem;
+  margin: 0;
+  border-radius: 8px;
+}
+
+.registration-container {
     padding: 16px 18px;
     margin: 1rem auto;
   }

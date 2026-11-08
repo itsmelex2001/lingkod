@@ -13,7 +13,7 @@
           <li><a href="#about">About Us</a></li>
           <li><a href="#services">Services</a></li>
           <li><a href="#location">Location</a></li>
-          <li><a href="/sdn/pages/schedules.php">Schedules</a></li>
+          <li><a href="/sdn/pages/schedules.php" target="_blank" rel="noopener noreferrer">Schedules</a></li>
           <li><a href="/sdn/pages/department-select.php" class="highlight-link">Book Appointment</a></li>
         </ul>
       </div>
@@ -35,7 +35,7 @@
     
     <div class="footer-divider"></div>
     <div class="footer-bottom">
-      <p>&copy; 2026Service Delivery Network (LINKod). All Rights Reserved.</p>
+      <p>&copy; 2026 Service Delivery Network (LINGKOD). All Rights Reserved.</p>
     </div>
   </div>
 </footer>

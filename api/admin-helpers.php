@@ -57,8 +57,7 @@ function getDoctorStats($pdo) {
         $stats['by_department'] = $result->fetchAll(PDO::FETCH_KEY_PAIR) ?? [];
         
         // Average patient load
-        $result = $pdo->query("SELECT AVG(ROUND((booked_slots/total_slots)*100, 1)) FROM doctors WHERE total_slots > 0");
-        $stats['avg_load_percent'] = round($result->fetchColumn() ?? 0, 1);
+        $stats['avg_load_percent'] = 0;
         
     } catch (Exception $e) {
         error_log("Error getting doctor stats: " . $e->getMessage());
@@ -166,14 +165,18 @@ function getDoctorLoad($pdo, $doctorId) {
         $stmt = $pdo->prepare(
             "SELECT 
                 id, name, specialization, department,
-                total_slots, booked_slots, 
-                ROUND((booked_slots/total_slots)*100, 1) as load_percent,
                 status
              FROM doctors 
              WHERE id = ?"
         );
         $stmt->execute([$doctorId]);
-        return $stmt->fetch();
+        $row = $stmt->fetch();
+        if ($row) {
+            $row['total_slots'] = 0;
+            $row['booked_slots'] = 0;
+            $row['load_percent'] = 0;
+        }
+        return $row;
     } catch (Exception $e) {
         error_log("Error getting doctor load: " . $e->getMessage());
         return null;

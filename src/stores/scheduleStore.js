@@ -23,7 +23,7 @@ export function createScheduleStore() {
 
         const matchDept = $selectedDepartment === 'All' || (d.department || '').toLowerCase().includes(dept);
 
-        const isAvail = d.status === 'available' && parseInt(d.booked_slots || 0, 10) < parseInt(d.total_slots || 0, 10);
+        const isAvail = (d.status || 'active').toLowerCase() !== 'leave';
         const matchAvail = $showOnlyAvailable ? isAvail : true;
 
         return matchSearch && matchDept && matchAvail;

@@ -4,7 +4,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
-    header('Location: /sdn/pages/login.php');
+    header('Location: /sdn/pages/portal@admin$staff_2026.php');
     exit;
 }
 ?>
@@ -12,19 +12,23 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Portal | SDN</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Admin Portal | LINGKOD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
     <link rel="stylesheet" href="/sdn/public/css/admin-portal.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/portal-chrome.css?v=<?= time() ?>" />
 </head>
 <body class="portal-layout">
     <aside class="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-brand">
-                <img src="/sdn/public/assets/mmwgh_logo.png" alt="MMWGH Logo" class="sidebar-brand-logo">
-                <div class="sidebar-brand-text">
-                    <span class="brand-title">MMWGH LINKod</span>
-                    <span class="brand-subtitle">System Administrator</span>
+                <div class="sidebar-brand-box">
+                    <img src="/sdn/public/assets/v3_lingkod_logo_green.png" alt="LINGKOD">
+                </div>
+                <div class="brand-text-block">
+                    <span class="brand-sub">Mariveles Mental Wellness and General Hospital</span>
+                    <span class="brand-title">LINGKOD</span>
+                    <span class="brand-role">System Administrator</span>
                 </div>
             </div>
         </div>
@@ -54,47 +58,85 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 Audit Log
             </a>
         </nav>
-        <div class="sidebar-footer">
-            <a href="/sdn/pages/logout.php" class="sidebar-logout-btn" title="Sign out of portal">
-                <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                    <polyline points="10 17 5 12 10 7"></polyline>
-                    <line x1="15" y1="12" x2="5" y2="12"></line>
-                </svg>
-                <span>Logout</span>
-            </a>
-        </div>
     </aside>
     <main class="main-content">
+        <header class="admin-topbar">
+            <div class="admin-topbar-left">
+                <span class="admin-portal-label" id="adminTopbarTitle">Admin Portal</span>
+            </div>
+            <div class="admin-topbar-right">
+                <div class="admin-notif-wrap" id="adminNotifWrap">
+                    <button type="button" class="admin-notif-btn" id="adminNotifBtn" onclick="toggleAdminNotifications(event)" title="Notifications" aria-label="Notifications">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="admin-notif-badge" id="adminNotifBadge" style="display:none;">0</span>
+                    </button>
+                    <div class="admin-notif-dropdown" id="adminNotifDropdown">
+                        <div class="admin-notif-header">
+                            <span class="admin-notif-title">Notifications</span>
+                            <button type="button" class="admin-notif-mark-read" onclick="markAllAdminNotificationsRead(event)">Mark all read</button>
+                        </div>
+                        <div class="admin-notif-list" id="adminNotifList">
+                            <div class="admin-notif-empty">Loading notifications...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-profile-wrap" id="adminProfileWrap">
+                    <button type="button" class="admin-profile-circle" id="adminProfileBtn" onclick="toggleAdminProfileMenu(event)" title="<?= htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['user'] ?? 'Admin') ?>" aria-label="Account menu">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </button>
+                    <div class="admin-profile-dropdown" id="adminProfileDropdown">
+                        <a href="/sdn/pages/logout.php" class="admin-profile-logout-btn">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                                <polyline points="10 17 5 12 10 7"></polyline>
+                                <line x1="15" y1="12" x2="5" y2="12"></line>
+                            </svg>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="admin-canvas">
         <!-- Dashboard -->
         <!-- Overall Patients Statistics Section -->
         <section id="view-dashboard" class="view-section active">
             <div class="header-flex">
                 <div>
                     <h1>Cross-Department Dashboard</h1>
-                    <p>Overview of system activity today.</p>
+                    <p>Real-time overview of clinical operations and department activity.</p>
                 </div>
             </div>
             <div class="stats-grid" id="dashboard-stats">
                 <div class="stat-card">Loading stats...</div>
             </div>
 
-            <div class="dashboard-section" style="margin-top: 30px;">
-                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="dashboard-section" style="margin-top: 24px;">
+                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
-                        <h2>Overall Patient Statistics</h2>
-                        <p style="margin-bottom:0;">Patient registration trends over time.</p>
+                        <h2>Department Patient Statistics</h2>
+                        <p style="margin-bottom:0;">Comparative patient registration trends across General Medical, Neurology, and Psychiatry.</p>
                     </div>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <select id="chart-filter" class="form-control" style="width: 150px;" onchange="loadChartData()">
+                        <select id="chart-filter" class="form-control pmi-select" style="width: 150px;" onchange="loadChartData()">
                             <option value="year">This Year</option>
                             <option value="month">This Month</option>
                             <option value="week">This Week</option>
                         </select>
-                        <button class="btn btn-outline" onclick="resetChartFilter()">Reset</button>
+                        <button class="btn btn-outline btn-reset-filters" onclick="resetChartFilter()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                            <span>Refresh</span>
+                        </button>
                     </div>
                 </div>
-                <div style="width:100%; height:300px; margin-top:20px;">
+                <div style="width:100%; height:320px; margin-top:18px;">
                     <canvas id="patientsChart"></canvas>
                 </div>
             </div>
@@ -114,16 +156,16 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div class="rbac-action-toolbar pmi-action-toolbar">
                 <div class="pmi-search-wrap">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="rbacSearchInput" class="form-control pmi-search-input" placeholder="Search staff name or username..." oninput="filterRBACTable()">
+                    <input type="text" id="rbacSearchInput" class="form-control pmi-search-input" placeholder="Search staff name..." oninput="filterRBACTable()">
                 </div>
                 <div class="pmi-filters-wrap">
                     <div class="filter-item">
                         <label for="rbacDeptFilter" class="toolbar-label">Department:</label>
                         <select id="rbacDeptFilter" class="form-control pmi-select" onchange="filterRBACTable()">
                             <option value="all">All Departments</option>
-                            <option value="psychiatry">OPU Psychiatry</option>
+                            <option value="psychiatry">Psychiatry</option>
                             <option value="neurology">Neurology</option>
-                            <option value="general">General Management</option>
+                            <option value="general">General Medical</option>
                         </select>
                     </div>
                     <div class="filter-item">
@@ -134,9 +176,9 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                             <option value="inactive">Inactive</option>
                         </select>
                     </div>
-                    <button class="btn btn-outline btn-reset-filters" onclick="resetRBACFilters()" title="Reset Filters">
+                    <button class="btn btn-outline btn-reset-filters" onclick="resetRBACFilters()" title="Refresh Filters">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
-                        <span>Reset</span>
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
@@ -202,22 +244,20 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                             <option value="all">All Departments</option>
                             <option value="psychiatry">Psychiatry</option>
                             <option value="neurology">Neurology</option>
-                            <option value="general">General Medicine</option>
+                            <option value="general">General Medical</option>
                         </select>
                     </div>
                     <div class="filter-item">
                         <label for="docStatusFilter" class="toolbar-label">Status:</label>
                         <select id="docStatusFilter" class="form-control pmi-select" onchange="filterDoctorsTable()">
                             <option value="all">All Statuses</option>
-                            <option value="available">Available</option>
-                            <option value="in_clinic">In Clinic</option>
-                            <option value="booked">Booked</option>
-                            <option value="leave">On Leave</option>
+                            <option value="in">IN</option>
+                            <option value="out">OUT</option>
                         </select>
                     </div>
-                    <button class="btn btn-outline btn-reset-filters" onclick="resetDoctorFilters()" title="Reset Filters">
+                    <button class="btn btn-outline btn-reset-filters" onclick="resetDoctorFilters()" title="Refresh Filters">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
-                        <span>Reset</span>
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
@@ -226,21 +266,19 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 <div class="custom-table-header">
                     <table class="data-table">
                         <colgroup>
-                            <col style="width: 19%;">
-                            <col style="width: 19%;">
-                            <col style="width: 13%;">
-                            <col style="width: 15%;">
-                            <col style="width: 10%;">
-                            <col style="width: 14%;">
-                            <col style="width: 10%;">
+                            <col style="width: 24%;">
+                            <col style="width: 24%;">
+                            <col style="width: 16%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>Doctor</th>
                                 <th>Specialization</th>
                                 <th>Department</th>
-                                <th>Schedule</th>
-                                <th>Slots</th>
+                                <th>Daily Slots</th>
                                 <th>Status</th>
                                 <th style="text-align: center;">Actions</th>
                             </tr>
@@ -250,16 +288,15 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 <div class="custom-table-body" id="doctors-scroll-body">
                     <table class="data-table">
                         <colgroup>
-                            <col style="width: 19%;">
-                            <col style="width: 19%;">
-                            <col style="width: 13%;">
-                            <col style="width: 15%;">
-                            <col style="width: 10%;">
-                            <col style="width: 14%;">
-                            <col style="width: 10%;">
+                            <col style="width: 24%;">
+                            <col style="width: 24%;">
+                            <col style="width: 16%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
                         </colgroup>
                         <tbody id="doctors-tbody">
-                            <tr><td colspan="7" style="text-align: center; padding: 30px;">Loading doctors...</td></tr>
+                            <tr><td colspan="6" style="text-align: center; padding: 30px;">Loading doctors...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -335,9 +372,9 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                             <option value="year">This Year</option>
                         </select>
                     </div>
-                    <button class="btn btn-outline btn-reset-filters" onclick="resetPMIFilter()" title="Reset Filters">
+                    <button class="btn btn-outline btn-reset-filters" onclick="resetPMIFilter()" title="Refresh Filters">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
-                        <span>Reset</span>
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
@@ -380,19 +417,19 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             </div>
         </section>
 
-        <!-- Reports & Analytics Module (Consolidated Multi-Department Hub) -->
+        <!-- Reports & Analytics Module (All Time Multi-Department Hub) -->
         <section id="view-reports" class="view-section">
             <div class="header-flex queue-header-flex">
                 <div>
-                    <h1>Consolidated Reports & Analytics</h1>
-                    <p>Central oversight across General Management, Neurology, and OPU Psychiatry staff portals.</p>
+                    <h1>All Time Reports & Analytics</h1>
+                    <p>Central oversight across General Medical, Neurology, and Psychiatry staff portals.</p>
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-outline" id="btnReportPrint" onclick="printReports()" title="Print executive clinical statistical report">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         <span>Print Report</span>
                     </button>
-                    <button class="btn btn-primary" id="btnReportExport" onclick="exportReportsCsv()" title="Download consolidated patient dataset as CSV">
+                    <button class="btn btn-primary" id="btnReportExport" onclick="exportReportsCsv()" title="Download all time patient dataset as CSV">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         <span>Export CSV</span>
                     </button>
@@ -405,7 +442,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                     <div class="filter-item">
                         <label for="reportPeriodFilter" class="toolbar-label">Period / Range:</label>
                         <select id="reportPeriodFilter" class="form-control pmi-select" onchange="loadReports()">
-                            <option value="all">All Time (Consolidated)</option>
+                            <option value="all">All Time</option>
                             <option value="daily">Today (Daily Aggregate)</option>
                             <option value="monthly">This Month (Monthly Aggregate)</option>
                         </select>
@@ -413,24 +450,24 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                     <div class="filter-item">
                         <label for="reportDeptFilter" class="toolbar-label">Department Hub:</label>
                         <select id="reportDeptFilter" class="form-control pmi-select" onchange="loadReports()">
-                            <option value="all">All Departments (Consolidated)</option>
-                            <option value="general">General Management</option>
+                            <option value="all">All Departments (All Time)</option>
+                            <option value="general">General Medical</option>
                             <option value="neurology">Neurology</option>
-                            <option value="psychiatry">OPU Psychiatry</option>
+                            <option value="psychiatry">Psychiatry</option>
                         </select>
                     </div>
-                    <button class="btn btn-outline btn-reset-filters" onclick="resetReportFilters()" title="Reset Report Filters">
+                    <button class="btn btn-outline btn-reset-filters" onclick="resetReportFilters()" title="Refresh Report Filters">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
-                        <span>Reset</span>
+                        <span>Refresh</span>
                     </button>
                     <span id="reportLastUpdated" style="margin-left:auto; font-size:0.8rem; color:#64748b; align-self:center;"></span>
                 </div>
             </div>
 
-            <!-- Consolidated KPI Overview -->
+            <!-- All Time KPI Overview -->
             <div class="reports-kpi-grid">
                 <div class="report-kpi-card">
-                    <div class="report-kpi-label">Consolidated Patients</div>
+                    <div class="report-kpi-label">All Time Patients</div>
                     <div class="report-kpi-val" id="repKpiTotal">0</div>
                     <div class="report-kpi-sub" id="repKpiSubTotal">Loading records...</div>
                 </div>
@@ -451,18 +488,25 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 </div>
             </div>
 
-            <!-- Tri-Department Cross-Portal Oversight -->
-            <h2 style="font-size:1.15rem; font-weight:700; color:#1e293b; margin:24px 0 12px 0;">Cross-Department Departmental Breakdown</h2>
-            <div class="reports-depts-grid" id="reportDeptsGrid">
-                <!-- Dynamically populated department cards -->
+            <!-- Statistical Reports & Analytics Graph Summary -->
+            <div class="dashboard-section" style="margin: 20px 0 24px 0;">
+                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h2 style="font-size:1.15rem; font-weight:700; color:#0f172a; margin:0 0 4px 0;">Statistical Reports & Analytics Summary</h2>
+                        <p style="margin:0; font-size:0.88rem; color:#64748b;">Departmental comparison of total visits, completed consultations, walk-ins, online bookings, and no-shows.</p>
+                    </div>
+                </div>
+                <div style="width:100%; height:310px; margin-top:16px;">
+                    <canvas id="reportsAnalyticsChart"></canvas>
+                </div>
             </div>
 
             <!-- Report Tab Navigation -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:28px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; margin-bottom:14px;">
                 <div class="report-view-nav">
                     <button type="button" class="report-tab-btn active" id="tabBtnDaily" onclick="switchReportTab('daily')">Daily Statistical Report</button>
                     <button type="button" class="report-tab-btn" id="tabBtnMonthly" onclick="switchReportTab('monthly')">Monthly Statistical Report</button>
-                    <button type="button" class="report-tab-btn" id="tabBtnRoster" onclick="switchReportTab('roster')">Consolidated Patient Records</button>
+                    <button type="button" class="report-tab-btn" id="tabBtnRoster" onclick="switchReportTab('roster')">All Time Patient Records</button>
                 </div>
             </div>
 
@@ -589,7 +633,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                             <col style="width: 20%;">
                         </colgroup>
                         <tbody id="reportRosterTbody">
-                            <tr><td colspan="6" style="text-align:center; padding:30px;">Loading consolidated roster...</td></tr>
+                            <tr><td colspan="6" style="text-align:center; padding:30px;">Loading all time records...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -601,21 +645,59 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div class="header-flex">
                 <div>
                     <h1>Audit Trail Log</h1>
-                    <p>System actions and modifications.</p>
+                    <p>System actions, security events, and administrative modifications.</p>
                 </div>
             </div>
+
+            <!-- Audit Log Category & Sort Toolbar -->
+            <div class="rbac-action-toolbar pmi-action-toolbar" style="margin-bottom: 16px; flex-shrink: 0;">
+                <div class="pmi-search-wrap">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="auditSearchInput" class="form-control pmi-search-input" placeholder="Search action, user, or details..." oninput="filterAndSortAuditTable()">
+                </div>
+                <div class="pmi-filters-wrap">
+                    <div class="filter-item">
+                        <label for="auditCategoryFilter" class="toolbar-label">Category:</label>
+                        <select id="auditCategoryFilter" class="form-control pmi-select" onchange="filterAndSortAuditTable()">
+                            <option value="all">All Categories</option>
+                            <option value="patient">Patient &amp; Appointments</option>
+                            <option value="staff">User Management</option>
+                            <option value="doctor">Doctors</option>
+                            <option value="auth">Authentication &amp; Security</option>
+                            <option value="system">System &amp; General</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="auditSortOrder" class="toolbar-label">Sort By:</label>
+                        <select id="auditSortOrder" class="form-control pmi-select" onchange="filterAndSortAuditTable()">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="category">Category (A–Z)</option>
+                            <option value="action">Action (A–Z)</option>
+                            <option value="user">User (A–Z)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-outline btn-reset-filters" onclick="resetAuditFilters()" title="Refresh Audit Log">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="custom-table-card audit-table-card">
                 <div class="custom-table-header">
                     <table class="data-table">
                         <colgroup>
-                            <col style="width: 18%;">
-                            <col style="width: 24%;">
-                            <col style="width: 18%;">
-                            <col style="width: 40%;">
+                            <col style="width: 16%;">
+                            <col style="width: 16%;">
+                            <col style="width: 20%;">
+                            <col style="width: 14%;">
+                            <col style="width: 34%;">
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>Time</th>
+                                <th>Category</th>
                                 <th>Action</th>
                                 <th>User</th>
                                 <th>Details</th>
@@ -626,18 +708,20 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 <div class="custom-table-body" id="audit-scroll-body">
                     <table class="data-table">
                         <colgroup>
-                            <col style="width: 18%;">
-                            <col style="width: 24%;">
-                            <col style="width: 18%;">
-                            <col style="width: 40%;">
+                            <col style="width: 16%;">
+                            <col style="width: 16%;">
+                            <col style="width: 20%;">
+                            <col style="width: 14%;">
+                            <col style="width: 34%;">
                         </colgroup>
                         <tbody id="audit-tbody">
-                            <tr><td colspan="4" style="text-align:center; padding:30px;">Loading audit logs...</td></tr>
+                            <tr><td colspan="5" style="text-align:center; padding:30px;">Loading audit logs...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
+        </div>
     </main>
     
     <!-- Modals -->
@@ -670,9 +754,9 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div class="form-group">
                 <label>Department <span class="required">*</span></label>
                 <select id="staffDept" class="form-control">
-                    <option value="OPU Psychiatry">OPU Psychiatry</option>
+                    <option value="Psychiatry">Psychiatry</option>
                     <option value="Neurology">Neurology</option>
-                    <option value="General Management">General Management</option>
+                    <option value="General Medical">General Medical</option>
                 </select>
             </div>
             <div class="modal-actions">
@@ -703,9 +787,9 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div class="form-group">
                 <label>Department <span class="required">*</span></label>
                 <select id="editStaffDept" class="form-control">
-                    <option value="OPU Psychiatry">OPU Psychiatry</option>
+                    <option value="Psychiatry">Psychiatry</option>
                     <option value="Neurology">Neurology</option>
-                    <option value="General Management">General Management</option>
+                    <option value="General Medical">General Medical</option>
                 </select>
             </div>
             <div class="form-group">
@@ -725,7 +809,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 <button type="button" id="editStaffStatusBtn" class="btn btn-outline" style="padding:6px 14px; font-size:0.85rem;" onclick="toggleEditStaffStatus()">Disable Account</button>
             </div>
             <div class="modal-actions-between">
-                <button type="button" class="btn btn-danger" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626;" onclick="deleteStaff(document.getElementById('editStaffId').value)">Delete Staff</button>
+                <button type="button" class="btn btn-danger" onclick="deleteStaff(document.getElementById('editStaffId').value)">Delete Staff</button>
                 <div style="display:flex; gap:10px;">
                     <button type="button" class="btn btn-outline" onclick="closeEditStaffModal()">Cancel</button>
                     <button type="button" class="btn btn-primary" onclick="submitEditStaff()">Save Changes</button>
@@ -758,53 +842,37 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div class="modal-header">
                 <div>
                     <h2 id="doctorModalTitle">Add Doctor</h2>
-                    <p>Configure doctor credentials, clinical specialization, and department schedule.</p>
+                    <p>Configure doctor credentials, clinical specialization, and daily slot capacity.</p>
                 </div>
                 <span class="close" onclick="closeDoctorModal()">&times;</span>
             </div>
             <input type="hidden" id="editDoctorId">
             <div class="form-group">
                 <label>Doctor Name <span class="required">*</span></label>
-                <input type="text" id="docName" class="form-control" placeholder="e.g. Dr. Maria Santos" autocomplete="off">
+                <input type="text" id="docName" class="form-control" placeholder="e.g. Dr. Maria Santos" autocomplete="off" oninput="this.classList.remove('input-error')">
             </div>
             <div class="form-group">
                 <label>Department <span class="required">*</span></label>
-                <select id="docDept" class="form-control" onchange="updateDoctorSpecializationOptions()">
-                    <option value="general">General Medicine</option>
+                <select id="docDept" class="form-control" onchange="this.classList.remove('input-error')">
+                    <option value="general">General Medical</option>
                     <option value="neurology">Neurology</option>
-                    <option value="psychiatry">Psychiatry (OPU)</option>
+                    <option value="psychiatry">Psychiatry</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Specialization <span class="required">*</span></label>
-                <select id="docSpec" class="form-control" required>
-                    <option value="" disabled selected>Select authorized clinical specialization...</option>
-                </select>
+                <input type="text" id="docSpec" class="form-control" placeholder="Enter clinical specialization..." autocomplete="off" oninput="this.classList.remove('input-error')">
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                 <div class="form-group">
-                    <label>Schedule Start</label>
-                    <input type="time" id="docStartTime" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label>Schedule End</label>
-                    <input type="time" id="docEndTime" class="form-control">
-                </div>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                <div class="form-group">
-                    <label>Total Daily Slots <span class="required">*</span></label>
-                    <input type="number" id="docSlots" class="form-control" value="20" min="1" max="100">
+                    <label>Total Daily Slots (Max 100) <span class="required">*</span></label>
+                    <input type="number" id="docSlots" class="form-control" value="20" min="1" max="100" oninput="this.classList.remove('input-error')">
                 </div>
                 <div class="form-group">
                     <label>Status <span class="required">*</span></label>
-                    <select id="docStatus" class="form-control">
-                        <option value="available">Available</option>
-                        <option value="in_clinic">In Clinic</option>
-                        <option value="on_break">On Break</option>
-                        <option value="booked">Booked</option>
-                        <option value="leave">On Leave</option>
-                        <option value="emergency">Emergency</option>
+                    <select id="docStatus" class="form-control" onchange="this.classList.remove('input-error')">
+                        <option value="in">IN</option>
+                        <option value="out">OUT</option>
                     </select>
                 </div>
             </div>
@@ -818,20 +886,20 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
         </div>
     </div>
 
-    <!-- Patient Registration Details Verification Modal -->
+    <!-- Patient Appointment Verification Modal -->
     <div id="patientDetailsModal" class="modal">
-        <div class="modal-content" style="max-width:780px; width:92%;">
-            <div class="modal-header">
+        <div class="modal-content pv-modal-shell">
+            <div class="modal-header pv-modal-header">
                 <div>
-                    <h2>Patient Registration Verification</h2>
-                    <p style="margin:4px 0 0 0; font-size:0.88rem; color:#64748b;">Review full registration information and verify patient authenticity via phone call.</p>
+                    <h2>Patient Appointment Verification</h2>
+                    <p>Review appointment information and verify patient authenticity via phone call.</p>
                 </div>
                 <span class="close" onclick="closePatientDetailsModal()">&times;</span>
             </div>
-            <div id="patientDetailsBody" style="max-height:60vh; overflow-y:auto; padding-right:6px;">
-                <p style="text-align:center; color:#64748b;">Loading patient information...</p>
+            <div id="patientDetailsBody" class="pv-modal-body">
+                <p style="text-align:center; color:#64748b; padding: 24px 0;">Loading appointment information...</p>
             </div>
-            <div id="patientDetailsActions" class="patient-modal-actions-bar">
+            <div id="patientDetailsActions" class="patient-modal-actions-bar pv-modal-footer">
                 <!-- Populated dynamically based on patient status -->
             </div>
         </div>

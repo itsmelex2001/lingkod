@@ -38,12 +38,11 @@
   
   <div class="card-footer">
     <div class="slots-minimal">
-      <span class="slot-txt">Slots: <strong>{doc.booked_slots || 0}</strong> / {doc.total_slots || 20}</span>
-      <div class="bar-bg"><div class="bar-fill {isAvailable ? 'fill-black' : 'fill-gray'}" style="width: {percentage}%"></div></div>
+      <span class="slot-txt">Open for Booking (Requires Approval)</span>
     </div>
     
     {#if isAvailable}
-      <a href="/sdn/pages/{link}?source=schedules&doctor={encodeURIComponent(doc.name)}" class="btn-action">Book</a>
+      <a href="/sdn/pages/{link}?source=schedules" class="btn-action">Request Booking</a>
     {:else}
       <button class="btn-action disabled" disabled>{statusInfo.buttonText}</button>
     {/if}

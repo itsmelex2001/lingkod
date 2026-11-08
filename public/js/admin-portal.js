@@ -36,6 +36,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Close notification & profile dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('adminNotifWrap');
+        const dd = document.getElementById('adminNotifDropdown');
+        if (wrap && dd && !wrap.contains(e.target)) {
+            dd.classList.remove('open');
+        }
+        const profWrap = document.getElementById('adminProfileWrap');
+        const profDd = document.getElementById('adminProfileDropdown');
+        if (profWrap && profDd && !profWrap.contains(e.target)) {
+            profDd.classList.remove('open');
+        }
+    });
+
     // Load initial data
     loadDashboard();
     loadRBAC();
@@ -150,6 +164,14 @@ function showToast(msg, type='success') {
     }, 4000);
 }
 
+function cleanDeptLabel(raw) {
+    if (!raw) return 'N/A';
+    return String(raw)
+        .replace(/\bOPU\s+/gi, '')
+        .replace(/\s*\(OPU\)/gi, '')
+        .trim() || 'Psychiatry';
+}
+
 function customConfirm(title, message, callback) {
     document.getElementById('confirmTitle').innerText = title;
     document.getElementById('confirmMessage').innerText = message;
@@ -157,6 +179,15 @@ function customConfirm(title, message, callback) {
     const confirmBtn = document.getElementById('confirmBtn');
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    const isDelete = /delete|remove/i.test(title) || /delete|remove/i.test(message);
+    if (isDelete) {
+        newConfirmBtn.className = 'btn btn-danger';
+        newConfirmBtn.innerText = 'Delete';
+    } else {
+        newConfirmBtn.className = 'btn btn-primary';
+        newConfirmBtn.innerText = 'Confirm';
+    }
     
     newConfirmBtn.addEventListener('click', () => {
         closeConfirmModal();
@@ -203,6 +234,7 @@ async function loadDashboard() {
                     </div>
                 </div>
             `;
+            updateAdminNotifications(res);
         }
     } catch(e) { console.error(e); }
     
@@ -235,12 +267,15 @@ async function loadDashboardTable() {
                     ? `<span style="display:inline-block; margin-left:6px; padding:2px 7px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:999px; font-size:0.68rem; font-weight:700; text-transform:uppercase; vertical-align:middle;">Inquiry</span>`
                     : '';
 
-                let safeId = escapeHtml(p.patient_id);
+                let safeId = escapeHtml(p.patient_id || p.id || '');
                 let safeName = escapeHtml(p.full_name);
                 let safeDept = escapeHtml(p.department || 'N/A');
+                let prevLine = p.previous_appointment_date
+                    ? `<div style="margin-top:3px; font-size:0.72rem; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; display:inline-block; padding:1px 7px; border-radius:999px;">Prev: ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
+                    : '';
                 let safeAppDate = isInquiry 
                     ? `<span style="color:#d97706; font-weight:600;">Inquiry (${escapeHtml(p.mode_of_inquiry || 'Online')})</span>`
-                    : (escapeHtml(p.appointment_date || 'N/A') + (p.scheduled_time ? ` <small>(${escapeHtml(p.scheduled_time)})</small>` : ''));
+                    : (`<div>${escapeHtml(p.appointment_date || 'N/A')}${p.scheduled_time ? ` <small>(${escapeHtml(p.scheduled_time)})</small>` : ''}</div>${prevLine}`);
                 let safeStatus = escapeHtml(p.status ? p.status.toUpperCase() : '');
 
                 return `
@@ -280,44 +315,97 @@ async function loadChartData() {
         const filterVal = filterEl ? filterEl.value : 'year';
         
         const res = await fetch(`/sdn/api/admin-stats.php?chart=${filterVal}`).then(r=>r.json());
-        if(res.success && res.chart_labels && res.chart_data) {
-            
+        if(res.success && res.chart_labels) {
             const ctx = document.getElementById('patientsChart').getContext('2d');
             
             if (patientsChartInstance) {
                 patientsChartInstance.destroy();
             }
+
+            const ds = res.chart_datasets || {};
+            const genData   = ds.general || res.chart_data || [];
+            const neuroData = ds.neurology || [];
+            const psychData = ds.psychiatry || [];
             
             patientsChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: res.chart_labels,
-                    datasets: [{
-                        label: 'Registered Patients',
-                        data: res.chart_data,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#0c3915',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        fill: true,
-                        tension: 0.3
-                    }]
+                    datasets: [
+                        {
+                            label: 'General Medical',
+                            data: genData,
+                            borderColor: '#15803d',
+                            backgroundColor: 'rgba(21, 128, 61, 0.08)',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#15803d',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            fill: true,
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Neurology',
+                            data: neuroData,
+                            borderColor: '#0284c7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.08)',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#0284c7',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            fill: true,
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Psychiatry',
+                            data: psychData,
+                            borderColor: '#7c3aed',
+                            backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#7c3aed',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            fill: true,
+                            tension: 0.35
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     plugins: {
-                        legend: { display: false }
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 18,
+                                font: {
+                                    family: "'Inter', sans-serif",
+                                    size: 12,
+                                    weight: '600'
+                                },
+                                color: '#334155'
+                            }
+                        }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { precision: 0 }
+                            ticks: { precision: 0, color: '#64748b' },
+                            grid: { color: '#f1f5f9' }
                         },
                         x: {
+                            ticks: { color: '#64748b' },
                             grid: { display: false }
                         }
                     }
@@ -343,12 +431,13 @@ function renderRBACTable(list) {
     tbody.innerHTML = list.map(s => {
         let safeName = escapeHtml(s.full_name || s.username);
         let safeUser = escapeHtml(s.username);
-        let safeDept = escapeHtml(s.department || 'N/A');
+        let cleanedDept = cleanDeptLabel(s.department || 'N/A');
+        let safeDept = escapeHtml(cleanedDept);
         let safeStatus = s.status === 'active' ? 'active' : 'inactive';
         let rawId = parseInt(s.id, 10) || 0;
         let rawNameAttr = encodeURIComponent(s.full_name || s.username);
         let rawUserAttr = encodeURIComponent(s.username);
-        let rawDeptAttr = encodeURIComponent(s.department || '');
+        let rawDeptAttr = encodeURIComponent(cleanedDept);
 
         return `
         <tr>
@@ -357,8 +446,8 @@ function renderRBACTable(list) {
             <td><span class="dept-badge" style="font-size:0.75rem; padding:4px 8px;">${safeDept}</span></td>
             <td><span class="badge ${safeStatus === 'active' ? 'badge-green' : 'badge-red'}">${escapeHtml(safeStatus.toUpperCase())}</span></td>
             <td style="text-align:center;">
-                <button class="btn btn-outline" style="padding: 4px 10px; margin-right: 6px;" onclick="openEditStaffModal(${rawId}, decodeURIComponent('${rawNameAttr}'), decodeURIComponent('${rawUserAttr}'), decodeURIComponent('${rawDeptAttr}'), '${safeStatus}')">Edit</button>
-                <button class="btn btn-danger" style="padding: 4px 10px;" onclick="deleteStaff(${rawId})">Delete</button>
+                <button class="btn btn-outline" style="padding: 5px 12px; margin-right: 6px; font-size: 0.82rem;" onclick="openEditStaffModal(${rawId}, decodeURIComponent('${rawNameAttr}'), decodeURIComponent('${rawUserAttr}'), decodeURIComponent('${rawDeptAttr}'), '${safeStatus}')">Edit</button>
+                <button class="btn btn-danger" style="padding: 5px 12px; font-size: 0.82rem;" onclick="deleteStaff(${rawId})">Delete</button>
             </td>
         </tr>
     `}).join('');
@@ -383,13 +472,9 @@ function filterRBACTable() {
         list = list.filter(s => (s.status || '').toLowerCase() === statusVal);
     }
 
-    // Filter by search query (name, username, department)
+    // Filter strictly by staff name
     if (searchVal) {
-        list = list.filter(s => 
-            (s.full_name || '').toLowerCase().includes(searchVal) ||
-            (s.username || '').toLowerCase().includes(searchVal) ||
-            (s.department || '').toLowerCase().includes(searchVal)
-        );
+        list = list.filter(s => (s.full_name || '').toLowerCase().includes(searchVal));
     }
 
     renderRBACTable(list);
@@ -436,7 +521,7 @@ function openStaffModal() {
     document.getElementById('staffName').value = '';
     document.getElementById('staffUsername').value = '';
     document.getElementById('staffPass').value = '';
-    document.getElementById('staffDept').value = 'OPU Psychiatry';
+    document.getElementById('staffDept').value = 'Psychiatry';
     document.getElementById('staffModal').classList.add('show'); 
 }
 
@@ -485,7 +570,7 @@ function openEditStaffModal(id, fullName, username, department, status) {
     document.getElementById('editStaffName').value = fullName || '';
     document.getElementById('editStaffUsername').value = username || '';
     if(document.getElementById('editStaffDept')) {
-        document.getElementById('editStaffDept').value = department || 'OPU Psychiatry';
+        document.getElementById('editStaffDept').value = cleanDeptLabel(department || 'Psychiatry');
     }
     document.getElementById('editStaffPass').value = ''; // clear password
     updateEditStaffStatusBtn(status);
@@ -586,32 +671,20 @@ function syncTableScrollbars() {
 }
 window.addEventListener('resize', syncTableScrollbars);
 
-function formatDoctorStatusBadge(status) {
-    const s = String(status || '').toLowerCase().trim();
-    let label = 'Available';
-    let pillClass = 'status-pill-available';
-
-    if (s === 'available') {
-        label = 'Available';
-        pillClass = 'status-pill-available';
-    } else if (s === 'in_clinic' || s === 'in-clinic' || s === 'in clinic') {
-        label = 'In Clinic';
-        pillClass = 'status-pill-inclinic';
-    } else if (s === 'booked' || s === 'fully booked') {
-        label = 'Fully Booked';
-        pillClass = 'status-pill-booked';
-    } else if (s === 'leave' || s === 'on_leave' || s === 'on leave') {
-        label = 'On Leave';
-        pillClass = 'status-pill-leave';
-    } else if (s === 'emergency') {
-        label = 'Emergency';
-        pillClass = 'status-pill-emergency';
-    } else if (s) {
-        label = s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        pillClass = 'status-pill-gray';
+function normalizeDocStatus(raw) {
+    const s = String(raw || '').toLowerCase().trim();
+    if (s === 'out' || s === 'leave' || s === 'on_leave' || s === 'on leave' || s === 'inactive' || s === 'on_break') {
+        return 'out';
     }
+    return 'in';
+}
 
-    return `<span class="status-pill ${pillClass}"><span class="status-indicator"></span>${escapeHtml(label)}</span>`;
+function formatDoctorStatusBadge(status) {
+    const norm = normalizeDocStatus(status);
+    if (norm === 'out') {
+        return `<span class="status-pill status-pill-leave"><span class="status-indicator"></span>OUT</span>`;
+    }
+    return `<span class="status-pill status-pill-available"><span class="status-indicator"></span>IN</span>`;
 }
 
 function renderDoctorsTable(list) {
@@ -619,7 +692,7 @@ function renderDoctorsTable(list) {
     if(!tbody) return;
 
     if(!list || list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:35px; color:var(--muted)">No doctors found matching filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:35px; color:var(--muted)">No doctors found matching filters.</td></tr>';
         syncTableScrollbars();
         return;
     }
@@ -627,13 +700,9 @@ function renderDoctorsTable(list) {
     tbody.innerHTML = list.map(d => {
         let safeName = escapeHtml(d.name);
         let safeSpec = escapeHtml(d.specialization || 'General');
-        let safeDept = escapeHtml(d.department ? d.department.toUpperCase() : 'N/A');
-        let sched = (d.schedule_start && d.schedule_end) 
-            ? `${escapeHtml(d.schedule_start)} - ${escapeHtml(d.schedule_end)}` 
-            : '<span style="color:var(--muted)">Not Set</span>';
-        let booked = parseInt(d.booked_slots, 10) || 0;
-        let total = parseInt(d.total_slots, 10) || 0;
-        let fillPct = total > 0 ? Math.round((booked / total) * 100) : 0;
+        let deptClean = cleanDeptLabel(d.department ? d.department.toUpperCase() : 'N/A');
+        let safeDept = escapeHtml(deptClean);
+        let total = Math.min(100, Math.max(1, parseInt(d.total_slots, 10) || 20));
         let safeId = parseInt(d.id, 10) || 0;
 
         return `
@@ -641,9 +710,8 @@ function renderDoctorsTable(list) {
             <td><strong>${safeName}</strong></td>
             <td>${safeSpec}</td>
             <td><span class="dept-badge" style="font-size:0.75rem; padding:4px 8px;">${safeDept}</span></td>
-            <td>${sched}</td>
             <td>
-                <span style="font-size:0.85rem; color:var(--muted);">${booked}/${total} (${fillPct}%)</span>
+                <span style="font-size:0.88rem; font-weight:600; color:#1e293b;">${total} <small style="color:var(--muted); font-weight:400;">/ 100 max</small></span>
             </td>
             <td>${formatDoctorStatusBadge(d.status)}</td>
             <td style="text-align:center;">
@@ -671,9 +739,9 @@ function filterDoctorsTable() {
         list = list.filter(d => (d.department || '').toLowerCase().includes(deptVal));
     }
 
-    // Filter by status
+    // Filter by status (IN / OUT)
     if (statusVal !== 'all') {
-        list = list.filter(d => (d.status || '').toLowerCase() === statusVal);
+        list = list.filter(d => normalizeDocStatus(d.status) === statusVal);
     }
 
     // Filter by search query (name, specialization, department)
@@ -708,62 +776,22 @@ async function loadDoctors() {
     } catch(e) { console.error('Failed to load doctors:', e); }
 }
 
-const DEPARTMENT_SPECIALIZATIONS = {
-    general: [
-        'Internal Medicine',
-        'Family Medicine & General Practice',
-        'Preventative Care & Routine Check-ups',
-        'Chronic Disease Management',
-        'Pediatric Care',
-        'General Surgery & Minor Procedures'
-    ],
-    neurology: [
-        'Clinical Neurology',
-        'Headache & Migraine Management',
-        'Stroke Rehabilitation',
-        'Epilepsy & Seizure Disorders',
-        'Movement Disorders',
-        'Neuromuscular Medicine'
-    ],
-    psychiatry: [
-        'Adult Psychiatry',
-        'Child & Adolescent Psychiatry',
-        'Substance Abuse & Addiction Treatment',
-        'Anxiety & Depression Management',
-        'Geriatric Psychiatry',
-        'Clinical Neuropsychiatry'
-    ]
-};
-
-function updateDoctorSpecializationOptions(selectedSpec = '') {
-    const dept = (document.getElementById('docDept')?.value || 'general').toLowerCase();
-    const specSelect = document.getElementById('docSpec');
-    if (!specSelect) return;
-
-    const specs = DEPARTMENT_SPECIALIZATIONS[dept] || DEPARTMENT_SPECIALIZATIONS.general;
-    specSelect.innerHTML = '<option value="" disabled selected>Select authorized clinical specialization...</option>';
-
-    specs.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = s;
-        if (selectedSpec && (s.toLowerCase() === selectedSpec.toLowerCase() || s.toLowerCase().includes(selectedSpec.toLowerCase()))) {
-            opt.selected = true;
-        }
-        specSelect.appendChild(opt);
+function clearDoctorModalErrors() {
+    ['docName', 'docDept', 'docSpec', 'docSlots', 'docStatus'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('input-error');
     });
 }
 
 function openAddDoctorModal() {
+    clearDoctorModalErrors();
     document.getElementById('doctorModalTitle').innerText = 'Add Doctor';
     document.getElementById('editDoctorId').value = '';
     document.getElementById('docName').value = '';
     document.getElementById('docDept').value = 'general';
-    updateDoctorSpecializationOptions();
-    document.getElementById('docStartTime').value = '08:00';
-    document.getElementById('docEndTime').value = '17:00';
+    document.getElementById('docSpec').value = '';
     document.getElementById('docSlots').value = '20';
-    document.getElementById('docStatus').value = 'available';
+    document.getElementById('docStatus').value = 'in';
     const delBtn = document.getElementById('btnDeleteDoctorModal');
     if(delBtn) delBtn.style.display = 'none';
     document.getElementById('doctorModal').classList.add('show');
@@ -773,16 +801,15 @@ function openEditDoctorModal(id) {
     const doc = allDoctorsList.find(d => d.id == id);
     if(!doc) return;
 
+    clearDoctorModalErrors();
     document.getElementById('doctorModalTitle').innerText = 'Edit Doctor: ' + doc.name;
     document.getElementById('editDoctorId').value = doc.id;
     document.getElementById('docName').value = doc.name || '';
     const deptVal = (doc.department || 'general').toLowerCase();
-    document.getElementById('docDept').value = deptVal;
-    updateDoctorSpecializationOptions(doc.specialization || '');
-    document.getElementById('docStartTime').value = doc.schedule_start || '';
-    document.getElementById('docEndTime').value = doc.schedule_end || '';
-    document.getElementById('docSlots').value = doc.total_slots || 20;
-    document.getElementById('docStatus').value = doc.status || 'available';
+    document.getElementById('docDept').value = deptVal.includes('psych') ? 'psychiatry' : (deptVal.includes('neuro') ? 'neurology' : 'general');
+    document.getElementById('docSpec').value = doc.specialization || '';
+    document.getElementById('docSlots').value = Math.min(100, Math.max(1, parseInt(doc.total_slots, 10) || 20));
+    document.getElementById('docStatus').value = normalizeDocStatus(doc.status);
     const delBtn = document.getElementById('btnDeleteDoctorModal');
     if(delBtn) delBtn.style.display = 'inline-block';
     document.getElementById('doctorModal').classList.add('show');
@@ -797,30 +824,53 @@ function handleModalDeleteDoctor() {
 }
 
 function closeDoctorModal() {
+    clearDoctorModalErrors();
     const modal = document.getElementById('doctorModal');
     if(modal) modal.classList.remove('show');
 }
 
 async function submitDoctorForm() {
     const id = document.getElementById('editDoctorId').value;
-    const name = document.getElementById('docName').value.trim();
-    const specialization = document.getElementById('docSpec').value.trim();
-    const department = document.getElementById('docDept').value;
-    const schedule_start = document.getElementById('docStartTime').value;
-    const schedule_end = document.getElementById('docEndTime').value;
-    const total_slots = parseInt(document.getElementById('docSlots').value, 10) || 20;
-    const status = document.getElementById('docStatus').value;
+    const nameEl = document.getElementById('docName');
+    const specEl = document.getElementById('docSpec');
+    const deptEl = document.getElementById('docDept');
+    const slotsEl = document.getElementById('docSlots');
+    const statusEl = document.getElementById('docStatus');
 
-    if(!name || !specialization || !department) {
-        return showToast('Doctor Name, Specialization, and Department are required.', 'error');
+    const name = (nameEl?.value || '').trim();
+    const specialization = (specEl?.value || '').trim();
+    const department = (deptEl?.value || '').trim();
+    const slotsRaw = (slotsEl?.value || '').trim();
+    const status = (statusEl?.value || 'in').trim();
+
+    clearDoctorModalErrors();
+
+    let hasEmptyError = false;
+    if (!name) {
+        if (nameEl) nameEl.classList.add('input-error');
+        hasEmptyError = true;
+    }
+    if (!specialization) {
+        if (specEl) specEl.classList.add('input-error');
+        hasEmptyError = true;
+    }
+    if (!department) {
+        if (deptEl) deptEl.classList.add('input-error');
+        hasEmptyError = true;
+    }
+    if (!slotsRaw) {
+        if (slotsEl) slotsEl.classList.add('input-error');
+        hasEmptyError = true;
     }
 
-    if(total_slots < 1 || total_slots > 100) {
-        return showToast('Total slots must be between 1 and 100.', 'error');
+    if (hasEmptyError) {
+        return;
     }
 
-    if(schedule_start && schedule_end && schedule_start >= schedule_end) {
-        return showToast('Schedule Start Time must be earlier than End Time.', 'error');
+    let total_slots = parseInt(slotsRaw, 10);
+    if (isNaN(total_slots) || total_slots < 1 || total_slots > 100) {
+        if (slotsEl) slotsEl.classList.add('input-error');
+        return showToast('Total daily slots must be between 1 and 100.', 'error');
     }
 
     const isEdit = !!id;
@@ -830,8 +880,6 @@ async function submitDoctorForm() {
         name,
         specialization,
         department,
-        schedule_start,
-        schedule_end,
         total_slots,
         status
     } : {
@@ -839,9 +887,8 @@ async function submitDoctorForm() {
         name,
         specialization,
         department,
-        schedule_start,
-        schedule_end,
-        total_slots
+        total_slots,
+        status
     };
 
     try {
@@ -942,15 +989,23 @@ function filterPMITable() {
             ? `<span style="display:inline-block; margin-left:6px; padding:2px 7px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:999px; font-size:0.68rem; font-weight:700; text-transform:uppercase; vertical-align:middle;">Inquiry</span>`
             : '';
 
-        let safeId = escapeHtml(p.patient_id);
+        let safeId = escapeHtml(p.patient_id || p.id || '');
         let safeName = escapeHtml(p.full_name);
-        let safeDept = escapeHtml(p.department);
+        let safeDept = escapeHtml(cleanDeptLabel(p.department));
         let safeStatus = escapeHtml(statusLabel);
+        let prevTag = p.previous_appointment_date
+            ? `<div style="margin-top:3px; font-size:0.72rem; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; display:inline-flex; align-items:center; gap:4px; padding:1px 7px; border-radius:999px;" title="Previous appointment date and time">
+                 <span>Prev visit: ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</span>
+               </div>`
+            : '';
 
         return `
         <tr class="clickable-row" onclick="openPatientDetailsModal('${safeId}')" title="Click to view full patient profile">
             <td><small style="font-weight:600; color:var(--deep-green);">${safeId}</small></td>
-            <td><strong>${safeName}</strong>${inquiryTag}</td>
+            <td>
+                <div><strong>${safeName}</strong>${inquiryTag}</div>
+                ${prevTag}
+            </td>
             <td>${safeDept}</td>
             <td><span class="badge ${b}">${safeStatus}</span></td>
             <td>
@@ -1004,21 +1059,35 @@ async function openPatientDetailsModal(patient_id) {
     if (!modal || !body) return;
 
     modal.classList.add('show');
-    body.innerHTML = '<p style="text-align:center; padding:20px; color:#64748b;">Loading registration details...</p>';
+    body.innerHTML = '<p style="text-align:center; padding:28px 0; color:#64748b;">Loading appointment details...</p>';
     if (actions) actions.innerHTML = '';
 
     try {
-        const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(patient_id)}`).then(r => r.json());
-        if (!res.success || !res.data) {
-            body.innerHTML = '<p style="text-align:center; color:#ef4444;">Failed to load patient details.</p>';
+        let p = null;
+        try {
+            const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(patient_id)}&_=${Date.now()}`).then(r => r.json());
+            if (res && res.success && res.data) {
+                p = res.data;
+            }
+        } catch (fetchErr) {
+            console.warn('API details fetch warning:', fetchErr);
+        }
+
+        // Cache fallback: if direct API query returned null or failed, use cached PMI patient data
+        if (!p && Array.isArray(cachedPMIPatients)) {
+            p = cachedPMIPatients.find(x => x && (x.patient_id === patient_id || String(x.id) === String(patient_id)));
+        }
+
+        if (!p) {
+            body.innerHTML = '<p style="text-align:center; color:#ef4444; padding:24px 0;">Failed to load appointment details.</p>';
             return;
         }
 
-        const p = res.data;
         const phone = p.contact_number || 'None';
         const isPending = (p.status === 'pending' || p.status === 'for_approval' || p.status === 'for_processing');
         const showVerificationProtocol = isPending && p.status !== 'completed';
         const isInquiry = p.inquiry_only == 1 || p.inquiry_only === true || p.inquiry_only === '1';
+        const deptFormatted = cleanDeptLabel(p.department || 'N/A');
 
         const modalTitle = document.querySelector('#patientDetailsModal .modal-header h2');
         const modalSub = document.querySelector('#patientDetailsModal .modal-header p');
@@ -1033,164 +1102,131 @@ async function openPatientDetailsModal(patient_id) {
                 }
             } else {
                 if (p.status === 'completed') {
-                    modalTitle.innerText = 'Patient Registration & Consultation Details';
+                    modalTitle.innerText = 'Patient Appointment & Consultation Details';
                     modalSub.innerText = 'Review patient profile, clinical diagnosis, treatment plan, and consultation history.';
                 } else {
-                    modalTitle.innerText = 'Patient Registration Verification';
-                    modalSub.innerText = 'Review full registration information and verify patient authenticity via phone call.';
+                    modalTitle.innerText = 'Patient Appointment Verification';
+                    modalSub.innerText = 'Review appointment information and verify patient authenticity via phone call.';
                 }
             }
         }
 
         if (isInquiry) {
             body.innerHTML = `
-                ${showVerificationProtocol ? `
-                <div class="verification-callout" style="background:#fffbeb; border-color:#fde68a;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    <div>
-                        <strong>Inquiry Follow-up Protocol:</strong> Contact inquirer at <strong>${escapeHtml(phone)}</strong> to address their general inquiry or guide them to appropriate clinic services.
+                <div class="pv-summary-bar">
+                    <div class="pv-summary-left">
+                        <div class="pv-avatar">${escapeHtml((p.full_name || 'P').charAt(0).toUpperCase())}</div>
+                        <div>
+                            <div class="pv-patient-name">${escapeHtml(p.full_name)}</div>
+                            <div class="pv-patient-meta">ID: <strong>${escapeHtml(p.patient_id)}</strong>${p.hrn ? ` &bull; HRN: <strong>${escapeHtml(p.hrn)}</strong>` : ''}</div>
+                        </div>
                     </div>
+                    <div class="pv-summary-right">
+                        ${phone !== 'None' ? `<a href="tel:${escapeHtml(phone)}" class="pv-call-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><span>${escapeHtml(phone)}</span></a>` : ''}
+                    </div>
+                </div>
+
+                ${showVerificationProtocol ? `
+                <div class="pv-callout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    <span><strong>Inquiry Follow-up Protocol:</strong> Contact inquirer at <strong>${escapeHtml(phone)}</strong> to address their inquiry or guide them to clinic services.</span>
                 </div>` : ''}
 
-                <div class="patient-verify-grid">
-                    <div class="patient-verify-card">
-                        <h3>
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            <span>Inquirer Information</span>
-                        </h3>
-                        <div class="verify-item">
-                            <label>Inquiry Reference ID</label>
-                            <span><strong>${escapeHtml(p.patient_id)}</strong> ${p.hrn ? `&bull; HRN: <strong>${escapeHtml(p.hrn)}</strong>` : ''}</span>
+                <div class="pv-grid">
+                    <div class="pv-card">
+                        <div class="pv-card-title">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span>Inquirer Profile</span>
                         </div>
-                        <div class="verify-item">
-                            <label>Inquirer Name</label>
-                            <span>${escapeHtml(p.full_name)}</span>
-                        </div>
-                        <div class="verify-item">
-                            <label>Contact Number</label>
-                            <div>
-                                ${phone !== 'None' ? `<a href="tel:${escapeHtml(phone)}" class="call-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> Call: ${escapeHtml(phone)}</a>` : '<span>None provided</span>'}
+                        <div class="pv-info-list">
+                            <div class="pv-info-row">
+                                <span class="pv-label">Gender &amp; Age</span>
+                                <span class="pv-val">${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs (${escapeHtml(p.birthdate || 'N/A')})</span>
+                            </div>
+                            <div class="pv-info-row">
+                                <span class="pv-label">Email Address</span>
+                                <span class="pv-val">${escapeHtml(p.email || 'None')}</span>
+                            </div>
+                            <div class="pv-info-row">
+                                <span class="pv-label">Address</span>
+                                <span class="pv-val">${escapeHtml(p.address || 'None provided')}</span>
                             </div>
                         </div>
-                        <div class="verify-item">
-                            <label>Email Address</label>
-                            <span>${escapeHtml(p.email || 'None')}</span>
-                        </div>
-                        <div class="verify-item">
-                            <label>Gender / Age</label>
-                            <span>${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs old (DOB: ${escapeHtml(p.birthdate || 'N/A')})</span>
-                        </div>
-                        <div class="verify-item">
-                            <label>Complete Address</label>
-                            <span>${escapeHtml(p.address || 'None provided')}</span>
-                        </div>
                     </div>
 
-                    <div class="patient-verify-card">
-                        <h3>
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                            <span>Inquiry &amp; Service Details</span>
-                        </h3>
-                        <div class="verify-item">
-                            <label>Department Target</label>
-                            <span><strong>${escapeHtml(p.department || 'N/A')}</strong></span>
+                    <div class="pv-card">
+                        <div class="pv-card-title">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <span>Inquiry Details</span>
                         </div>
-                        <div class="verify-item">
-                            <label>Classification</label>
-                            <span class="badge" style="background:#fef3c7; color:#92400e; font-weight:600; display:inline-block; margin-top:2px; border:1px solid #fde68a;">Patient General Inquiry</span>
-                        </div>
-                        <div class="verify-item">
-                            <label>Mode of Inquiry</label>
-                            <span><strong>${escapeHtml(p.mode_of_inquiry || 'Online Portal')}</strong></span>
-                        </div>
-                        <div class="verify-item">
-                            <label>Submitted Date</label>
-                            <span>${escapeHtml(p.created_at || 'Today')}</span>
-                        </div>
-                        <div class="verify-item">
-                            <label>Clinic Schedule Requirement</label>
-                            <span style="color:#059669; font-weight:600;">No clinic slot reserved (Inquiry Only)</span>
+                        <div class="pv-info-list">
+                            <div class="pv-info-row">
+                                <span class="pv-label">Department</span>
+                                <span class="pv-val"><strong>${escapeHtml(deptFormatted)}</strong></span>
+                            </div>
+                            <div class="pv-info-row">
+                                <span class="pv-label">Mode of Inquiry</span>
+                                <span class="pv-val">${escapeHtml(p.mode_of_inquiry || 'Online Portal')}</span>
+                            </div>
+                            <div class="pv-info-row">
+                                <span class="pv-label">Submitted</span>
+                                <span class="pv-val">${escapeHtml(p.created_at || 'Today')}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="patient-verify-card" style="margin-bottom:0;">
-                    <h3>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                        <span>Inquiry Concern &amp; Detailed Message</span>
-                    </h3>
-                    <div class="verify-item" style="margin-bottom:12px;">
-                        <label>Inquiry Subject / Concern</label>
-                        <p style="background:#ffffff; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; font-weight:600; color:#0f2e1b;">
-                            ${escapeHtml(p.chief_complaints || 'General Inquiry')}
-                        </p>
+                <div class="pv-card">
+                    <div class="pv-card-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span>Inquiry Subject &amp; Details</span>
                     </div>
+                    <div class="pv-text-block">${escapeHtml(p.chief_complaints || 'General Inquiry')}</div>
                     ${(p.illness_description || p.recommendation_remarks) ? `
-                    <div class="verify-item">
-                        <label>Inquiry Message / Additional Details</label>
-                        <p style="background:#ffffff; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; font-size:0.9rem; line-height:1.5;">
-                            ${escapeHtml(p.illness_description || p.recommendation_remarks)}
-                        </p>
-                    </div>` : ''}
+                    <div class="pv-text-block" style="margin-top:8px;">${escapeHtml(p.illness_description || p.recommendation_remarks)}</div>` : ''}
                 </div>
-
-                ${p.latest_progress_note ? `
-                <div class="patient-verify-card" style="margin-top:16px; margin-bottom:0;">
-                    <h3>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-                        <span>Latest Update / Note (by ${escapeHtml(p.latest_progress_note.noted_by || 'Staff')})</span>
-                    </h3>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px; font-size:0.88rem;">
-                        ${escapeHtml(p.latest_progress_note.note)}
-                    </p>
-                </div>` : ''}
             `;
 
             if (actions) {
                 if (isPending) {
                     actions.innerHTML = `
                         <div class="patient-modal-status-col">
-                            <span class="badge badge-yellow">Status: FOR REVIEW</span>
+                            <span class="badge badge-yellow">FOR REVIEW</span>
                         </div>
                         <div class="patient-modal-btn-group">
                             <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
                             <button type="button" class="btn-verify-action btn-verify-noshow" onclick="promptPatientVerification('${p.patient_id}', 'no-show', '${escapeHtml(p.full_name)}')">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                <span>Mark as Invalid</span>
+                                <span>Mark Invalid</span>
                             </button>
                             <button type="button" class="btn-verify-action btn-verify-accept" onclick="promptPatientVerification('${p.patient_id}', 'approve', '${escapeHtml(p.full_name)}')">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 <span>Accept Inquiry</span>
                             </button>
-                            <button type="button" class="btn-verify-action" style="background:#059669; color:#fff;" onclick="promptResolveInquiry('${p.patient_id}', '${escapeHtml(p.full_name)}')">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                <span>Resolve Inquiry</span>
+                            <button type="button" class="btn-verify-action" style="background:#15803d; color:#fff;" onclick="promptResolveInquiry('${p.patient_id}', '${escapeHtml(p.full_name)}')">
+                                <span>Resolve</span>
                             </button>
                         </div>
                     `;
                 } else if (p.status === 'approved') {
                     actions.innerHTML = `
                         <div class="patient-modal-status-col">
-                            <span class="badge badge-green">Status: UNDER REVIEW / ACCEPTED</span>
+                            <span class="badge badge-green">UNDER REVIEW</span>
                         </div>
                         <div class="patient-modal-btn-group">
                             <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
                             <button type="button" class="btn-verify-action btn-verify-noshow" onclick="promptPatientVerification('${p.patient_id}', 'no-show', '${escapeHtml(p.full_name)}')">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                <span>Mark as Invalid</span>
+                                <span>Mark Invalid</span>
                             </button>
-                            <button type="button" class="btn-verify-action" style="background:#059669; color:#fff;" onclick="promptResolveInquiry('${p.patient_id}', '${escapeHtml(p.full_name)}')">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <button type="button" class="btn-verify-action" style="background:#15803d; color:#fff;" onclick="promptResolveInquiry('${p.patient_id}', '${escapeHtml(p.full_name)}')">
                                 <span>Resolve Inquiry</span>
                             </button>
                         </div>
                     `;
                 } else {
                     let statusBadge = (p.status === 'no-show' || p.status === 'rejected') ? 'badge-red' : (p.status === 'completed' ? 'badge-blue' : 'badge-purple');
-                    let statusText = (p.status === 'completed') ? 'COMPLETED / RESOLVED' : (p.status === 'no-show' || p.status === 'rejected' ? 'INVALID / REJECTED' : (p.status || '').toUpperCase());
+                    let statusText = (p.status === 'completed') ? 'RESOLVED' : (p.status === 'no-show' || p.status === 'rejected' ? 'INVALID' : (p.status || '').toUpperCase());
                     actions.innerHTML = `
                         <div class="patient-modal-status-col">
-                            <span class="badge ${statusBadge}">Status: ${statusText}</span>
+                            <span class="badge ${statusBadge}">${statusText}</span>
                         </div>
                         <div class="patient-modal-btn-group">
                             <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
@@ -1202,151 +1238,142 @@ async function openPatientDetailsModal(patient_id) {
         }
 
         body.innerHTML = `
-            ${showVerificationProtocol ? `
-            <div class="verification-callout">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                <div>
-                    <strong>Verification Protocol:</strong> Call patient at <strong>${escapeHtml(phone)}</strong> to confirm appointment validity. If unreachable, fake, or unverified, mark as No-Show.
+            <div class="pv-summary-bar">
+                <div class="pv-summary-left">
+                    <div class="pv-avatar">${escapeHtml((p.full_name || 'P').charAt(0).toUpperCase())}</div>
+                    <div>
+                        <div class="pv-patient-name">${escapeHtml(p.full_name)}</div>
+                        <div class="pv-patient-meta">ID: <strong>${escapeHtml(p.patient_id)}</strong>${p.hrn ? ` &bull; HRN: <strong>${escapeHtml(p.hrn)}</strong>` : ''}</div>
+                    </div>
                 </div>
+                <div class="pv-summary-right">
+                    ${phone !== 'None' ? `<a href="tel:${escapeHtml(phone)}" class="pv-call-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><span>Call: ${escapeHtml(phone)}</span></a>` : `<span class="pv-no-phone">No phone</span>`}
+                </div>
+            </div>
+
+            ${showVerificationProtocol ? `
+            <div class="pv-callout">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                <span><strong>Verification Protocol:</strong> Call patient at <strong>${escapeHtml(phone)}</strong> to confirm appointment validity. If unreachable or unverified, mark as No-Show.</span>
             </div>` : ''}
 
-            <div class="patient-verify-grid">
-                <div class="patient-verify-card">
-                    <h3>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <div class="pv-grid">
+                <div class="pv-card">
+                    <div class="pv-card-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <span>Personal Information</span>
-                    </h3>
-                    <div class="verify-item">
-                        <label>Patient ID</label>
-                        <span><strong>${escapeHtml(p.patient_id)}</strong> ${p.hrn ? `&bull; HRN: <strong>${escapeHtml(p.hrn)}</strong>` : ''}</span>
                     </div>
-                    <div class="verify-item">
-                        <label>Full Name</label>
-                        <span>${escapeHtml(p.full_name)}</span>
-                    </div>
-                    <div class="verify-item">
-                        <label>Contact Number</label>
-                        <div>
-                            ${phone !== 'None' ? `<a href="tel:${escapeHtml(phone)}" class="call-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> Call: ${escapeHtml(phone)}</a>` : '<span>None provided</span>'}
+                    <div class="pv-info-list">
+                        <div class="pv-info-row">
+                            <span class="pv-label">Gender &amp; Age</span>
+                            <span class="pv-val">${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs old</span>
                         </div>
-                    </div>
-                    <div class="verify-item">
-                        <label>Email Address</label>
-                        <span>${escapeHtml(p.email || 'None')}</span>
-                    </div>
-                    <div class="verify-item">
-                        <label>Gender / Age</label>
-                        <span>${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs old (DOB: ${escapeHtml(p.birthdate || 'N/A')})</span>
-                    </div>
-                    <div class="verify-item">
-                        <label>Complete Address</label>
-                        <span>${escapeHtml(p.address || 'None')}</span>
-                    </div>
-                    <div class="verify-item">
-                        <label>Companion</label>
-                        <span>${p.with_companion ? 'Accompanied' : 'Alone / Unaccompanied'}</span>
+                        <div class="pv-info-row">
+                            <span class="pv-label">Birthdate</span>
+                            <span class="pv-val">${escapeHtml(p.birthdate || 'N/A')}</span>
+                        </div>
+                        <div class="pv-info-row">
+                            <span class="pv-label">Email</span>
+                            <span class="pv-val">${escapeHtml(p.email || 'None')}</span>
+                        </div>
+                        <div class="pv-info-row">
+                            <span class="pv-label">Address</span>
+                            <span class="pv-val">${escapeHtml(p.address || 'None')}</span>
+                        </div>
+                        <div class="pv-info-row">
+                            <span class="pv-label">Companion</span>
+                            <span class="pv-val">${p.with_companion ? 'Accompanied' : 'Unaccompanied'}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="patient-verify-card">
-                    <h3>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        <span>Appointment & Consultation</span>
-                    </h3>
-                    <div class="verify-item">
-                        <label>Department Assigned</label>
-                        <span><strong>${escapeHtml(p.department || 'N/A')}</strong></span>
+                <div class="pv-card">
+                    <div class="pv-card-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span>Appointment Details</span>
                     </div>
-                    ${p.referral_source ? `
-                    <div class="verify-item">
-                        <label>Referral / Transferred From</label>
-                        <span style="color:#6b21a8; font-weight:600;">${escapeHtml(p.referral_source)}</span>
-                    </div>` : ''}
-                    <div class="verify-item">
-                        <label>Appointment Date & Time</label>
-                        <span>${escapeHtml(p.appointment_date || 'N/A')} ${p.scheduled_time ? '(' + escapeHtml(p.scheduled_time) + ')' : ''}</span>
-                    </div>
-                    <div class="verify-item">
-                        <label>Patient Type / Booking</label>
-                        <span>${escapeHtml(p.patient_type || 'N/A')} &bull; ${p.unscheduled_walkin ? 'Walk-in' : 'Online Booker'}</span>
-                    </div>
-                    <div class="verify-item">
-                        <label>Consultation Nature & Mode</label>
-                        <span>${escapeHtml(p.consultation_nature || 'General')} (${escapeHtml(p.consultation_mode || 'Face-to-Face')})</span>
-                    </div>
-                    <div class="verify-item">
-                        <label>Assigned Doctor</label>
-                        <span>${escapeHtml(p.assigned_doctor || 'None assigned yet')}</span>
+                    <div class="pv-info-list">
+                        <div class="pv-info-row">
+                            <span class="pv-label">Department</span>
+                            <span class="pv-val"><strong>${escapeHtml(deptFormatted)}</strong></span>
+                        </div>
+                        <div class="pv-info-row">
+                            <span class="pv-label">Date &amp; Time</span>
+                            <span class="pv-val">${escapeHtml(p.appointment_date || 'N/A')}${p.scheduled_time ? ' &bull; ' + escapeHtml(p.scheduled_time) : ''}</span>
+                        </div>
+                        ${p.previous_appointment_date ? `
+                        <div class="pv-info-row">
+                            <span class="pv-label">Previous Visit</span>
+                            <span class="pv-val" style="color:#0369a1; font-weight:700;">${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</span>
+                        </div>` : ''}
+                        <div class="pv-info-row">
+                            <span class="pv-label">Booking Type</span>
+                            <span class="pv-val">${escapeHtml(p.patient_type || 'N/A')} (${p.unscheduled_walkin ? 'Walk-in' : 'Online'})</span>
+                        </div>
+                        <div class="pv-info-row">
+                            <span class="pv-label">Consultation</span>
+                            <span class="pv-val">${escapeHtml(p.consultation_nature || 'General')} (${escapeHtml(p.consultation_mode || 'Face-to-Face')})</span>
+                        </div>
+                        <div class="pv-info-row">
+                            <span class="pv-label">Doctor</span>
+                            <span class="pv-val">${escapeHtml(p.assigned_doctor || 'Unassigned')}</span>
+                        </div>
+                        ${p.referral_source ? `
+                        <div class="pv-info-row">
+                            <span class="pv-label">Referral</span>
+                            <span class="pv-val" style="color:#6b21a8; font-weight:600;">${escapeHtml(cleanDeptLabel(p.referral_source))}</span>
+                        </div>` : ''}
                     </div>
                 </div>
             </div>
 
-            <div class="patient-verify-card" style="margin-bottom:0;">
-                <h3>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    <span>Clinical Complaints & Symptoms</span>
-                </h3>
-                <div class="verify-item" style="margin-bottom:12px;">
-                    <label>Chief Complaints</label>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; font-weight:500;">
-                        ${escapeHtml(p.chief_complaints || 'None listed')}
-                    </p>
+            <div class="pv-card">
+                <div class="pv-card-title">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Chief Complaint &amp; Remarks</span>
                 </div>
-                ${p.illness_description ? `
-                <div class="verify-item" style="margin-bottom:12px;">
-                    <label>History of Present Illness / Details</label>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; font-size:0.88rem;">
-                        ${escapeHtml(p.illness_description)}
-                    </p>
-                </div>` : ''}
-                ${p.recommendation_remarks ? `
-                <div class="verify-item">
-                    <label>Recommendation Remarks</label>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; font-size:0.88rem;">
-                        ${escapeHtml(p.recommendation_remarks)}
-                    </p>
-                </div>` : ''}
+                <div class="pv-text-block">${escapeHtml(p.chief_complaints || 'None listed')}</div>
+                ${p.illness_description ? `<div class="pv-text-block" style="margin-top:8px;"><strong>Details:</strong> ${escapeHtml(p.illness_description)}</div>` : ''}
+                ${p.recommendation_remarks ? `<div class="pv-text-block" style="margin-top:8px;"><strong>Remarks:</strong> ${escapeHtml(p.recommendation_remarks)}</div>` : ''}
             </div>
 
             ${(p.medical_history_diagnosis || p.medical_history_treatment || p.medical_history_prescription || p.active_medications || p.latest_progress_note) ? `
-            <div class="patient-verify-card" style="margin-top:16px; margin-bottom:0;">
-                <h3>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dark-green);"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-                    <span>Clinical History & Medical Notes</span>
-                </h3>
-                ${p.medical_history_diagnosis ? `
-                <div class="verify-item" style="margin-bottom:10px;">
-                    <label>Diagnosis</label>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px; font-weight:600; color:#0f2e1b;">
-                        ${escapeHtml(p.medical_history_diagnosis)}
-                    </p>
-                </div>` : ''}
-                ${p.medical_history_treatment ? `
-                <div class="verify-item" style="margin-bottom:10px;">
-                    <label>Treatment Plan</label>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px; font-size:0.88rem;">
-                        ${escapeHtml(p.medical_history_treatment)}
-                    </p>
-                </div>` : ''}
-                ${p.medical_history_prescription ? `
-                <div class="verify-item" style="margin-bottom:10px;">
-                    <label>Prescriptions / Medications</label>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px; font-size:0.88rem;">
-                        ${escapeHtml(p.medical_history_prescription)}
-                    </p>
-                </div>` : ''}
-                ${p.next_visit_date ? `
-                <div class="verify-item" style="margin-bottom:10px;">
-                    <label>Next Follow-Up Visit Date</label>
-                    <span><strong>${escapeHtml(p.next_visit_date)}</strong></span>
-                </div>` : ''}
-                ${p.latest_progress_note ? `
-                <div class="verify-item">
-                    <label>Latest Progress Note / Vitals (by ${escapeHtml(p.latest_progress_note.noted_by || 'Staff')})</label>
-                    <p style="background:#ffffff; border:1px solid #e2e8f0; padding:8px 12px; border-radius:8px; font-size:0.88rem;">
-                        ${escapeHtml(p.latest_progress_note.note)}
-                    </p>
-                </div>` : ''}
+            <div class="pv-card" style="margin-top:12px;">
+                <div class="pv-card-title">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                    <span>Clinical History &amp; Medical Notes</span>
+                </div>
+                <div class="pv-info-list">
+                    ${p.medical_history_diagnosis ? `<div class="pv-info-row"><span class="pv-label">Diagnosis</span><span class="pv-val"><strong>${escapeHtml(p.medical_history_diagnosis)}</strong></span></div>` : ''}
+                    ${p.medical_history_treatment ? `<div class="pv-info-row"><span class="pv-label">Treatment Plan</span><span class="pv-val">${escapeHtml(p.medical_history_treatment)}</span></div>` : ''}
+                    ${p.medical_history_prescription ? `<div class="pv-info-row"><span class="pv-label">Prescription</span><span class="pv-val">${escapeHtml(p.medical_history_prescription)}</span></div>` : ''}
+                    ${p.next_visit_date ? `<div class="pv-info-row"><span class="pv-label">Next Follow-Up</span><span class="pv-val"><strong>${escapeHtml(p.next_visit_date)}</strong></span></div>` : ''}
+                    ${p.latest_progress_note ? `<div class="pv-info-row"><span class="pv-label">Progress Note</span><span class="pv-val">${escapeHtml(p.latest_progress_note.note)}</span></div>` : ''}
+                </div>
+            </div>` : ''}
+
+            ${(Array.isArray(p.previous_appointments) && p.previous_appointments.length > 0) ? `
+            <div class="pv-card" style="margin-top:12px;">
+                <div class="pv-card-title">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>Previous Appointments History (${p.previous_appointments.length})</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+                    ${p.previous_appointments.map(prev => `
+                        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:9px 12px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                            <div>
+                                <div style="font-size:0.86rem; font-weight:700; color:#0f172a;">
+                                    ${escapeHtml(prev.date_formatted || prev.appointment_date)} &bull; <span style="color:#0369a1;">${escapeHtml(prev.time_formatted || '8:00 AM')}</span>
+                                </div>
+                                <div style="font-size:0.78rem; color:#475569; margin-top:2px;">
+                                    ${escapeHtml(cleanDeptLabel(prev.department || 'Clinic'))} &bull; ${escapeHtml(prev.assigned_doctor || 'Attending Physician')} (${escapeHtml(prev.patient_id)})
+                                </div>
+                                ${prev.diagnosis ? `<div style="font-size:0.78rem; color:#15803d; margin-top:2px;"><strong>Diagnosis:</strong> ${escapeHtml(prev.diagnosis)}</div>` : ''}
+                            </div>
+                            <span class="badge" style="font-size:0.68rem;">${escapeHtml((prev.status || '').toUpperCase())}</span>
+                        </div>
+                    `).join('')}
+                </div>
             </div>` : ''}
         `;
 
@@ -1354,7 +1381,7 @@ async function openPatientDetailsModal(patient_id) {
             const isWalkin = !!(p.unscheduled_walkin || p.appointment_type === 'walk-in');
             const noShowBtnModal = isWalkin ? '' : `
                 <button type="button" class="btn-verify-action btn-verify-noshow" onclick="promptPatientVerification('${p.patient_id}', 'no-show', '${escapeHtml(p.full_name)}')">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     <span>Mark as No-Show</span>
                 </button>
             `;
@@ -1362,13 +1389,13 @@ async function openPatientDetailsModal(patient_id) {
             if (isPending) {
                 actions.innerHTML = `
                     <div class="patient-modal-status-col">
-                        <span class="badge badge-yellow">Current Status: FOR APPROVAL</span>
+                        <span class="badge badge-yellow">FOR APPROVAL</span>
                     </div>
                     <div class="patient-modal-btn-group">
                         <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
                         ${noShowBtnModal}
                         <button type="button" class="btn-verify-action btn-verify-accept" onclick="promptPatientVerification('${p.patient_id}', 'approve', '${escapeHtml(p.full_name)}')">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                             <span>Accept Patient</span>
                         </button>
                     </div>
@@ -1376,13 +1403,13 @@ async function openPatientDetailsModal(patient_id) {
             } else if (p.status === 'approved') {
                 actions.innerHTML = `
                     <div class="patient-modal-status-col">
-                        <span class="badge badge-green">Current Status: APPROVED</span>
+                        <span class="badge badge-green">APPROVED</span>
                     </div>
                     <div class="patient-modal-btn-group">
                         <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
                         ${noShowBtnModal}
                         <button type="button" class="btn-verify-action btn-table-arrived" onclick="closePatientDetailsModal(); promptPatientVerification('${p.patient_id}', 'arrived', '${escapeHtml(p.full_name)}')">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
                             <span>Check In</span>
                         </button>
                     </div>
@@ -1390,13 +1417,13 @@ async function openPatientDetailsModal(patient_id) {
             } else if (p.status === 'arrived') {
                 actions.innerHTML = `
                     <div class="patient-modal-status-col">
-                        <span class="badge badge-teal">Current Status: IN TRIAGE</span>
+                        <span class="badge badge-teal">IN TRIAGE</span>
                     </div>
                     <div class="patient-modal-btn-group">
                         <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
                         ${noShowBtnModal}
                         <button type="button" class="btn-verify-action btn-table-ongoing" onclick="closePatientDetailsModal(); promptPatientVerification('${p.patient_id}', 'ongoing', '${escapeHtml(p.full_name)}')">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                             <span>Start Consultation</span>
                         </button>
                     </div>
@@ -1404,13 +1431,13 @@ async function openPatientDetailsModal(patient_id) {
             } else if (p.status === 'ongoing') {
                 actions.innerHTML = `
                     <div class="patient-modal-status-col">
-                        <span class="badge badge-pink">Current Status: ONGOING CONSULTATION</span>
+                        <span class="badge badge-pink">ONGOING CONSULTATION</span>
                     </div>
                     <div class="patient-modal-btn-group">
                         <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
                         <button type="button" class="btn-verify-action btn-verify-accept" style="background:#2563eb; color:#fff;" onclick="closePatientDetailsModal(); promptDoctorSignOff('${p.patient_id}', '${escapeHtml(p.full_name)}')">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                            <span>Sign Off & Complete</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            <span>Sign Off &amp; Complete</span>
                         </button>
                     </div>
                 `;
@@ -1418,7 +1445,7 @@ async function openPatientDetailsModal(patient_id) {
                 let statusBadge = (p.status === 'no-show' || p.status === 'rejected') ? 'badge-red' : (p.status === 'transferred' ? 'badge-purple' : 'badge-blue');
                 actions.innerHTML = `
                     <div class="patient-modal-status-col">
-                        <span class="badge ${statusBadge}">Current Status: ${escapeHtml((p.status || '').replace(/_/g, ' ').toUpperCase())}</span>
+                        <span class="badge ${statusBadge}">${escapeHtml((p.status || '').replace(/_/g, ' ').toUpperCase())}</span>
                     </div>
                     <div class="patient-modal-btn-group">
                         <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
@@ -1429,7 +1456,7 @@ async function openPatientDetailsModal(patient_id) {
 
     } catch(err) {
         console.error(err);
-        body.innerHTML = '<p style="text-align:center; color:#ef4444;">Error fetching patient details.</p>';
+        body.innerHTML = '<p style="text-align:center; color:#ef4444; padding:24px 0;">Error fetching appointment details.</p>';
     }
 }
 
@@ -1800,25 +1827,215 @@ function promptResolveInquiry(patient_id, patientName) {
 
 
 
+// ── ADMIN HEADER NOTIFICATIONS ──────────────────────────────────────────────
+let latestAdminNotifItems = [];
+
+function toggleAdminNotifications(e) {
+    if (e) e.stopPropagation();
+    const profDd = document.getElementById('adminProfileDropdown');
+    if (profDd) profDd.classList.remove('open');
+    const dd = document.getElementById('adminNotifDropdown');
+    if (dd) dd.classList.toggle('open');
+}
+
+function toggleAdminProfileMenu(e) {
+    if (e) e.stopPropagation();
+    const notifDd = document.getElementById('adminNotifDropdown');
+    if (notifDd) notifDd.classList.remove('open');
+    const profDd = document.getElementById('adminProfileDropdown');
+    if (profDd) profDd.classList.toggle('open');
+}
+
+function markAllAdminNotificationsRead(e) {
+    if (e) e.stopPropagation();
+    const readSig = latestAdminNotifItems.map(n => n.id).join('|') || 'read';
+    localStorage.setItem('sdn_admin_notif_read_sig', readSig);
+    const badge = document.getElementById('adminNotifBadge');
+    if (badge) badge.style.display = 'none';
+    document.querySelectorAll('.admin-notif-item.unread').forEach(el => el.classList.remove('unread'));
+}
+
+function navigateToAdminView(viewName) {
+    const dd = document.getElementById('adminNotifDropdown');
+    if (dd) dd.classList.remove('open');
+    const link = document.querySelector(`.sidebar-nav .nav-link[data-view="${viewName}"]`);
+    if (link) link.click();
+}
+
+function updateAdminNotifications(statsRes) {
+    const listEl = document.getElementById('adminNotifList');
+    const badgeEl = document.getElementById('adminNotifBadge');
+    if (!listEl || !badgeEl) return;
+
+    const items = [];
+    const pendingCount = parseInt(statsRes.pending_actions, 10) || 0;
+    if (pendingCount > 0) {
+        items.push({
+            id: 'pending-' + pendingCount,
+            title: `${pendingCount} Pending Patient Action${pendingCount > 1 ? 's' : ''}`,
+            desc: 'Patient appointments or inquiries awaiting review in Patient Master Index.',
+            time: 'Action Required',
+            view: 'pmi',
+            type: 'warning'
+        });
+    }
+
+    const logs = statsRes.alerts || statsRes.audit_logs || [];
+    logs.slice(0, 5).forEach((l, idx) => {
+        const cat = classifyAuditCategory(l);
+        let targetView = 'audit';
+        if (cat.key === 'patient') targetView = 'pmi';
+        else if (cat.key === 'doctor') targetView = 'doctors';
+        else if (cat.key === 'staff') targetView = 'rbac';
+
+        items.push({
+            id: `log-${l.id || idx}-${l.timestamp || ''}`,
+            title: l.action || 'System Activity',
+            desc: cleanDeptLabel(l.details || ''),
+            time: l.timestamp || 'Recent',
+            view: targetView,
+            type: 'info'
+        });
+    });
+
+    latestAdminNotifItems = items;
+    const currentSig = items.map(n => n.id).join('|');
+    const readSig = localStorage.getItem('sdn_admin_notif_read_sig') || '';
+    const isAllRead = currentSig && currentSig === readSig;
+
+    const unreadCount = isAllRead ? 0 : items.length;
+    if (unreadCount > 0) {
+        badgeEl.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+        badgeEl.style.display = 'inline-flex';
+    } else {
+        badgeEl.style.display = 'none';
+    }
+
+    if (items.length === 0) {
+        listEl.innerHTML = '<div class="admin-notif-empty">No new notifications.</div>';
+        return;
+    }
+
+    listEl.innerHTML = items.map(item => `
+        <div class="admin-notif-item ${isAllRead ? '' : 'unread'}" onclick="navigateToAdminView('${item.view}')">
+            <div class="admin-notif-dot ${item.type === 'warning' ? 'dot-warning' : 'dot-info'}"></div>
+            <div class="admin-notif-content">
+                <div class="admin-notif-item-top">
+                    <span class="admin-notif-item-title">${escapeHtml(item.title)}</span>
+                    <span class="admin-notif-item-time">${escapeHtml(item.time)}</span>
+                </div>
+                <p class="admin-notif-item-desc">${escapeHtml(item.desc)}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ── AUDIT LOG FILTERING & CATEGORY SORTING ───────────────────────────────────
+let allAuditLogs = [];
+
+function classifyAuditCategory(log) {
+    const text = `${log.action || ''} ${log.details || ''}`.toLowerCase();
+    if (/doctor|specialization|leave|slot/i.test(text)) {
+        return { key: 'doctor', label: 'Doctors', badgeClass: 'badge-teal' };
+    }
+    if (/staff|rbac|account|role|user added|user updated|user deleted/i.test(text)) {
+        return { key: 'staff', label: 'User Management', badgeClass: 'badge-purple' };
+    }
+    if (/patient|appointment|walk-in|walkin|inquiry|consultation|triage|no-show|transfer|approved|check-in|check in/i.test(text)) {
+        return { key: 'patient', label: 'Patient & Appts', badgeClass: 'badge-green' };
+    }
+    if (/login|logout|auth|password|session|security/i.test(text)) {
+        return { key: 'auth', label: 'Auth & Security', badgeClass: 'badge-orange' };
+    }
+    return { key: 'system', label: 'System', badgeClass: 'badge-gray' };
+}
+
+function filterAndSortAuditTable() {
+    const tbody = document.getElementById('audit-tbody');
+    if (!tbody) return;
+
+    const searchVal = (document.getElementById('auditSearchInput')?.value || '').toLowerCase().trim();
+    const catFilter = (document.getElementById('auditCategoryFilter')?.value || 'all').toLowerCase();
+    const sortOrder = (document.getElementById('auditSortOrder')?.value || 'newest').toLowerCase();
+
+    let list = (allAuditLogs || []).map((l, idx) => {
+        const cat = classifyAuditCategory(l);
+        return {
+            ...l,
+            _idx: idx,
+            _catKey: cat.key,
+            _catLabel: cat.label,
+            _catBadge: cat.badgeClass,
+            _cleanDetails: cleanDeptLabel(l.details || '')
+        };
+    });
+
+    if (catFilter !== 'all') {
+        list = list.filter(l => l._catKey === catFilter);
+    }
+
+    if (searchVal) {
+        list = list.filter(l =>
+            (l.action || '').toLowerCase().includes(searchVal) ||
+            (l.user || '').toLowerCase().includes(searchVal) ||
+            (l._cleanDetails || '').toLowerCase().includes(searchVal) ||
+            (l._catLabel || '').toLowerCase().includes(searchVal)
+        );
+    }
+
+    list.sort((a, b) => {
+        if (sortOrder === 'oldest') {
+            return (a.timestamp || '').localeCompare(b.timestamp || '') || (b._idx - a._idx);
+        }
+        if (sortOrder === 'category') {
+            return a._catLabel.localeCompare(b._catLabel) || (b.timestamp || '').localeCompare(a.timestamp || '');
+        }
+        if (sortOrder === 'action') {
+            return (a.action || '').localeCompare(b.action || '') || (b.timestamp || '').localeCompare(a.timestamp || '');
+        }
+        if (sortOrder === 'user') {
+            return (a.user || '').localeCompare(b.user || '') || (b.timestamp || '').localeCompare(a.timestamp || '');
+        }
+        // newest first (default)
+        return (b.timestamp || '').localeCompare(a.timestamp || '') || (a._idx - b._idx);
+    });
+
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--muted);">No audit logs match the selected filters.</td></tr>';
+        syncTableScrollbars();
+        return;
+    }
+
+    tbody.innerHTML = list.map(l => `
+        <tr>
+            <td><small style="color:var(--muted); font-size: 0.85rem;">${escapeHtml(l.timestamp)}</small></td>
+            <td><span class="badge ${l._catBadge}" style="font-size:0.75rem;">${escapeHtml(l._catLabel)}</span></td>
+            <td><strong style="color: #0f172a;">${escapeHtml(l.action)}</strong></td>
+            <td style="color: #334155;">${escapeHtml(l.user)}</td>
+            <td style="color: #334155;">${escapeHtml(l._cleanDetails)}</td>
+        </tr>
+    `).join('');
+    syncTableScrollbars();
+}
+
+function resetAuditFilters() {
+    const searchEl = document.getElementById('auditSearchInput');
+    if (searchEl) searchEl.value = '';
+    const catEl = document.getElementById('auditCategoryFilter');
+    if (catEl) catEl.value = 'all';
+    const sortEl = document.getElementById('auditSortOrder');
+    if (sortEl) sortEl.value = 'newest';
+    loadAudit();
+}
+
 async function loadAudit() {
     try {
         const tbody = document.getElementById('audit-tbody');
         if (!tbody) return;
         const res = await fetch('/sdn/api/logs.php?_=' + Date.now()).then(r => r.json());
         if (res.success && Array.isArray(res.data)) {
-            if (res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--muted);">No audit logs recorded yet.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = res.data.map(l => `
-                <tr>
-                    <td><small style="color:var(--muted); font-size: 0.88rem;">${escapeHtml(l.timestamp)}</small></td>
-                    <td><strong style="color: #0f172a;">${escapeHtml(l.action)}</strong></td>
-                    <td style="color: #334155;">${escapeHtml(l.user)}</td>
-                    <td style="color: #334155;">${escapeHtml(l.details)}</td>
-                </tr>
-            `).join('');
-            syncTableScrollbars();
+            allAuditLogs = res.data;
+            filterAndSortAuditTable();
         }
     } catch(e) { console.error('Error loading audit trail:', e); }
 }
@@ -1841,6 +2058,7 @@ function togglePasswordVisibility(inputId) {
 // ══════════════════════════════════════════════════════════════════════════════
 let currentReportTab = 'daily'; // 'daily' | 'monthly' | 'roster'
 let cachedReportsData = null;
+let reportsAnalyticsChartInstance = null;
 
 function switchReportTab(tab) {
     currentReportTab = tab;
@@ -1871,7 +2089,7 @@ function exportReportsCsv() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    showToast('Exporting consolidated CSV report...');
+    showToast('Exporting all time CSV report...');
 }
 
 function printReports() {
@@ -1891,7 +2109,7 @@ async function loadReports() {
             console.error('Failed to load reports data', res);
             const tbody = document.getElementById('reportDailyTbody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:35px; color:#ef4444;">Failed to load consolidated reports data.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:35px; color:#ef4444;">Failed to load all time reports data.</td></tr>';
             }
             return;
         }
@@ -1941,8 +2159,8 @@ async function loadReports() {
             updatedEl.textContent = `Updated: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
         }
 
-        // 2. Render Tri-Department Oversight Cards
-        renderDepartmentCards(depts);
+        // 2. Render Statistical Reports & Analytics Summary Graph
+        renderReportsAnalyticsChart(depts);
 
         // 3. Render Daily Aggregation Table
         renderDailyReportsTable(dailyReports);
@@ -1950,12 +2168,12 @@ async function loadReports() {
         // 4. Render Monthly Aggregation Table
         renderMonthlyReportsTable(monthlyReports);
 
-        // 5. Render Consolidated Patient Roster Table
+        // 5. Render All Time Patient Roster Table
         renderRosterReportsTable(roster);
 
         syncTableScrollbars();
     } catch (e) {
-        console.error('Error fetching consolidated reports:', e);
+        console.error('Error fetching all time reports:', e);
         const tbody = document.getElementById('reportDailyTbody');
         if (tbody) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:35px; color:#ef4444;">Error connecting to reports server.</td></tr>';
@@ -1963,75 +2181,111 @@ async function loadReports() {
     }
 }
 
-function renderDepartmentCards(departments) {
-    const grid = document.getElementById('reportDeptsGrid');
-    if (!grid) return;
+function renderReportsAnalyticsChart(departments) {
+    const canvas = document.getElementById('reportsAnalyticsChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
 
-    if (!departments || departments.length === 0) {
-        grid.innerHTML = '<p style="color:#64748b; padding:20px;">No department summary data available.</p>';
-        return;
+    if (reportsAnalyticsChartInstance) {
+        reportsAnalyticsChartInstance.destroy();
     }
 
-    grid.innerHTML = departments.map(d => {
-        let tagClass = 'tag-general';
-        let deptShort = 'General Care';
-        const dName = d.name || '';
-        if (dName.toLowerCase().includes('psych')) {
-            tagClass = 'tag-psych';
-            deptShort = 'OPU Behavioral';
-        } else if (dName.toLowerCase().includes('neuro')) {
-            tagClass = 'tag-neuro';
-            deptShort = 'Neurosciences';
+    const list = (departments && departments.length > 0) ? departments : [
+        { name: 'General Medical', total: 0, completed: 0, walkin: 0, online: 0, noshow: 0 },
+        { name: 'Neurology', total: 0, completed: 0, walkin: 0, online: 0, noshow: 0 },
+        { name: 'Psychiatry', total: 0, completed: 0, walkin: 0, online: 0, noshow: 0 }
+    ];
+
+    const labels = list.map(d => cleanDeptLabel(d.name));
+    const totalData = list.map(d => Number(d.total || 0));
+    const completedData = list.map(d => Number(d.completed || 0));
+    const walkinData = list.map(d => Number(d.walkin || 0));
+    const onlineData = list.map(d => Number(d.online || 0));
+    const noshowData = list.map(d => Number(d.noshow || 0));
+
+    reportsAnalyticsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Total Visits',
+                    data: totalData,
+                    backgroundColor: '#15803d',
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                },
+                {
+                    label: 'Completed',
+                    data: completedData,
+                    backgroundColor: '#0284c7',
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                },
+                {
+                    label: 'Walk-in',
+                    data: walkinData,
+                    backgroundColor: '#f59e0b',
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                },
+                {
+                    label: 'Online Bookings',
+                    data: onlineData,
+                    backgroundColor: '#7c3aed',
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                },
+                {
+                    label: 'No-Shows',
+                    data: noshowData,
+                    backgroundColor: '#dc2626',
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                        font: {
+                            family: "'Inter', sans-serif",
+                            size: 12,
+                            weight: '600'
+                        },
+                        color: '#334155'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, color: '#64748b' },
+                    grid: { color: '#f1f5f9' }
+                },
+                x: {
+                    ticks: {
+                        color: '#0f172a',
+                        font: { family: "'Inter', sans-serif", size: 12, weight: '600' }
+                    },
+                    grid: { display: false }
+                }
+            }
         }
-
-        const compRate = Math.min(100, Math.max(0, d.completion_rate || 0));
-
-        return `
-            <div class="dept-overview-card">
-                <div>
-                    <div class="dept-card-header">
-                        <div>
-                            <h3 class="dept-card-title">${escapeHtml(d.name)}</h3>
-                            <span class="dept-card-tag ${tagClass}">${escapeHtml(deptShort)}</span>
-                        </div>
-                        <div style="text-align:right;">
-                            <span style="font-size:1.4rem; font-weight:700; color:#0f172a;">${d.total}</span>
-                            <span style="display:block; font-size:0.7rem; color:#64748b; text-transform:uppercase;">Total Visits</span>
-                        </div>
-                    </div>
-
-                    <div class="dept-card-stats">
-                        <div class="dept-stat-box">
-                            <span class="val">${d.walkin}</span>
-                            <span class="lbl">Walk-in Queue</span>
-                        </div>
-                        <div class="dept-stat-box">
-                            <span class="val">${d.online}</span>
-                            <span class="lbl">Online Appts</span>
-                        </div>
-                        <div class="dept-stat-box">
-                            <span class="val" style="color:#059669;">${d.completed}</span>
-                            <span class="lbl">Completed</span>
-                        </div>
-                        <div class="dept-stat-box">
-                            <span class="val" style="color:#e11d48;">${d.noshow}</span>
-                            <span class="lbl">No-Shows</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="dept-progress-wrap">
-                    <div class="dept-progress-label">
-                        <span>Clinical Sign-Off Rate</span>
-                        <span>${compRate}%</span>
-                    </div>
-                    <div class="dept-progress-bar-bg">
-                        <div class="dept-progress-bar-fill" style="width: ${compRate}%;"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
+    });
 }
 
 function renderDailyReportsTable(dailyList) {
@@ -2045,14 +2299,14 @@ function renderDailyReportsTable(dailyList) {
 
     tbody.innerHTML = dailyList.map(item => {
         let tagClass = 'tag-general';
-        const dName = item.department || '';
+        const dName = cleanDeptLabel(item.department || '');
         if (dName.toLowerCase().includes('psych')) tagClass = 'tag-psych';
         else if (dName.toLowerCase().includes('neuro')) tagClass = 'tag-neuro';
 
         return `
             <tr>
                 <td><strong>${escapeHtml(item.formatted_date || item.date)}</strong></td>
-                <td><span class="dept-card-tag ${tagClass}">${escapeHtml(item.department)}</span></td>
+                <td><span class="dept-card-tag ${tagClass}">${escapeHtml(dName)}</span></td>
                 <td><strong style="color:#0f172a;">${item.total}</strong></td>
                 <td><span class="badge" style="background:#f1f5f9; color:#475569;">${item.walkin}</span></td>
                 <td><span class="badge" style="background:#eff6ff; color:#1d4ed8;">${item.online}</span></td>
@@ -2078,14 +2332,14 @@ function renderMonthlyReportsTable(monthlyList) {
 
     tbody.innerHTML = monthlyList.map(item => {
         let tagClass = 'tag-general';
-        const dName = item.department || '';
+        const dName = cleanDeptLabel(item.department || '');
         if (dName.toLowerCase().includes('psych')) tagClass = 'tag-psych';
         else if (dName.toLowerCase().includes('neuro')) tagClass = 'tag-neuro';
 
         return `
             <tr>
                 <td><strong>${escapeHtml(item.month_label || item.month)}</strong></td>
-                <td><span class="dept-card-tag ${tagClass}">${escapeHtml(item.department)}</span></td>
+                <td><span class="dept-card-tag ${tagClass}">${escapeHtml(dName)}</span></td>
                 <td><strong style="color:#0f172a;">${item.total}</strong></td>
                 <td><span class="badge" style="background:#f1f5f9; color:#475569;">${item.walkin}</span></td>
                 <td><span class="badge" style="background:#eff6ff; color:#1d4ed8;">${item.online}</span></td>
@@ -2111,7 +2365,7 @@ function renderRosterReportsTable(roster) {
 
     tbody.innerHTML = roster.map(p => {
         let tagClass = 'tag-general';
-        const dName = p.normalized_department || p.department || '';
+        const dName = cleanDeptLabel(p.normalized_department || p.department || '');
         if (dName.toLowerCase().includes('psych')) tagClass = 'tag-psych';
         else if (dName.toLowerCase().includes('neuro')) tagClass = 'tag-neuro';
 

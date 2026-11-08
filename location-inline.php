@@ -1,97 +1,453 @@
 <!-- Inline Location Section -->
-<div id="location-new" class="w-full max-w-6xl mx-auto flex flex-col md:flex-row overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white" style="height: 600px; display: flex; margin: 0 auto 4rem auto;" data-aos="fade-up" data-aos-duration="1200">
-  
+<section id="location-new" class="sitemap-section-inline" style="scroll-margin-top: 76px;" data-aos="fade-up" data-aos-duration="1200">
+
   <!-- Load Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  
-  <!-- Sidebar (Left) -->
-  <div class="w-full md:w-[320px] flex flex-col shrink-0 border-r border-gray-100 bg-white">
-    <!-- Search Bar -->
-    <div class="p-4 pb-0 shrink-0 border-b border-transparent bg-white">
-      <div class="flex items-center mb-4 font-['Poppins'] font-black text-xl tracking-wide text-gray-800">
-        <span>S</span>
-        <div class="text-green-800 w-6 h-6 mx-1.5 flex items-center justify-center -mt-1">
-          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            <path d="M7 16h10v2H7z" fill="#1e5a32"/>
-            <path d="M5 18h14v2H5z" fill="#1e5a32"/>
+
+  <div class="sitemap-container-inline">
+    <!-- Top Centered SITE MAP Heading (Matching Image 1) -->
+    <div class="sitemap-header-inline">
+      <h2 class="sitemap-title-inline" aria-label="SITE MAP">
+        <span class="sitemap-letter-inline">S</span>
+        <span class="sitemap-pin-icon-inline" aria-hidden="true">
+          <svg viewBox="0 0 56 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Perspective Map Base -->
+            <path d="M11 45L4 57H52L45 45H11Z" fill="#1d630b"/>
+            <!-- White Map Grid Lines on Base -->
+            <path d="M7.5 51H48.5" stroke="#ffffff" stroke-width="1.6"/>
+            <path d="M4 57H52" stroke="#1d630b" stroke-width="1"/>
+            <path d="M6 54.5H50" stroke="#ffffff" stroke-width="1.4"/>
+            <path d="M23 45L19 57" stroke="#ffffff" stroke-width="1.8"/>
+            <!-- White Outline around Pin Tip to separate from Map Base -->
+            <path d="M28 4C19.7157 4 13 10.7157 13 19C13 29.5 28 46 28 46C28 46 43 29.5 43 19C43 10.7157 36.2843 4 28 4Z" fill="#1d630b" stroke="#ffffff" stroke-width="2"/>
+            <!-- Inner White Circle of Pin -->
+            <circle cx="28" cy="18.5" r="6" fill="#ffffff"/>
           </svg>
-        </div>
-        <span>TE&nbsp;&nbsp;MAP</span>
-      </div>
+        </span>
+        <span class="sitemap-letter-inline">TE MAP</span>
+      </h2>
+    </div>
+
+    <!-- Two-Column Layout (Left: Search/Filters/Directory, Right: Map Card) -->
+    <div class="sitemap-grid-inline">
       
-      <!-- New Pill Search -->
-      <input type="text" id="inline-search" placeholder="Search departments, buildings..." 
-             class="w-full py-2 px-5 rounded-full border border-gray-200 shadow-sm focus:outline-none focus:border-green-700 text-sm mb-3" />
-             
-      <!-- New Pill Filters -->
-      <div class="flex items-center gap-2 mb-2">
-        <button id="btn-show-all" class="px-5 py-1.5 rounded-full text-[11px] font-bold bg-[#1e5a32] text-white shadow-sm transition-colors border border-transparent">All</button>
-        <button id="btn-show-visited" class="px-5 py-1.5 rounded-full text-[11px] font-bold bg-white text-gray-400 border border-gray-100 shadow-sm transition-colors hover:text-gray-600">Most Visited</button>
-      </div>
-    </div>
-    
-    <!-- Directory List (Scrollable) -->
-    <div class="flex-grow overflow-y-auto p-2 border-t border-gray-100">
-      <ul id="inline-directory-list" class="divide-y divide-gray-50 text-sm">
-        <li class="p-4 text-center text-gray-500">Loading directory...</li>
-      </ul>
-    </div>
-  </div>
+      <!-- Left Column -->
+      <div class="sitemap-left-col-inline">
+        <!-- Search Bar -->
+        <div class="sitemap-controls-inline">
+          <input
+            type="text"
+            id="inline-search"
+            placeholder="Search"
+            data-i18n-ph="map_search"
+            class="sitemap-search-input-inline"
+          />
 
-  <!-- Map Container (Right) -->
-  <div class="flex-grow relative bg-[#f8faf9] z-10">
-    <!-- Google Maps Style Navigation Floating Card / HUD -->
-    <div id="map-nav-hud" class="absolute top-3 left-3 right-3 md:left-4 md:right-auto md:max-w-sm bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-xl border border-gray-200 transition-all duration-300 pointer-events-auto" style="z-index: 500; display: none;">
-      <div class="flex items-start justify-between gap-2.5">
-        <div class="flex items-start gap-2.5">
-          <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
-            <!-- Walking Person Icon -->
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7a2 2 0 11-4 0 2 2 0 014 0zM9 13a4 4 0 00-4 4v4h3v-3.5l1.5-1.5 2 3H15v-4.5l-2-2.5 1-2.5 2 1.5V11h2V9l-3-2.5-2.5 1.5L9.5 9A4 4 0 009 13z" />
-            </svg>
-          </div>
-          <div>
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Walking Route</span>
-              <span id="nav-badge" class="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">Bldg</span>
-            </div>
-            <h4 id="nav-destination-title" class="font-bold text-gray-900 text-[13px] leading-tight mt-1">Destination</h4>
-            <div class="text-xs text-gray-600 mt-1 flex items-center gap-1.5 flex-wrap">
-              <span class="text-emerald-700 font-bold" id="nav-time">~2 min</span>
-              <span class="text-gray-300">•</span>
-              <span class="font-medium text-gray-700" id="nav-dist">120 m</span>
-              <span class="text-gray-300">•</span>
-              <span class="text-gray-500 text-[11px]">Via Walkway</span>
-            </div>
+          <!-- Filter Pills -->
+          <div class="sitemap-pills-row-inline">
+            <button id="btn-show-all" class="sitemap-pill-btn sitemap-pill-inactive" data-i18n="map_all">All</button>
+            <button id="btn-show-visited" class="sitemap-pill-btn sitemap-pill-active" data-i18n="map_visited">Most Visited</button>
           </div>
         </div>
-        <button id="btn-clear-route" class="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-lg transition-colors shrink-0" title="Clear route">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
 
-      <!-- Quick Start Point Selector -->
-      <div class="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
-        <div class="flex items-center gap-1 text-gray-500">
-          <span class="text-gray-400">From:</span>
-          <select id="select-route-start" class="bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-700 font-medium text-[11px] focus:outline-none focus:border-blue-500 cursor-pointer">
-            <option value="you_are_here">📍 You Are Here (Campus Path)</option>
-            <option value="gate">🚪 Main Entrance (Gate 2)</option>
-          </select>
+        <!-- Directory List (Scrollable) -->
+        <div class="sitemap-directory-box-inline overflow-y-auto">
+          <ul id="inline-directory-list" class="divide-y divide-gray-100 text-sm">
+            <li class="p-4 text-center text-gray-400">Loading directory...</li>
+          </ul>
         </div>
-        <button id="btn-fit-route" class="text-[11px] text-blue-600 font-semibold hover:text-blue-800 transition-colors">Fit Route</button>
       </div>
-    </div>
 
-    <!-- Forced z-index 1 on leaflet to prevent navbar overlap on scroll -->
-    <div id="inline-map-container" class="absolute inset-0" style="z-index: 1;"></div>
+      <!-- Right Column: Rounded White Map Frame with Soft Shadow -->
+      <div id="sitemap-right-col" class="sitemap-right-col-inline">
+        <div id="sitemap-card-frame" class="sitemap-card-frame-inline" title="Click to expand map">
+          <!-- Close Button (Visible only when Map Modal is Open) -->
+          <button
+            type="button"
+            id="btn-close-sitemap-modal"
+            class="sitemap-modal-close-btn"
+            aria-label="Close expanded map"
+            title="Close map"
+          >&times;</button>
+
+          <div class="sitemap-canvas-wrapper-inline">
+            
+            <!-- Fixed Compass Icon on Top Right of Map Box (Image 2) -->
+            <div class="sitemap-fixed-compass-inline" aria-hidden="true">
+              <img src="/sdn/public/assets/map_compass.png?v=<?= time() ?>" alt="Map Compass" />
+            </div>
+
+            <!-- Google Maps Style Navigation Floating Card / HUD -->
+            <div id="map-nav-hud" class="absolute top-3 left-3 right-24 md:left-4 md:right-auto md:max-w-xs bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-xl border border-gray-200 transition-all duration-300 pointer-events-auto" style="z-index: 500; display: none;">
+              <div class="flex items-start justify-between gap-2.5">
+                <div class="flex items-start gap-2.5">
+                  <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                    <!-- Walking Person Icon -->
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7a2 2 0 11-4 0 2 2 0 014 0zM9 13a4 4 0 00-4 4v4h3v-3.5l1.5-1.5 2 3H15v-4.5l-2-2.5 1-2.5 2 1.5V11h2V9l-3-2.5-2.5 1.5L9.5 9A4 4 0 009 13z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Walking Route</span>
+                      <span id="nav-badge" class="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">Bldg</span>
+                    </div>
+                    <h4 id="nav-destination-title" class="font-bold text-gray-900 text-[13px] leading-tight mt-1">Destination</h4>
+                    <div class="text-xs text-gray-600 mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span class="text-emerald-700 font-bold" id="nav-time">~2 min</span>
+                      <span class="text-gray-300">•</span>
+                      <span class="font-medium text-gray-700" id="nav-dist">120 m</span>
+                      <span class="text-gray-300">•</span>
+                      <span class="text-gray-500 text-[11px]">Via Walkway</span>
+                    </div>
+                  </div>
+                </div>
+                <button id="btn-clear-route" class="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-lg transition-colors shrink-0" title="Clear route">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <!-- Quick Start Point Selector -->
+              <div class="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                <div class="flex items-center gap-1 text-gray-500">
+                  <span class="text-gray-400">From:</span>
+                  <select id="select-route-start" class="bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-700 font-medium text-[11px] focus:outline-none focus:border-blue-500 cursor-pointer">
+                    <option value="you_are_here">📍 You Are Here (Campus Path)</option>
+                    <option value="gate">🚪 Main Entrance (Gate 2)</option>
+                  </select>
+                </div>
+                <button id="btn-fit-route" class="text-[11px] text-blue-600 font-semibold hover:text-blue-800 transition-colors">Fit Route</button>
+              </div>
+            </div>
+
+            <!-- Leaflet Map Container -->
+            <div id="inline-map-container" class="absolute inset-0" style="z-index: 1;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
-  
+</section>
+
+<!-- Pop-up Map Modal Backdrop (Outside data-aos section so position:fixed covers viewport below Navbar) -->
+<div id="sitemap-modal-backdrop" class="sitemap-modal-backdrop-inline" aria-hidden="true">
+  <div id="sitemap-modal-holder" class="sitemap-modal-holder-inline"></div>
 </div>
 
 <style>
+  .sitemap-section-inline {
+    width: 100%;
+    min-height: calc(100vh - 76px);
+    height: calc(100vh - 76px);
+    background-color: #ffffff;
+    padding: 1.5rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .sitemap-container-inline {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 640px;
+  }
+
+  /* Centered SITE MAP Header */
+  .sitemap-header-inline {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.35rem;
+    flex-shrink: 0;
+  }
+
+  .sitemap-title-inline {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Outfit', 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.85rem, 2.8vw, 2.3rem);
+    color: #000000;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .sitemap-pin-icon-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 44px;
+    margin: 0 -2px -5px -2px;
+  }
+
+  .sitemap-pin-icon-inline svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Two-Column Grid */
+  .sitemap-grid-inline {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    gap: 3rem;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Left Column */
+  .sitemap-left-col-inline {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .sitemap-controls-inline {
+    flex-shrink: 0;
+    margin-bottom: 0.65rem;
+  }
+
+  .sitemap-search-input-inline {
+    width: 100%;
+    height: 36px;
+    padding: 0 1.25rem;
+    border-radius: 9999px;
+    border: 1px solid #9ca3af;
+    background-color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    color: #1f2937;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 0.75rem;
+  }
+
+  .sitemap-search-input-inline::placeholder {
+    color: #9ca3af;
+    font-weight: 500;
+  }
+
+  .sitemap-search-input-inline:focus {
+    border-color: #1d630b;
+    box-shadow: 0 0 0 3px rgba(29, 99, 11, 0.1);
+  }
+
+  .sitemap-pills-row-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .sitemap-pill-btn {
+    border-radius: 9999px;
+    padding: 0.4rem 1.6rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    min-width: 82px;
+    text-align: center;
+  }
+
+  .sitemap-pill-active {
+    background-color: #1d630b;
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(29, 99, 11, 0.28);
+  }
+
+  .sitemap-pill-inactive {
+    background-color: #f9f4f4;
+    color: #8c8c8c;
+    box-shadow: none;
+  }
+
+  .sitemap-pill-inactive:hover {
+    background-color: #f1e9e9;
+    color: #4b5563;
+  }
+
+  .sitemap-directory-box-inline {
+    flex: 1;
+    min-height: 0;
+    background-color: #ffffff;
+    border-radius: 14px;
+    padding: 0.25rem;
+  }
+
+  /* Right Column: Map Box / Container */
+  .sitemap-right-col-inline {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+  }
+
+  .sitemap-card-frame-inline {
+    position: relative;
+    background-color: #ffffff;
+    border-radius: 22px;
+    padding: 12px;
+    box-shadow: 0 12px 38px rgba(0, 0, 0, 0.14);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .sitemap-right-col-inline .sitemap-card-frame-inline:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.18);
+  }
+
+  /* Close Button inside Expanded Map Modal */
+  .sitemap-modal-close-btn {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 1.45rem;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 650;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  }
+
+  .sitemap-modal-close-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: scale(1.06);
+  }
+
+  /* Pop-up Map Modal Backdrop (Same Concept as Steps/Guide UI) */
+  body.sitemap-modal-lock {
+    overflow: hidden !important;
+  }
+
+  body.sitemap-modal-lock #location-new {
+    filter: blur(3px);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .sitemap-modal-backdrop-inline {
+    position: fixed;
+    top: 86px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 950;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+  }
+
+  .sitemap-modal-backdrop-inline.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .sitemap-modal-holder-inline {
+    width: min(90vw, 1020px);
+    height: calc(100vh - 125px);
+    max-height: 740px;
+    display: flex;
+    transform: translateY(14px) scale(0.98);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sitemap-modal-backdrop-inline.open .sitemap-modal-holder-inline {
+    transform: translateY(0) scale(1);
+  }
+
+  .sitemap-modal-holder-inline .sitemap-card-frame-inline {
+    cursor: default;
+    padding: 16px;
+    border-radius: 26px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  }
+
+  .sitemap-modal-holder-inline .sitemap-modal-close-btn {
+    display: flex;
+  }
+
+  .sitemap-modal-holder-inline .sitemap-fixed-compass-inline {
+    top: 56px;
+  }
+
+  .sitemap-canvas-wrapper-inline {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #ebf2ed;
+  }
+
+  /* Fixed Compass on Top-Right of Map Box */
+  .sitemap-fixed-compass-inline {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 78px;
+    height: 78px;
+    z-index: 450;
+    pointer-events: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sitemap-fixed-compass-inline img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Make Leaflet background match the soft sage green in Image 1 */
+  #inline-map-container.leaflet-container {
+    background-color: #ebf2ed !important;
+  }
+
   /* Sidebar Scrollbar */
   #location-new .overflow-y-auto::-webkit-scrollbar { width: 6px; }
   #location-new .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
@@ -163,6 +519,27 @@
     background-color: #f0fdf4 !important;
     border-left-color: #16a34a !important;
   }
+
+  @media (max-width: 900px) {
+    .sitemap-section-inline {
+      height: auto;
+      min-height: auto;
+      padding: 2.5rem 1.25rem 3.5rem;
+    }
+    .sitemap-container-inline {
+      max-height: none;
+    }
+    .sitemap-grid-inline {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .sitemap-left-col-inline {
+      height: 360px;
+    }
+    .sitemap-card-frame-inline {
+      height: 480px;
+    }
+  }
 </style>
 
 <script>
@@ -180,29 +557,54 @@
 
     function initInlineMap() {
       const imageBounds = [[0, 0], [1000, 700]];
-      const paddedMaxBounds = [[-200, -200], [1200, 900]];
+      const paddedMaxBounds = [[-250, -250], [1250, 950]];
       
       const map = L.map('inline-map-container', {
           crs: L.CRS.Simple,
           zoomControl: true,
           scrollWheelZoom: true,
+          zoomSnap: 0.05,
+          zoomDelta: 0.25,
+          minZoom: -2.5,
           maxBounds: paddedMaxBounds,
           maxBoundsViscosity: 0.9,
           maxZoom: 3
       });
 
-      const mapImage = L.imageOverlay('/sdn/public/assets/MMWGH-site-map.png', imageBounds).addTo(map);
+      const mapImage = L.imageOverlay('/sdn/public/assets/MMWGH-site-map-clean.png?v=<?= time() ?>', imageBounds).addTo(map);
       
       mapImage.on('error', function() {
-          console.warn("MMWGH-site-map.png not found.");
+          console.warn("MMWGH-site-map-clean.png not found, falling back to MMWGH-site-map.png.");
+          L.imageOverlay('/sdn/public/assets/MMWGH-site-map.png', imageBounds).addTo(map);
       });
 
-      // Fit perfectly to the image bounds at initial load
-      map.fitBounds(imageBounds);
-      
+      function fitWholeSiteMap(animate = false) {
+          map.invalidateSize();
+          map.fitBounds(imageBounds, { padding: [8, 8], animate: animate });
+      }
+
+      // Fit the entire site map inside the box on load, resize, and when scrolled into view
+      fitWholeSiteMap(false);
       setTimeout(() => {
-          map.setMinZoom(map.getZoom());
-      }, 100);
+          fitWholeSiteMap(false);
+          map.setMinZoom(map.getZoom() - 0.15);
+      }, 150);
+      setTimeout(() => {
+          fitWholeSiteMap(false);
+      }, 500);
+      window.addEventListener('resize', () => fitWholeSiteMap(false));
+
+      const locSection = document.getElementById('location-new');
+      if (locSection && 'IntersectionObserver' in window) {
+          const io = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                  if (entry.isIntersecting && !activeDestinationId) {
+                      setTimeout(() => fitWholeSiteMap(false), 50);
+                  }
+              });
+          }, { threshold: 0.2 });
+          io.observe(locSection);
+      }
 
       let markers = [];
       let locationsData = [];
@@ -505,15 +907,8 @@
           // 7. Highlight in Sidebar
           highlightSidebarItem(loc.id);
 
-          // 8. OVERHAULED ZOOM: Removed aggressive flyTo(pos, 2)!
-          // Gently fits the route bounds with comfortable padding so the full path from start to finish is visible
-          const bounds = routeMain.getBounds();
-          map.fitBounds(bounds, {
-              padding: [60, 60],
-              maxZoom: 0.65, // Never zoom in to level 2! Keep high-level campus overview
-              animate: true,
-              duration: 0.8
-          });
+          // 8. Keep the whole site map visible so the user can see the route across the full campus
+          fitWholeSiteMap(true);
       }
 
       function clearRoute() {
@@ -523,8 +918,7 @@
           document.querySelectorAll('#inline-directory-list li').forEach(li => {
               li.classList.remove('active-dir-item');
           });
-          // Restore full map overview
-          map.fitBounds(imageBounds, { animate: true, duration: 0.6 });
+          fitWholeSiteMap(true);
       }
 
       function highlightSidebarItem(id) {
@@ -573,7 +967,6 @@
           markers = [];
           data.forEach(loc => {
               const latLng = [loc.y_coordinate, loc.x_coordinate];
-              // Clickable transparent hotspot icon over printed building numbers
               const customIcon = L.divIcon({
                   className: 'custom-number-marker',
                   html: `<div style="background-color: transparent; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;" title="${loc.name} (Click for directions)"></div>`,
@@ -583,7 +976,6 @@
 
               const marker = L.marker(latLng, { icon: customIcon, draggable: false }).addTo(map);
               
-              // Clicking ANY building on map directly generates the Google Maps directional line!
               marker.on('click', () => {
                   drawRouteTo(loc);
               });
@@ -633,26 +1025,95 @@
           renderSidebar(filtered);
       });
 
-      document.getElementById('btn-show-all').addEventListener('click', (e) => {
+      document.getElementById('btn-show-all').addEventListener('click', () => {
           currentFilter = 'ALL';
           const btnAll = document.getElementById('btn-show-all');
           const btnVisited = document.getElementById('btn-show-visited');
           
-          btnAll.className = 'px-5 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-colors bg-[#1e5a32] text-white border border-transparent';
-          btnVisited.className = 'px-5 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-colors hover:text-gray-600 bg-white text-gray-400 border border-gray-100';
+          btnAll.className = 'sitemap-pill-btn sitemap-pill-active';
+          btnVisited.className = 'sitemap-pill-btn sitemap-pill-inactive';
           
           document.getElementById('inline-search').dispatchEvent(new Event('input'));
       });
 
-      document.getElementById('btn-show-visited').addEventListener('click', (e) => {
+      document.getElementById('btn-show-visited').addEventListener('click', () => {
           currentFilter = 'VISITED';
           const btnAll = document.getElementById('btn-show-all');
           const btnVisited = document.getElementById('btn-show-visited');
           
-          btnVisited.className = 'px-5 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-colors bg-[#1e5a32] text-white border border-transparent';
-          btnAll.className = 'px-5 py-1.5 rounded-full text-[11px] font-bold shadow-sm transition-colors hover:text-gray-600 bg-white text-gray-400 border border-gray-100';
+          btnVisited.className = 'sitemap-pill-btn sitemap-pill-active';
+          btnAll.className = 'sitemap-pill-btn sitemap-pill-inactive';
           
           document.getElementById('inline-search').dispatchEvent(new Event('input'));
+      });
+
+      // --- CLICKABLE MAP POP-UP MODAL (Same Concept as Steps/Guide UI) ---
+      let isSitemapModalOpen = false;
+      const rightCol = document.getElementById('sitemap-right-col');
+      const cardFrame = document.getElementById('sitemap-card-frame');
+      const modalBackdrop = document.getElementById('sitemap-modal-backdrop');
+      const modalHolder = document.getElementById('sitemap-modal-holder');
+      const closeModalBtn = document.getElementById('btn-close-sitemap-modal');
+
+      function preventPageScrollOnSitemapModal(e) {
+          if (!isSitemapModalOpen) return;
+          // Allow wheel zoom inside the Leaflet map container while blocking page scroll
+          if (e.target && e.target.closest && e.target.closest('#inline-map-container')) {
+              return;
+          }
+          e.preventDefault();
+      }
+
+      function openSitemapModal() {
+          if (isSitemapModalOpen) return;
+          isSitemapModalOpen = true;
+          modalHolder.appendChild(cardFrame);
+          cardFrame.removeAttribute('title');
+          modalBackdrop.classList.add('open');
+          modalBackdrop.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('sitemap-modal-lock');
+          window.addEventListener('wheel', preventPageScrollOnSitemapModal, { passive: false });
+          window.addEventListener('touchmove', preventPageScrollOnSitemapModal, { passive: false });
+          setTimeout(() => {
+              fitWholeSiteMap(false);
+          }, 60);
+          setTimeout(() => {
+              fitWholeSiteMap(false);
+          }, 320);
+      }
+
+      function closeSitemapModal(e) {
+          if (e) e.stopPropagation();
+          if (!isSitemapModalOpen) return;
+          isSitemapModalOpen = false;
+          modalBackdrop.classList.remove('open');
+          modalBackdrop.setAttribute('aria-hidden', 'true');
+          rightCol.appendChild(cardFrame);
+          cardFrame.setAttribute('title', 'Click to expand map');
+          document.body.classList.remove('sitemap-modal-lock');
+          window.removeEventListener('wheel', preventPageScrollOnSitemapModal);
+          window.removeEventListener('touchmove', preventPageScrollOnSitemapModal);
+          setTimeout(() => {
+              fitWholeSiteMap(false);
+          }, 60);
+      }
+
+      cardFrame.addEventListener('click', (e) => {
+          if (isSitemapModalOpen) return;
+          // Don't trigger modal open if clicking HUD clear/fit buttons or zoom controls directly
+          if (e.target && e.target.closest && e.target.closest('#map-nav-hud, .leaflet-control-zoom, #btn-close-sitemap-modal')) {
+              return;
+          }
+          openSitemapModal();
+      });
+
+      closeModalBtn.addEventListener('click', closeSitemapModal);
+
+      document.addEventListener('keydown', (e) => {
+          if (!isSitemapModalOpen) return;
+          if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
+              e.preventDefault();
+          }
       });
 
       fetchLocations();

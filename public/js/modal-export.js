@@ -17,7 +17,7 @@ function populateSummary() {
   }
 
   const deptVal = getVal("department");
-  const deptMap = { psychiatry: "OPU Psychiatry", general: "General Management", neurology: "Neurology" };
+  const deptMap = { psychiatry: "OPU Psychiatry", general: "General Medical", neurology: "Neurology" };
   setText("p-department", deptMap[deptVal] || deptVal || "—");
 
   const getPatientFullName = () => {

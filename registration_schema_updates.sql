@@ -14,7 +14,7 @@ ALTER TABLE `patients`
   ADD COLUMN `unscheduled_walkin` TINYINT(1) DEFAULT 0 AFTER `recommendation_remarks`,
   ADD COLUMN `inquiry_only` TINYINT(1) DEFAULT 0 AFTER `unscheduled_walkin`,
 
-  -- General Management specific fields
+  -- General Medical specific fields
   ADD COLUMN `mode_of_inquiry` VARCHAR(50) DEFAULT NULL AFTER `inquiry_only`,
   ADD COLUMN `employee_type` VARCHAR(50) DEFAULT NULL AFTER `mode_of_inquiry`,
   ADD COLUMN `select_type` VARCHAR(50) DEFAULT NULL AFTER `employee_type`,

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Directory & Site Map - MMWGH</title>
+    <title>Hospital Directory & Site Map | LINGKOD</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS -->
@@ -11,6 +11,8 @@
     
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        body, body * { user-select: none; -webkit-user-select: none; caret-color: transparent; }
+        input, textarea, select { user-select: text; -webkit-user-select: text; caret-color: auto; }
         #map-container { height: 100%; width: 100%; background: #f8faf9; }
         
         /* Leaflet popup styling */

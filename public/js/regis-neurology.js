@@ -138,10 +138,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (consultationAboutSelect) consultationAboutSelect.required = true;
 
       if (lblChiefComplaints) {
-        lblChiefComplaints.innerHTML = `Health Concerns <span class="asterisk">*</span>`;
+        lblChiefComplaints.innerHTML = `Chief Complaint <span class="asterisk">*</span>`;
       }
       if (illnessDescriptionTextarea) {
-        illnessDescriptionTextarea.placeholder = "Additional details, notes, or symptoms description...";
+        illnessDescriptionTextarea.placeholder = "Additional details, notes, or chief complaint description...";
         illnessDescriptionTextarea.rows = 3;
       }
       if (submitBtn) {
@@ -315,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Medical Information Validation
       if (!chiefComplaintsSelect.value.trim()) {
-        markFieldError(chiefComplaintsSelect, isInquiry ? "Please select inquiry concern." : "Please select primary neurological health concern.");
+        markFieldError(chiefComplaintsSelect, isInquiry ? "Please select inquiry concern." : "Please select primary neurological chief complaint.");
         if (!firstInvalidEl) firstInvalidEl = chiefComplaintsSelect;
       }
 
@@ -359,6 +359,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (firstInvalidEl) {
+        const parentPhase = firstInvalidEl.closest(".form-phase");
+        if (parentPhase && typeof window.jumpToPhase === "function") {
+          const pNum = parseInt(parentPhase.dataset.phase, 10);
+          if (pNum) window.jumpToPhase(pNum);
+        }
         firstInvalidEl.scrollIntoView({ behavior: "smooth", block: "center" });
         firstInvalidEl.focus();
         return;
@@ -411,7 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
         appointment_date: isInquiry ? null : appointmentDateInput.value.trim(),
         scheduled_time: isInquiry ? null : appointmentTimeInput.value.trim(),
         referral_source: (document.getElementById("referralSource")?.value || "").trim(),
-        assigned_doctor: doctorParam || null,
+        assigned_doctor: null,
         website_url: document.getElementById("website_url")?.value || ""
       };
 
