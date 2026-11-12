@@ -116,7 +116,45 @@ session_start();
 
     .step-node.current .step-circle {
       background-color: #1b6e1b;
-      box-shadow: 0 0 0 4px rgba(27, 110, 27, 0.22);
+      position: relative;
+    }
+
+    .step-node.current .step-circle::after {
+      content: "";
+      position: absolute;
+      inset: -7px;
+      border-radius: 50%;
+      border: 2px solid #1b6e1b;
+      background: transparent;
+      pointer-events: none;
+      animation: phaseHeartbeat 1.35s ease-in-out infinite;
+    }
+
+    .step-node.active:not(.current) {
+      cursor: pointer;
+    }
+
+    .step-node.active:not(.current):hover .step-circle,
+    .step-node.active:not(.current):focus-visible .step-circle {
+      transform: scale(1.08);
+    }
+
+    .step-node:focus-visible {
+      outline: 2px solid #1b6e1b;
+      outline-offset: 4px;
+      border-radius: 12px;
+    }
+
+    @keyframes phaseHeartbeat {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      14% { transform: scale(1.18); opacity: 1; }
+      28% { transform: scale(1); opacity: 0.75; }
+      42% { transform: scale(1.1); opacity: 1; }
+      56% { transform: scale(1); opacity: 0.55; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .step-node.current .step-circle::after { animation: none; }
     }
 
     .step-text {
@@ -603,13 +641,25 @@ session_start();
 
     @media (max-width: 768px) {
       html, body { overflow: auto !important; height: auto; max-height: none; }
-      #new-patient-registration-app { height: auto; max-height: none; overflow: visible !important; }
-      .main-wrapper { height: auto; max-height: none; overflow: visible !important; padding: 16px 14px; }
+      #new-patient-registration-app {
+        height: auto;
+        max-height: none;
+        min-height: 0;
+        justify-content: flex-start;
+        overflow: visible !important;
+        /* Fixed mobile navbar is 64px and sits on top of the page */
+        padding: 80px 14px 32px;
+      }
+      .main-wrapper { height: auto; max-height: none; overflow: visible !important; padding: 8px 0 0; }
+      .stepper-container { overflow: visible; }
       .card-wizard { padding: 16px 14px; }
       .inner-panel { padding: 14px 10px; }
       .grid-3, .grid-contact, .summary-grid { grid-template-columns: 1fr; }
-      .step-node { width: 85px; }
-      .step-text { font-size: 0.68rem; white-space: normal; }
+      .stepper-container { width: 100%; max-width: 100%; }
+      .stepper-line { left: 36px; right: 36px; }
+      .step-node { width: auto; flex: 1; min-width: 0; }
+      .step-circle { width: 40px; height: 40px; }
+      .step-text { font-size: 0.68rem; white-space: normal; line-height: 1.25; max-width: 96px; }
       .btn-pill-next { padding: 8px 30px; width: 100%; }
     }
   </style>
@@ -618,7 +668,7 @@ session_start();
 
   <!-- Top Navigation Bar (Identical to Landing Page) -->
   <nav class="navbar" id="navbar">
-    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 2rem; margin: 0 auto;">
+    <div class="navbar-inner">
       <a class="logo" href="/sdn/index.php" title="Home">
         <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="Lingkod Logo" class="logo-ver2-img" />
         <span class="logo-text">

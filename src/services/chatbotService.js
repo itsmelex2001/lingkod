@@ -1,23 +1,23 @@
 /**
- * Chatbot Knowledge Base & Assistant Service for MMWGH LINKod
+ * Chatbot Knowledge Base & Assistant Service for MMWGH LINGKOD
  */
 
 export const ASSISTANTS = {
   girl: {
     name: { EN: "Nurse Mika", TL: "Nurse Mika" },
-    role: { EN: "LINKod Nursing Assistant", TL: "LINKod Nursing Assistant" },
+    role: { EN: "LINGKOD Nursing Assistant", TL: "LINGKOD Nursing Assistant" },
     avatar: "/sdn/public/assets/chibi_girl_avatar.png",
     welcome: {
-      EN: "Hello! 👋 I'm Nurse Mika, your LINKod assistant.<br/>How can I help you today?",
-      TL: "Kumusta! 👋 Ako si Nurse Mika, inyong LINKod assistant.<br/>Paano ko kayo matutulungan ngayon?",
+      EN: "Hello! 👋 I'm Nurse Mika, your LINGKOD assistant.<br/>How can I help you today?",
+      TL: "Kumusta! 👋 Ako si Nurse Mika, inyong LINGKOD assistant.<br/>Paano ko kayo matutulungan ngayon?",
     },
   },
   boy: {
     name: { EN: "Dr. Leo", TL: "Dr. Leo" },
-    role: { EN: "LINKod Medical Assistant", TL: "LINKod Medical Assistant" },
+    role: { EN: "LINGKOD Medical Assistant", TL: "LINGKOD Medical Assistant" },
     avatar: "/sdn/public/assets/chibi_boy_avatar.png",
     welcome: {
-      EN: "Hello! 👋 I'm Dr. Leo, your LINKod healthcare guide.<br/>How can I assist you today?",
+      EN: "Hello! 👋 I'm Dr. Leo, your LINGKOD healthcare guide.<br/>How can I assist you today?",
       TL: "Kumusta! 👋 Ako si Dr. Leo, inyong healthcare guide.<br/>Paano ko kayo matutulungan ngayon?",
     },
   },

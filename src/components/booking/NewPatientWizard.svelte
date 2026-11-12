@@ -9,6 +9,11 @@
   let submissionError = '';
 
   // Phase 1: Personal Information
+  export let userProfile = null;
+
+  let bookingFor = 'Myself'; // 'Myself' | 'Someone Else / Dependent'
+  let relationshipToPatient = '';
+
   let firstName = '';
   let lastName = '';
   let middleInitial = ''; // STRICTLY MANDATORY
@@ -22,6 +27,75 @@
   let email = '';
   let address = '';
   let withCompanion = 'No';
+
+  // Saved profile cache for restoration when switching back to "Myself"
+  let savedProfile = {
+    firstName: '',
+    lastName: '',
+    middleInitial: '',
+    gender: '',
+    birthdate: '',
+    age: '',
+    contactNumber: '',
+    email: '',
+    address: ''
+  };
+
+  onMount(() => {
+    if (userProfile) {
+      savedProfile = {
+        firstName: userProfile.first_name || userProfile.firstName || '',
+        lastName: userProfile.last_name || userProfile.lastName || '',
+        middleInitial: userProfile.middle_initial || userProfile.middleInitial || '',
+        gender: userProfile.gender || '',
+        birthdate: userProfile.birthdate || '',
+        age: userProfile.age || '',
+        contactNumber: userProfile.contact_number || userProfile.contactNumber || '',
+        email: userProfile.email || '',
+        address: userProfile.address || ''
+      };
+      restoreProfile();
+    } else {
+      savedProfile = {
+        firstName, lastName, middleInitial, gender, birthdate, age, contactNumber, email, address
+      };
+    }
+  });
+
+  function restoreProfile() {
+    firstName = savedProfile.firstName;
+    lastName = savedProfile.lastName;
+    middleInitial = savedProfile.middleInitial;
+    gender = savedProfile.gender;
+    birthdate = savedProfile.birthdate;
+    age = savedProfile.age;
+    contactNumber = savedProfile.contactNumber;
+    email = savedProfile.email;
+    address = savedProfile.address;
+  }
+
+  function handleBookingForChange(val) {
+    bookingFor = val;
+    if (val === 'Myself') {
+      restoreProfile();
+      relationshipToPatient = '';
+    } else {
+      // Clear dependent personal details, keep contact number & email of account owner
+      firstName = '';
+      lastName = '';
+      middleInitial = '';
+      gender = '';
+      birthdate = '';
+      age = '';
+      address = '';
+      withCompanion = 'Yes'; // Force companion
+    }
+  }
+
+  // Reactive force companion when booking for someone else
+  $: if (bookingFor === 'Someone Else / Dependent') {
+    withCompanion = 'Yes';
+  }
 
   // Phase 2: Account Registration
   let username = '';
@@ -94,6 +168,13 @@
 
     if (!address.trim()) errors.address = 'Home address is required.';
 
+    // Relationship to Patient required when booking for someone else
+    if (bookingFor === 'Someone Else / Dependent') {
+      if (!relationshipToPatient.trim()) {
+        errors.relationshipToPatient = 'Please select your relationship to the patient.';
+      }
+    }
+
     // Minor / Guardian Validation: Mandatory if age is below 18
     if (isMinor) {
       if (!guardianName.trim()) {
@@ -158,6 +239,13 @@
     }
   }
 
+  function jumpToStep(step) {
+    if (step >= 1 && step < currentStep && !isSubmitting) {
+      currentStep = step;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
   async function submitRegistration() {
     isSubmitting = true;
     submissionError = '';
@@ -177,6 +265,8 @@
       email: email.trim().toLowerCase(),
       address: address.trim(),
       with_companion: withCompanion === 'Yes' ? 1 : 0,
+      booking_for: bookingFor,
+      relationship_to_patient: bookingFor === 'Someone Else / Dependent' ? relationshipToPatient : null,
       username: username.trim(),
       password: password,
       confirm_password: confirmPassword
@@ -232,19 +322,46 @@
         </div>
 
         <!-- Step 1 -->
-        <div class="step-item" class:active={currentStep >= 1} class:current={currentStep === 1}>
+        <div
+          class="step-item"
+          class:active={currentStep >= 1}
+          class:current={currentStep === 1}
+          role="button"
+          tabindex="0"
+          aria-current={currentStep === 1 ? 'step' : undefined}
+          on:click={() => jumpToStep(1)}
+          on:keydown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpToStep(1); } }}
+        >
           <div class="step-circle">1</div>
           <span class="step-label">Personal Information</span>
         </div>
 
         <!-- Step 2 -->
-        <div class="step-item" class:active={currentStep >= 2} class:current={currentStep === 2}>
+        <div
+          class="step-item"
+          class:active={currentStep >= 2}
+          class:current={currentStep === 2}
+          role="button"
+          tabindex="0"
+          aria-current={currentStep === 2 ? 'step' : undefined}
+          on:click={() => jumpToStep(2)}
+          on:keydown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpToStep(2); } }}
+        >
           <div class="step-circle">2</div>
           <span class="step-label">Account Registration</span>
         </div>
 
         <!-- Step 3 -->
-        <div class="step-item" class:active={currentStep >= 3} class:current={currentStep === 3}>
+        <div
+          class="step-item"
+          class:active={currentStep >= 3}
+          class:current={currentStep === 3}
+          role="button"
+          tabindex="0"
+          aria-current={currentStep === 3 ? 'step' : undefined}
+          on:click={() => jumpToStep(3)}
+          on:keydown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpToStep(3); } }}
+        >
           <div class="step-circle">3</div>
           <span class="step-label">Confirmation</span>
         </div>
@@ -257,6 +374,48 @@
         <!-- PHASE 1: PERSONAL INFORMATION -->
         {#if currentStep === 1}
           <h2 class="card-title">Personal Information</h2>
+
+          <!-- "Who is this appointment for?" Radio Group -->
+          <div class="mb-5 p-4 rounded-xl border border-emerald-200 bg-emerald-50/60 shadow-sm">
+            <span class="block text-xs font-bold uppercase tracking-wider text-emerald-900 mb-2">
+              Who is this appointment for? <span class="req">*</span>
+            </span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label
+                class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all {bookingFor === 'Myself' ? 'border-emerald-600 bg-white shadow-sm ring-1 ring-emerald-500' : 'border-slate-200 bg-white/70 hover:bg-white'}"
+              >
+                <input
+                  type="radio"
+                  name="bookingFor"
+                  value="Myself"
+                  checked={bookingFor === 'Myself'}
+                  on:change={() => handleBookingForChange('Myself')}
+                  class="w-4 h-4 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
+                />
+                <div>
+                  <span class="block text-sm font-bold text-slate-800">Myself</span>
+                  <span class="block text-xs text-slate-500">I am the patient receiving clinical care</span>
+                </div>
+              </label>
+
+              <label
+                class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all {bookingFor === 'Someone Else / Dependent' ? 'border-emerald-600 bg-white shadow-sm ring-1 ring-emerald-500' : 'border-slate-200 bg-white/70 hover:bg-white'}"
+              >
+                <input
+                  type="radio"
+                  name="bookingFor"
+                  value="Someone Else / Dependent"
+                  checked={bookingFor === 'Someone Else / Dependent'}
+                  on:change={() => handleBookingForChange('Someone Else / Dependent')}
+                  class="w-4 h-4 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
+                />
+                <div>
+                  <span class="block text-sm font-bold text-slate-800">Someone Else / Dependent</span>
+                  <span class="block text-xs text-slate-500">Booking for a child, parent, spouse, or dependent</span>
+                </div>
+              </label>
+            </div>
+          </div>
 
           <div class="inner-form-box">
             <!-- Row 1: First Name, Last Name, M.I. -->
@@ -432,13 +591,49 @@
                   <span class="custom-radio"></span>
                   <span>Yes</span>
                 </label>
-                <label class="radio-item">
-                  <input type="radio" bind:group={withCompanion} value="No" />
-                  <span class="custom-radio"></span>
-                  <span>No</span>
-                </label>
+                {#if bookingFor !== 'Someone Else / Dependent'}
+                  <label class="radio-item">
+                    <input type="radio" bind:group={withCompanion} value="No" />
+                    <span class="custom-radio"></span>
+                    <span>No</span>
+                  </label>
+                {/if}
               </div>
+              {#if bookingFor === 'Someone Else / Dependent'}
+                <span class="text-xs text-emerald-700 font-medium mt-1 block">
+                  (Required: An accompanying companion/guardian is mandatory when booking for a dependent.)
+                </span>
+              {/if}
             </div>
+
+            <!-- Relationship to Patient (Conditional for Someone Else / Dependent) -->
+            {#if bookingFor === 'Someone Else / Dependent'}
+              <div class="form-field mt-3 p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/70">
+                <label for="relationshipToPatient" class="block text-xs font-bold uppercase tracking-wider text-emerald-900 mb-1.5">
+                  Relationship to Patient <span class="req">*</span>
+                </label>
+                <select
+                  id="relationshipToPatient"
+                  bind:value={relationshipToPatient}
+                  class="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                  class:has-error={errors.relationshipToPatient}
+                >
+                  <option value="" disabled selected>Select Relationship</option>
+                  <option value="Parent">Parent</option>
+                  <option value="Child">Child</option>
+                  <option value="Spouse">Spouse</option>
+                  <option value="Sibling">Sibling</option>
+                  <option value="Guardian">Guardian</option>
+                  <option value="Other">Other</option>
+                </select>
+                {#if errors.relationshipToPatient}
+                  <span class="field-error">{errors.relationshipToPatient}</span>
+                {/if}
+                <p class="text-[11px] text-emerald-700 mt-1.5">
+                  As the primary account owner, you will be registered as the accompanying guardian/companion.
+                </p>
+              </div>
+            {/if}
           </div>
         {/if}
 
@@ -808,7 +1003,45 @@
 
   .step-item.current .step-circle {
     background-color: #1b6e1b;
-    box-shadow: 0 0 0 3px rgba(27, 110, 27, 0.25);
+    position: relative;
+  }
+
+  .step-item.current .step-circle::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border-radius: 50%;
+    border: 2px solid #1b6e1b;
+    background: transparent;
+    pointer-events: none;
+    animation: phaseHeartbeat 1.35s ease-in-out infinite;
+  }
+
+  .step-item.active:not(.current) {
+    cursor: pointer;
+  }
+
+  .step-item.active:not(.current):hover .step-circle,
+  .step-item.active:not(.current):focus-visible .step-circle {
+    transform: scale(1.08);
+  }
+
+  .step-item:focus-visible {
+    outline: 2px solid #1b6e1b;
+    outline-offset: 4px;
+    border-radius: 12px;
+  }
+
+  @keyframes phaseHeartbeat {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    14% { transform: scale(1.18); opacity: 1; }
+    28% { transform: scale(1); opacity: 0.75; }
+    42% { transform: scale(1.1); opacity: 1; }
+    56% { transform: scale(1); opacity: 0.55; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step-item.current .step-circle::after { animation: none; }
   }
 
   .step-label {
@@ -1308,12 +1541,25 @@
     .stepper-section {
       max-width: 100%;
     }
+    .stepper-line-bg {
+      left: 28px;
+      right: 28px;
+      top: 20px;
+    }
     .step-item {
-      width: 85px;
+      width: auto;
+      flex: 1;
+      min-width: 0;
+    }
+    .step-circle {
+      width: 40px;
+      height: 40px;
     }
     .step-label {
       font-size: 0.68rem;
+      line-height: 1.25;
       white-space: normal;
+      max-width: 96px;
     }
     .btn-wizard-main {
       padding: 8px 30px;

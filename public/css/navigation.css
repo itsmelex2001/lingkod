@@ -270,6 +270,21 @@
 
   .hamburger {
     display: flex;
+    flex-shrink: 0;
+  }
+
+  .hamburger span {
+    background: #ffffff;
+  }
+
+  .navbar-inner {
+    padding: 0;
+    min-width: 0;
+  }
+
+  .nav-links .lang-switch-btn,
+  .nav-links .lang-switch-btn svg {
+    color: #0f172a;
   }
 
   .nav-links {
@@ -303,10 +318,33 @@
     display: flex;
   }
 
-  .nav-links a {
+  .nav-links li {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .nav-links > li > a {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .nav-links a,
+  .nav-links a:hover,
+  .nav-links a.active-nav {
+    color: #14532d;
+    text-shadow: none;
     font-size: 1rem;
     padding: 12px 14px;
     border-radius: var(--radius-md);
+  }
+
+  .nav-links a.active-nav {
+    background: #ecfdf3;
+    font-weight: 700;
+  }
+
+  .nav-chevron {
+    stroke: #14532d;
   }
 
   .nav-links a::after {
@@ -424,7 +462,13 @@
   .nav-dropdown {
     margin-left: 0;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nav-chevron {
+    stroke: #14532d;
+    color: #14532d;
   }
   .btn-signin {
     width: 100%;
@@ -434,15 +478,36 @@
     box-shadow: none;
     border: none;
     border-left: 2px solid var(--primary-green);
-    margin-top: 5px;
-    margin-left: 10px;
+    margin-top: 2px;
+    margin-left: 14px;
+    min-width: 0;
+    width: auto;
     display: none;
   }
   .nav-dropdown:hover .dropdown-content {
+    display: none;
+  }
+  .nav-dropdown.open .dropdown-content {
     display: block;
+  }
+  .nav-dropdown:hover .nav-chevron {
+    transform: none;
+  }
+  .nav-dropdown.open .nav-chevron {
+    transform: rotate(180deg);
   }
 }
 
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 2rem;
+  margin: 0 auto;
+  min-width: 0;
+}
 
 .navbar {
   height: 86px;
@@ -559,4 +624,33 @@
   content: "✓";
   color: #0f172a;
   font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-shadow: none;
+  }
+
+  .navbar,
+  .logo {
+    height: 64px;
+  }
+
+  .logo img.logo-ver2-img,
+  .logo img.logo-v3-img {
+    height: 72px;
+    max-height: 72px;
+    margin-left: 0;
+    margin-right: 0;
+    transform: none;
+  }
+
+  .logo-title-top {
+    display: none;
+  }
 }

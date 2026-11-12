@@ -23,7 +23,7 @@
       <div class="footer-col-inline footer-col-brand-inline">
         <h2 class="footer-logo-inline">MMWGH<br>LINGKod</h2>
         <div class="footer-accent-line footer-accent-brand"></div>
-        <p class="footer-tagline-main-inline" data-i18n-html="footer_tagline">A Localized Network and Knowledge-base for<br>Online Service Delivery</p>
+        <p class="footer-tagline-main-inline" data-i18n-html="footer_tagline">A Localized Network and Knowledge-base for<br> Online Service Delivery</p>
         <p class="footer-tagline-sub-inline" data-i18n="footer_tagline_sub">Dedicated to your health, driven by excellence.</p>
       </div>
 

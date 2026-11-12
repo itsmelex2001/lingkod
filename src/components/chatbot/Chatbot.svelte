@@ -1,1052 +1,823 @@
 <script>
-  import { fly, fade } from "svelte/transition";
-  import { afterUpdate, onMount, onDestroy } from "svelte";
+  import { tick } from "svelte";
 
-  let isOpen = false;
-  let activeChibi = "boy"; // character on the walking stage
-  let chatAssistant = "boy"; // assistant in the chat conversation
-  let actorState = "state-walk-in"; // 'state-walk-in' | 'state-arrived' | 'state-walk-out'
-  let showBubble = false;
-
-  let timerStep1, timerStep2, timerStep3;
-
-  function getCurrentTime() {
-    return new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
+  let isOpen = true;
   let lang = "EN";
+  let assistant = "girl";
+  let langMenuOpen = false;
+  let isTyping = false;
+  let showingMainTopics = true;
+  let activeBotMsgId = "initial-welcome";
+  let highlightedMsgId = null;
+  let chatBodyRef;
 
-  const ASSISTANTS = {
+  const assistants = {
     girl: {
-      name: { EN: "Nurse Mika", TL: "Nurse Mika" },
-      role: { EN: "LINKod Nursing Assistant", TL: "LINKod Nursing Assistant" },
+      name: "Nurse Mika",
       avatar: "/sdn/public/assets/chibi_girl_avatar.png",
-      welcome: {
-        EN: "Hello! 👋 I'm Nurse Mika, your LINKod assistant.<br/>How can I help you today?",
-        TL: "Kumusta! 👋 Ako si Nurse Mika, inyong LINKod assistant.<br/>Paano ko kayo matutulungan ngayon?",
-      },
     },
     boy: {
-      name: { EN: "Dr. Leo", TL: "Dr. Leo" },
-      role: { EN: "LINKod Medical Assistant", TL: "LINKod Medical Assistant" },
+      name: "Dr. Leo",
       avatar: "/sdn/public/assets/chibi_boy_avatar.png",
-      welcome: {
-        EN: "Hello! 👋 I'm Dr. Leo, your LINKod healthcare guide.<br/>How can I assist you today?",
-        TL: "Kumusta! 👋 Ako si Dr. Leo, inyong healthcare guide.<br/>Paano ko kayo matutulungan ngayon?",
-      },
     },
   };
 
-  const dict = {
-    EN: {
-      selectQuestion: "Choose a topic to ask:",
-      askAnother: "Ask another question",
-      limitReached: "You've reached the FAQ limit. Please rate your experience:",
-      feedbackThanks: (stars) =>
-        `You rated us ${stars} star${stars > 1 ? "s" : ""}! Thank you for your feedback! ⭐`,
-      bubble: "ASK ME",
-    },
-    TL: {
-      selectQuestion: "Pumili ng tanong:",
-      askAnother: "Magtanong muli",
-      limitReached: "Naabot na ang limitasyon ng FAQ. Pakibigyan kami ng rating:",
-      feedbackThanks: (stars) =>
-        `Binigyan mo kami ng ${stars} bituin! Maraming salamat sa iyong feedback! ⭐`,
-      bubble: "TANGUNGIN MO AKO",
-    },
+  const topics = {
+    EN: [
+      "How do I request an appointment/schedule?",
+      "What are the hospital's operating hours & doctor schedules?",
+      "Where I can find the nearest MMWGH hospital?",
+      "What should I bring for my consultation & EMR triage?",
+    ],
+    TL: [
+      "Paano ako mag-request ng appointment/iskedyul?",
+      "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+      "Saan ko makikita ang pinakamalapit na ospital ng MMWGH?",
+      "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+    ],
   };
 
-  const faqsDict = {
+  const faqs = {
     EN: [
       {
+        id: "request-appointment",
         question: "How do I request an appointment/schedule?",
+        keywords: ["request", "appointment", "schedule", "book", "reserve", "slot"],
         answer:
-          "Click 'Book Appointment' on the homepage, select your department, and complete the registration. <strong>Staff Verification Protocol:</strong> Our clinic staff will call your contact number to verify your appointment before admitting you to the consultation queue. Please keep your phone line active!",
+          "Click <strong>'Book Appointment'</strong> on the homepage, select your desired clinical department, and complete the registration. <strong>Staff Verification Protocol:</strong> Our clinic staff will call your active phone number to confirm your details before placing you in the physician queue.",
+        followUps: [
+          "Why does clinic staff call before confirming my appointment?",
+          "Can I make a same-day appointment or walk-in booking?",
+          "What should I bring for my consultation & EMR triage?",
+        ],
       },
       {
+        id: "hospital-hours",
         question: "What are the hospital's operating hours & doctor schedules?",
+        keywords: ["hours", "operating", "doctor", "schedules", "time", "open", "opd", "emergency"],
         answer:
-          "Our main emergency triage operates 24/7. Outpatient clinic consultations and telehealth services are open Monday to Friday from 8:00 AM to 5:00 PM. Real-time doctor availability and open slots can be tracked directly on our homepage live stats counter.",
+          "The <strong>Emergency Triage</strong> operates 24/7. <strong>Outpatient (OPD) specialty clinics</strong> and telehealth services run Monday through Friday from <strong>8:00 AM to 5:00 PM</strong>. Live doctor availability and open slots can be inspected in the Schedules section.",
+        followUps: [
+          "How do I check live doctor availability and clinic schedules?",
+          "What is the cut-off time for same-day clinic queues?",
+          "Can I make a same-day appointment or walk-in booking?",
+        ],
       },
       {
-        question:
-          "Where can I find the nearest Service Delivery Network (SDN) facility?",
+        id: "sdn-facility",
+        question: "Where I can find the nearest MMWGH hospital?",
+        keywords: ["where", "nearest", "mmwgh", "hospital", "sdn", "facility", "location", "rhu", "bhs", "network"],
         answer:
-          "You can view all affiliated hospital, RHU, and BHS partner locations on our interactive 'Location Map'. Our attending staff can also initiate seamless inter-department referrals or transfers if specialized evaluation is required.",
+          "Access the interactive <strong>'Location Map'</strong> on our portal to view Mariveles Mental Wellness and General Hospital (MMWGH) and all affiliated Service Delivery Network (SDN) facilities, Rural Health Units (RHUs), and Barangay Health Stations (BHS).",
+        followUps: [
+          "How do I check my appointment status on the portal?",
+          "What should I bring for my consultation & EMR triage?",
+          "Why is Data Privacy Act (DPA) consent required?",
+        ],
       },
       {
+        id: "consultation-requirements",
         question: "What should I bring for my consultation & EMR triage?",
+        keywords: ["bring", "consultation", "triage", "emr", "requirements", "documents", "id", "vitals"],
         answer:
-          "Please bring a valid government/student ID, your active contact phone number, and any prior medical records, lab results, or prescription lists. Our staff records triage vitals into your electronic medical record (EMR) and issues printable clinical notes.",
+          "Please present a valid government, company, or student ID, your mobile number, and prior laboratory tests, prescriptions, or medical records. Our triage team will record your vitals directly into your Electronic Medical Record (EMR).",
+        followUps: [
+          "Why is Data Privacy Act (DPA) consent required?",
+          "How do I check my appointment status on the portal?",
+          "What happens if I miss the phone verification call?",
+        ],
+      },
+      {
+        id: "portal-status",
+        question: "How do I check my appointment status on the portal?",
+        keywords: ["portal", "status", "check", "dashboard", "queue", "reference"],
+        answer:
+          "Navigate to the <strong>Patient Portal</strong> and sign in using your registered mobile number or reference code. Your live dashboard provides scheduled consultation dates, assigned doctor names, and current queue numbers.",
+        followUps: [
+          "Where can I view clinical notes and doctor prescriptions?",
+          "What happens if I miss the phone verification call?",
+          "Why is Data Privacy Act (DPA) consent required?",
+        ],
+      },
+      {
+        id: "portal-records",
+        question: "Where can I view clinical notes and doctor prescriptions?",
+        keywords: ["notes", "prescriptions", "records", "clinical", "pdf", "medical", "lab"],
+        answer:
+          "Consultation summaries, laboratory order slips, and digital physician prescriptions are stored under <strong>Patient Portal &gt; Medical Records</strong> as downloadable, printable PDFs.",
+        followUps: [
+          "How do I check my appointment status on the portal?",
+          "What should I bring for my consultation & EMR triage?",
+          "Why is Data Privacy Act (DPA) consent required?",
+        ],
+      },
+      {
+        id: "dpa-consent",
+        question: "Why is Data Privacy Act (DPA) consent required?",
+        keywords: ["dpa", "privacy", "consent", "data", "law", "act", "ra 10173"],
+        answer:
+          "In accordance with <strong>Republic Act 10173 (Data Privacy Act of 2012)</strong>, healthcare facilities must secure explicit consent before collecting and processing health records. All medical data is protected with end-to-end encryption accessible strictly by authorized medical staff.",
+        followUps: [
+          "What patient information is collected and how is it protected?",
+          "How do I check my appointment status on the portal?",
+          "Can I make a same-day appointment or walk-in booking?",
+        ],
+      },
+      {
+        id: "dpa-protection",
+        question: "What patient information is collected and how is it protected?",
+        keywords: ["collected", "protected", "security", "confidential", "storage", "doh"],
+        answer:
+          "We collect personal demographics, contact information, and initial triage symptoms. All records are securely maintained in compliance with Department of Health (DOH) security standards.",
+        followUps: [
+          "Why is Data Privacy Act (DPA) consent required?",
+          "Why does clinic staff call before confirming my appointment?",
+          "Can I make a same-day appointment or walk-in booking?",
+        ],
+      },
+      {
+        id: "same-day",
+        question: "Can I make a same-day appointment or walk-in booking?",
+        keywords: ["same-day", "same day", "walk-in", "walkin", "today", "urgent"],
+        answer:
+          "Same-day online bookings are accepted for morning clinics until <strong>10:00 AM</strong>, subject to remaining department capacity. For acute emergency needs, proceed directly to our <strong>24/7 Emergency Triage</strong>.",
+        followUps: [
+          "What is the cut-off time for same-day clinic queues?",
+          "What are the hospital's operating hours & doctor schedules?",
+          "Why does clinic staff call before confirming my appointment?",
+        ],
+      },
+      {
+        id: "cutoff-time",
+        question: "What is the cut-off time for same-day clinic queues?",
+        keywords: ["cut-off", "cutoff", "time", "deadline", "queue", "limit"],
+        answer:
+          "Outpatient departments observe a strict <strong>10:00 AM cut-off</strong> for morning clinics and a <strong>2:00 PM cut-off</strong> for afternoon sessions to guarantee sufficient consultation time for queued patients.",
+        followUps: [
+          "Can I make a same-day appointment or walk-in booking?",
+          "What are the hospital's operating hours & doctor schedules?",
+          "Why does clinic staff call before confirming my appointment?",
+        ],
+      },
+      {
+        id: "schedules",
+        question: "How do I check live doctor availability and clinic schedules?",
+        keywords: ["availability", "doctor", "roster", "duty", "slots", "schedules"],
+        answer:
+          "Click the <strong>Schedules</strong> module in the navigation menu to review daily on-duty specialists across Internal Medicine, Pediatrics, Surgery, and OB-GYN, along with available consultation quota.",
+        followUps: [
+          "What are the hospital's operating hours & doctor schedules?",
+          "Can I make a same-day appointment or walk-in booking?",
+          "How do I check my appointment status on the portal?",
+        ],
+      },
+      {
+        id: "verification-call",
+        question: "Why does clinic staff call before confirming my appointment?",
+        keywords: ["call", "phone", "verify", "verification", "confirm", "staff"],
+        answer:
+          "Clinical staff call to evaluate symptom urgency, ensure you are directed to the correct specialty department, and confirm slot availability before locking your spot in the queue.",
+        followUps: [
+          "What happens if I miss the phone verification call?",
+          "What should I bring for my consultation & EMR triage?",
+          "Why is Data Privacy Act (DPA) consent required?",
+        ],
+      },
+      {
+        id: "missed-call",
+        question: "What happens if I miss the phone verification call?",
+        keywords: ["missed", "unanswered", "retry", "released", "cancel"],
+        answer:
+          "Our clinic staff re-attempts calls up to <strong>two times</strong> within 30 minutes. If unreachable, the slot is released to accommodate urgent patients. You may re-book through the portal anytime.",
+        followUps: [
+          "Why does clinic staff call before confirming my appointment?",
+          "How do I check my appointment status on the portal?",
+          "Can I make a same-day appointment or walk-in booking?",
+        ],
       },
     ],
     TL: [
       {
+        id: "request-appointment",
         question: "Paano ako mag-request ng appointment/iskedyul?",
+        keywords: ["request", "appointment", "iskedyul", "book", "magpa-schedule"],
         answer:
-          "Pindutin ang 'Book Appointment' sa homepage, piliin ang inyong departamento, at punan ang registration form. <strong>Staff Verification Protocol:</strong> Tatawagan po kayo ng clinic staff sa inyong numero upang kumpirmahin ang appointment bago kayo ipasok sa queue ng doktor. Pakisigurong aktibo ang inyong linya!",
+          "Pindutin ang <strong>'Book Appointment'</strong> sa homepage, piliin ang inyong departamento, at sagutan ang form. <strong>Staff Verification Protocol:</strong> Tatawagan po kayo ng clinic staff sa inyong numero upang kumpirmahin ang detalye bago ilagay sa queue ng doktor.",
+        followUps: [
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+        ],
       },
       {
+        id: "hospital-hours",
         question: "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+        keywords: ["oras", "operasyon", "iskedyul", "doktor", "bukas", "emergency", "opd"],
         answer:
-          "Ang Emergency Department ay bukas 24/7. Ang outpatient clinics at telehealth ay bukas Lunes hanggang Biyernes, 8:00 AM hanggang 5:00 PM. Makikita rin ninyo ang live available doctor slots sa aming homepage live stats counter.",
+          "Bukas ang <strong>Emergency Triage</strong> 24 oras araw-araw. Ang <strong>Outpatient (OPD) clinics</strong> at telehealth ay bukas Lunes hanggang Biyernes mula <strong>8:00 AM hanggang 5:00 PM</strong>.",
+        followUps: [
+          "Paano masusuri ang availability ng doktor at iskedyul ng klinika?",
+          "Ano ang cut-off time para sa same-day clinic queues?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        ],
       },
       {
-        question:
-          "Saan ko makikita ang pinakamalapit na pasilidad ng SDN?",
+        id: "sdn-facility",
+        question: "Saan ko makikita ang pinakamalapit na ospital ng MMWGH?",
+        keywords: ["saan", "mmwgh", "ospital", "pasilidad", "sdn", "lokasyon", "rhu", "bhs", "mapa"],
         answer:
-          "Makikita ang lahat ng kaakibat na partner hospitals, RHUs, at BHS facilities sa aming interactive 'Location Map'. Maaari ring mag-proseso ang aming staff ng electronic referral o transfer sa ibang departamento kung kinakailangan.",
+          "Maaari ninyong tingnan ang aming interactive na <strong>'Location Map'</strong> upang makita ang MMWGH, partner hospitals, RHU, at BHS stations. Maaari ring mag-asikaso ang staff ng inter-facility electronic referral.",
+        followUps: [
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+        ],
       },
       {
+        id: "consultation-requirements",
         question: "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+        keywords: ["dalhin", "dokumento", "id", "kailangan", "triage", "vitals", "emr"],
         answer:
-          "Mangyaring magdala ng valid ID, aktibong cellphone number, at anumang nakaraang laboratory results o reseta ng gamot. Itatala ng aming staff ang inyong triage vitals sa inyong electronic medical record (EMR) at magbibigay ng opisyal na printable clinical notes.",
+          "Magdala ng valid ID, inyong aktibong cellphone number, at anumang lumang laboratory results o reseta. Itatala ng aming nursing staff ang inyong vitals sa inyong Electronic Medical Record (EMR).",
+        followUps: [
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Ano ang mangyayari kung hindi nasagot ang verification call?",
+        ],
+      },
+      {
+        id: "portal-status",
+        question: "Paano ko masusuri ang status ng aking appointment sa portal?",
+        keywords: ["portal", "status", "tingnan", "appointment", "iskedyul", "queue"],
+        answer:
+          "Mag-log in sa <strong>Patient Portal</strong> gamit ang inyong registered mobile number o reference number. Makikita rito ang petsa, nakatalagang doktor, at queue status.",
+        followUps: [
+          "Saan makikita ang clinical notes at reseta ng doktor?",
+          "Ano ang mangyayari kung hindi nasagot ang verification call?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+        ],
+      },
+      {
+        id: "portal-records",
+        question: "Saan makikita ang clinical notes at reseta ng doktor?",
+        keywords: ["notes", "reseta", "doktor", "rekord", "laboratory", "pdf"],
+        answer:
+          "Ang mga clinical summary, lab referral forms, at digital na reseta ay naka-archive sa <strong>Patient Portal &gt; Medical Records</strong> bilang mga nada-download na PDF.",
+        followUps: [
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+        ],
+      },
+      {
+        id: "dpa-consent",
+        question: "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+        keywords: ["privacy", "dpa", "consent", "datos", "batas", "proteksyon"],
+        answer:
+          "Ayon sa <strong>Republic Act 10173 (Data Privacy Act ng 2012)</strong>, kailangan ang inyong pahintulot upang maiproseso ang inyong medical data nang may mataas na antas ng encryption at seguridad.",
+        followUps: [
+          "Anong impormasyon ang kinokolekta at paano pinoprotektahan?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        ],
+      },
+      {
+        id: "dpa-protection",
+        question: "Anong impormasyon ang kinokolekta at paano pinoprotektahan?",
+        keywords: ["kinokolekta", "protektado", "datos", "ingat", "seguridad"],
+        answer:
+          "Kinokolekta lamang ang pangalan, contact details, at triage vitals alinsunod sa mga pamantayan ng Department of Health (DOH).",
+        followUps: [
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        ],
+      },
+      {
+        id: "same-day",
+        question: "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        keywords: ["same-day", "walk-in", "ngayon", "urgent", "emergency"],
+        answer:
+          "Tumatanggap ng online same-day bookings hanggang <strong>10:00 AM</strong> depende sa natitirang slots. Para sa mga agarang emergency, dumiretso sa <strong>24/7 Emergency Triage</strong>.",
+        followUps: [
+          "Ano ang cut-off time para sa same-day clinic queues?",
+          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+        ],
+      },
+      {
+        id: "cutoff-time",
+        question: "Ano ang cut-off time para sa same-day clinic queues?",
+        keywords: ["cut-off", "cutoff", "oras", "deadline", "pila"],
+        answer:
+          "Ipinapatupad ang <strong>10:00 AM cut-off</strong> sa pang-umaga at <strong>2:00 PM cut-off</strong> sa panghapon upang masiguro ang masusing konsultasyon.",
+        followUps: [
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+        ],
+      },
+      {
+        id: "schedules",
+        question: "Paano masusuri ang availability ng doktor at iskedyul ng klinika?",
+        keywords: ["iskedyul", "doktor", "availability", "duty", "slots"],
+        answer:
+          "Buksan ang <strong>Schedules</strong> tab upang makita ang talaan ng mga doktor sa iba't ibang klinika at ang natitirang consultation quota.",
+        followUps: [
+          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+        ],
+      },
+      {
+        id: "verification-call",
+        question: "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+        keywords: ["tawag", "staff", "kumpirmahin", "verification", "telepono"],
+        answer:
+          "Tumatawag ang nurse o admissions officer upang tiyaking angkop ang departamento para sa inyong sintomas bago pinal na i-lock ang inyong schedule.",
+        followUps: [
+          "Ano ang mangyayari kung hindi nasagot ang verification call?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+        ],
+      },
+      {
+        id: "missed-call",
+        question: "Ano ang mangyayari kung hindi nasagot ang verification call?",
+        keywords: ["hindi nasagot", "missed", "retry", "nakansela"],
+        answer:
+          "Magtatangkang tumawag ang staff nang <strong>dalawang beses</strong> sa loob ng 30 minuto. Kung walang sagot, ibabalik ang slot sa pangkalahatang queue.",
+        followUps: [
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        ],
       },
     ],
   };
 
-  $: currentDict = dict[lang];
-  $: currentFaqs = faqsDict[lang];
-  $: currentProfile = ASSISTANTS[chatAssistant];
+  const uiText = {
+    EN: {
+      role: "LINGKOD ASSISTANT",
+      welcome: "Hello! I am Nurse Mika, your LINGKOD assistant. How can I help you today?",
+      chooseTopic: "CHOOSE A TOPIC TO ASK:",
+      followUpTitle: "CHOOSE A FOLLOW-UP QUESTION:",
+      backToTopics: "← Back to Main Topics",
+      closeAria: "Close support chat",
+      openAria: "Open LINGKOD Assistant",
+      badgeTitle: "LINGKOD • FAQs",
+      defaultUnmatched:
+        "I could not find an exact match for your inquiry. Please choose one of the core appointment workflow topics below:",
+      defaultFollowUps: [
+        "How do I check my appointment status on the portal?",
+        "Can I make a same-day appointment or walk-in booking?",
+        "What should I bring for my consultation & EMR triage?",
+      ],
+    },
+    TL: {
+      role: "LINGKOD ASSISTANT",
+      welcome: "Kumusta! Ako si Nurse Mika, inyong LINGKOD assistant. Paano ko kayo matutulungan ngayon?",
+      chooseTopic: "PUMILI NG TANONG:",
+      followUpTitle: "MGA KAUGNAY NA TANONG:",
+      backToTopics: "← Bumalik sa Pangunahing Tanong",
+      closeAria: "Isara ang support chat",
+      openAria: "Buksan ang LINGKOD Assistant",
+      badgeTitle: "LINGKOD • FAQs",
+      defaultUnmatched:
+        "Hindi nahanap ang eksaktong sagot para sa inyong tanong. Pumili sa mga sumusunod na paksa:",
+      defaultFollowUps: [
+        "Paano ko masusuri ang status ng aking appointment sa portal?",
+        "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+      ],
+    },
+  };
 
-  let messages = [];
-
-  function initMessages() {
-    messages = [
-      {
-        sender: "bot",
-        text: ASSISTANTS[chatAssistant].welcome[lang],
-        time: getCurrentTime(),
-        avatar: ASSISTANTS[chatAssistant].avatar,
-        name: ASSISTANTS[chatAssistant].name[lang],
-      },
-    ];
+  function getCurrentTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    const dateStr = now.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+    return `${timeStr} | ${dateStr}`;
   }
 
-  initMessages();
-
-  let showOptions = true;
-  let chatBody;
-  let questionCount = 0;
-  let showRating = false;
-  let userRating = 0;
-  let isTyping = false;
-  let timerStep4 = null;
-  let timerStep5 = null;
-
-  function clearTimers() {
-    if (timerStep1) clearTimeout(timerStep1);
-    if (timerStep2) clearTimeout(timerStep2);
-    if (timerStep3) clearTimeout(timerStep3);
-    if (timerStep4) clearTimeout(timerStep4);
-    if (timerStep5) clearTimeout(timerStep5);
+  function toggleAssistant() {
+    assistant = assistant === "girl" ? "boy" : "girl";
   }
 
-  function runWalkCycle(chibi) {
-    if (isOpen) return;
-    activeChibi = chibi;
+  let messages = [
+    {
+      id: "initial-welcome",
+      sender: "bot",
+      text: uiText.EN.welcome,
+      time: getCurrentTime(),
+      isInitial: true,
+      followUps: [],
+    },
+  ];
 
-    if (chibi === 'girl') {
-      // NURSE MIKA CYCLE: Walk In -> Wave Hello -> Stand Idle Blink -> Wave Bye -> Walk Out
-      actorState = "state-walk-in";
-      showBubble = false;
-
-      // 1. Walk in (2.6s) -> Wave Hello (1.6s) with bubble
-      timerStep1 = setTimeout(() => {
-        if (isOpen) return;
-        actorState = "state-wave-hello";
-        showBubble = true;
-
-        // 2. After waving hello (1.6s) -> Stand Idle on both feet with periodic eye blinking (3.6s)
-        timerStep2 = setTimeout(() => {
-          if (isOpen) return;
-          actorState = "state-arrived";
-          showBubble = true;
-
-          // 3. After standing idle (3.6s) -> Wave Bye before exiting (1.4s)
-          timerStep3 = setTimeout(() => {
-            if (isOpen) return;
-            actorState = "state-wave-bye";
-            showBubble = false;
-
-            // 4. After wave bye (1.4s) -> Walk Out to the right (2.2s)
-            timerStep4 = setTimeout(() => {
-              if (isOpen) return;
-              actorState = "state-walk-out";
-
-              // 5. After walked out -> Switch to Dr. Leo
-              timerStep5 = setTimeout(() => {
-                if (isOpen) return;
-                runWalkCycle("boy");
-              }, 2200);
-            }, 1400);
-
-          }, 3600);
-
-        }, 1600);
-
-      }, 2600);
-
-    } else {
-      // DR. LEO CYCLE (Unchanged)
-      actorState = "state-walk-in";
-      showBubble = false;
-
-      // After walking in (2.6s), pop up bubble
-      timerStep1 = setTimeout(() => {
-        if (isOpen) return;
-        actorState = "state-arrived";
-        showBubble = true;
-
-        // After 5.5s with bubble, walk out to right side (2.2s)
-        timerStep2 = setTimeout(() => {
-          if (isOpen) return;
-          showBubble = false;
-          actorState = "state-walk-out";
-
-          // After 2.2s walk out, switch to Nurse Mika
-          timerStep3 = setTimeout(() => {
-            if (isOpen) return;
-            runWalkCycle("girl");
-          }, 2200);
-        }, 5500);
-      }, 2600);
+  async function scrollToBottom() {
+    await tick();
+    if (chatBodyRef) {
+      chatBodyRef.scrollTop = chatBodyRef.scrollHeight;
     }
   }
 
-  onMount(() => {
-    runWalkCycle("boy");
-  });
+  function findBestMatch(queryText) {
+    const list = faqs[lang];
+    const clean = queryText.toLowerCase().trim();
 
-  onDestroy(() => {
-    clearTimers();
-  });
+    const direct = list.find(
+      (item) =>
+        clean === item.question.toLowerCase() ||
+        clean.includes(item.question.toLowerCase()) ||
+        item.question.toLowerCase().includes(clean)
+    );
+    if (direct) return direct;
 
-  function openChatWith(chibi) {
-    chatAssistant = chibi;
-    questionCount = 0;
-    showOptions = true;
-    showRating = false;
-    userRating = 0;
-    initMessages();
-    if (!isOpen) {
-      isOpen = true;
-      clearTimers();
+    let bestScore = 0;
+    let selected = null;
+
+    for (const item of list) {
+      let score = 0;
+      for (const kw of item.keywords) {
+        if (clean.includes(kw.toLowerCase())) {
+          score += 1;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        selected = item;
+      }
+    }
+
+    return bestScore > 0 ? selected : null;
+  }
+
+  function handleSelectQuestion(questionText) {
+    if (isTyping) return;
+    submitQuery(questionText);
+  }
+
+  async function submitQuery(queryText) {
+    const cleanKey = queryText.toLowerCase().trim();
+    const existingBot = messages.find(
+      (m) => m.sender === "bot" && m.questionKey === cleanKey
+    );
+
+    if (existingBot) {
+      showingMainTopics = false;
+      activeBotMsgId = existingBot.id;
+      highlightedMsgId = existingBot.id;
+      await tick();
+
+      if (chatBodyRef) {
+        const targetRow = chatBodyRef.querySelector(
+          `[data-msg-id="${existingBot.id}"]`
+        );
+        if (targetRow) {
+          targetRow.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+      setTimeout(() => {
+        highlightedMsgId = null;
+      }, 1400);
+      return;
+    }
+
+    showingMainTopics = false;
+    activeBotMsgId = null;
+
+    messages = [
+      ...messages,
+      {
+        id: "user-" + Date.now(),
+        sender: "user",
+        text: queryText,
+        time: getCurrentTime(),
+      },
+    ];
+
+    scrollToBottom();
+    isTyping = true;
+
+    setTimeout(() => {
+      const match = findBestMatch(queryText);
+      let replyText = "";
+      let chips = [];
+
+      if (match) {
+        replyText = match.answer;
+        chips = match.followUps || [];
+      } else {
+        replyText = uiText[lang].defaultUnmatched;
+        chips = uiText[lang].defaultFollowUps;
+      }
+
+      const newBotId = "bot-" + Date.now();
+      messages = [
+        ...messages,
+        {
+          id: newBotId,
+          questionKey: cleanKey,
+          sender: "bot",
+          text: replyText,
+          time: getCurrentTime(),
+          followUps: chips,
+        },
+      ];
+
+      showingMainTopics = false;
+      activeBotMsgId = newBotId;
+      isTyping = false;
+      scrollToBottom();
+    }, 350);
+  }
+
+  async function handleBackToTopics() {
+    showingMainTopics = true;
+    activeBotMsgId = "initial-welcome";
+    await tick();
+    if (chatBodyRef) {
+      chatBodyRef.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function switchLang(newLang) {
+    if (lang === newLang) return;
+    lang = newLang;
+
+    if (messages.length === 1 && messages[0].isInitial) {
+      showingMainTopics = true;
+      activeBotMsgId = "initial-welcome";
+      messages = [
+        {
+          id: "initial-welcome",
+          sender: "bot",
+          text: uiText[lang].welcome,
+          time: getCurrentTime(),
+          isInitial: true,
+          followUps: [],
+        },
+      ];
     }
   }
 
   function toggleChat() {
     isOpen = !isOpen;
     if (isOpen) {
-      clearTimers();
-    } else {
-      runWalkCycle(activeChibi);
+      scrollToBottom();
     }
   }
-
-  function toggleAssistant() {
-    chatAssistant = chatAssistant === "boy" ? "girl" : "boy";
-    initMessages();
-  }
-
-  function changeLang(newLang) {
-    lang = newLang;
-    questionCount = 0;
-    showOptions = true;
-    showRating = false;
-    userRating = 0;
-    initMessages();
-  }
-
-  function handleQuestionClick(faq) {
-    if (questionCount >= 4 || isTyping) return;
-
-    messages = [
-      ...messages,
-      { sender: "user", text: faq.question, time: getCurrentTime() },
-    ];
-    questionCount++;
-    showOptions = false;
-    isTyping = true;
-
-    setTimeout(() => {
-      isTyping = false;
-      messages = [
-        ...messages,
-        {
-          sender: "bot",
-          text: faq.answer,
-          time: getCurrentTime(),
-          avatar: currentProfile.avatar,
-          name: currentProfile.name[lang],
-        },
-      ];
-
-      if (questionCount >= 4) {
-        showRating = true;
-      }
-
-      setTimeout(() => {
-        if (chatBody) {
-          chatBody.scrollTop = chatBody.scrollHeight;
-        }
-      }, 50);
-    }, 450);
-  }
-
-  function handleRating(star) {
-    userRating = star;
-    showRating = false;
-    messages = [
-      ...messages,
-      {
-        sender: "bot",
-        text: currentDict.feedbackThanks(star),
-        time: getCurrentTime(),
-        avatar: currentProfile.avatar,
-        name: currentProfile.name[lang],
-      },
-    ];
-  }
-
-  function resetOptions() {
-    showOptions = true;
-  }
-
-  afterUpdate(() => {
-    if (chatBody) {
-      chatBody.scrollTop = chatBody.scrollHeight;
-    }
-  });
 </script>
 
-<!-- Floating Chibi Widget in Bottom-Right -->
-{#if !isOpen}
-  <div class="chibi-widget-container" transition:fade>
-    <div
-      class="chibi-stage"
-      on:click={() => openChatWith(activeChibi)}
-      role="button"
-      tabindex="0"
-      on:keydown={(e) => {
-        if (e.key === "Enter" || e.key === " ") openChatWith(activeChibi);
-      }}
-      title="Click to ask me!"
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-end font-sans antialiased">
+  {#if !isOpen}
+    <button
+      type="button"
+      on:click={toggleChat}
+      class="flex items-center gap-2 rounded-lg bg-[#0a8d19] px-3.5 py-2 text-white shadow-md transition-colors duration-150 hover:bg-[#087514] focus:outline-none"
+      aria-label={uiText[lang].openAria}
     >
-      <div class="chibi-ground-shadow"></div>
-
-      <!-- Walking Actor -->
-      <div class="chibi-character-actor actor-{activeChibi} {actorState}">
-        {#if showBubble}
-          <div
-            class="chibi-ask-me-bubble"
-            class:is-tl={lang === "TL"}
-            on:click|stopPropagation={() => openChatWith(activeChibi)}
-            role="button"
-            tabindex="0"
-            title={lang === "TL" ? "TANUNGIN MO AKO" : "ASK ME"}
-          ></div>
-        {/if}
-        {#if activeChibi === "boy"}
-          <div class="chibi-sprite chibi-sprite-boy" aria-label="Dr. Leo Chibi"></div>
-        {:else if actorState === "state-wave-hello" || actorState === "state-wave-bye"}
-          <div class="chibi-sprite chibi-sprite-girl-wave" aria-label="Nurse Mika Waving"></div>
-        {:else}
-          <div class="chibi-sprite chibi-sprite-girl" aria-label="Nurse Mika Chibi"></div>
-        {/if}
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Chat Window -->
-{#if isOpen}
-  <div class="chibi-chat-window is-open" transition:fly={{ y: 50, duration: 300 }}>
-    <!-- Header with SINGLE Head Circle -->
-    <div class="chibi-chat-header">
-      <div class="chibi-header-info">
-        <!-- Single Head Circle Avatar -->
-        <div
-          class="chibi-avatar-single"
-          on:click={toggleAssistant}
-          role="button"
-          tabindex="0"
-          title="Click to switch assistant"
-        >
-          <img src={currentProfile.avatar} alt={currentProfile.name[lang]} />
-        </div>
-        <div class="chibi-header-text">
-          <h3>{currentProfile.name[lang]}</h3>
-          <p>{currentProfile.role[lang]}</p>
-        </div>
-      </div>
-
-      <div class="chibi-header-actions">
-        <div class="chibi-lang-switch">
-          <button
-            class="chibi-lang-btn"
-            class:active={lang === "EN"}
-            on:click={() => changeLang("EN")}
-          >
-            EN
-          </button>
-          <button
-            class="chibi-lang-btn"
-            class:active={lang === "TL"}
-            on:click={() => changeLang("TL")}
-          >
-            TL
-          </button>
-        </div>
+      <span class="h-2 w-2 rounded-full bg-white"></span>
+      <span class="text-xs font-semibold tracking-tight">{uiText[lang].badgeTitle}</span>
+    </button>
+  {:else}
+    <div
+      class="relative flex h-[555px] max-h-[calc(100vh-3rem)] w-[360px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[18px] bg-white text-gray-900 shadow-[0_12px_36px_rgba(0,0,0,0.22)]"
+      style="background-image: linear-gradient(to bottom, #ffffff 0%, #ffffff 63%, rgba(255,255,255,0.92) 70%, rgba(255,255,255,0.25) 82%, rgba(255,255,255,0) 100%), url('/sdn/public/assets/bg_login.jpg'); background-repeat: no-repeat; background-position: center top, center bottom; background-size: 100% 100%, 100% 190px;"
+      role="region"
+      aria-label="LINGKOD Chatbot"
+    >
+      <header class="relative flex shrink-0 flex-col items-center bg-[#0a8d19] px-[18px] pt-[14px] pb-[11px] text-white">
         <button
-          class="chibi-close-btn"
+          type="button"
           on:click={toggleChat}
-          aria-label="Close Chat"
+          class="absolute top-[10px] right-[12px] flex h-[26px] w-[26px] items-center justify-center text-white transition-opacity hover:opacity-80 focus:outline-none"
+          aria-label={uiText[lang].closeAria}
         >
           <svg
-            width="18"
-            height="18"
+            class="h-5 w-5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2.5"
+            stroke-width="2.6"
             stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
-      </div>
-    </div>
 
-    <!-- Chat Log -->
-    <div class="chibi-chat-body" bind:this={chatBody}>
-      {#each messages as msg}
-        <div class="chibi-msg-row {msg.sender}">
+        <button
+          type="button"
+          on:click={toggleAssistant}
+          class="flex flex-col items-center focus:outline-none"
+          title="Click to switch between Nurse Mika & Dr. Leo"
+        >
+          <div class="mb-0.5 flex h-[44px] items-center justify-center">
+            {#if assistant === "girl"}
+              <svg class="h-[35px] w-[50px]" viewBox="0 0 64 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 13C21 5.5 43 5.5 48 13" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" />
+                <path d="M7 17.5C18 10.5 46 10.5 57 17.5L51.5 34.5C40 28 24 28 12.5 34.5L7 17.5Z" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round" />
+                <path d="M30.2 17H33.8V20.8H37.6V24.2H33.8V28H30.2V24.2H26.4V20.8H30.2V17Z" stroke="#ffffff" stroke-width="1.9" stroke-linejoin="round" />
+              </svg>
+            {:else}
+              <svg class="h-[42px] w-[44px]" viewBox="0 0 56 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20.5" cy="6.5" r="2.3" stroke="#ffffff" stroke-width="2.1" />
+                <circle cx="35.5" cy="6.5" r="2.3" stroke="#ffffff" stroke-width="2.1" />
+                <path d="M18.5 6.8C13.5 8 12.5 18 17.8 24C21.2 27.8 25.2 29.2 28 29.2C30.8 29.2 34.8 27.8 38.2 24C43.5 18 42.5 8 37.5 6.8" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" />
+                <path d="M15.2 18.8C19.8 25.5 36.2 25.5 40.8 18.8" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+                <path d="M28 29.2V35.5C28 43 21.5 49 16 48C11.2 47.2 10.8 41.2 16 39.2C21.2 37.2 28.2 43 34.2 47.2C38.5 50.2 43 49 44.5 45.5" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" />
+                <circle cx="45.5" cy="41.5" r="5" stroke="#ffffff" stroke-width="2.2" />
+                <circle cx="45.5" cy="41.5" r="2.2" stroke="#ffffff" stroke-width="1.8" />
+              </svg>
+            {/if}
+          </div>
+          <h2 class="text-[16.5px] font-extrabold leading-tight tracking-wide text-white">
+            {assistants[assistant].name}
+          </h2>
+        </button>
+
+        <div class="my-[7px] h-px w-[88%] bg-white/85"></div>
+
+        <div class="relative flex min-h-[20px] w-[88%] items-center justify-center">
+          <p class="text-[13px] font-medium uppercase leading-tight tracking-[0.03em] text-white">
+            {uiText[lang].role}
+          </p>
+
+          <div class="absolute right-0 top-1/2 -translate-y-1/2">
+            <button
+              type="button"
+              on:click={() => (langMenuOpen = !langMenuOpen)}
+              class="inline-flex items-center gap-[3px] px-1 py-0.5 text-[11.5px] font-bold leading-none text-white focus:outline-none"
+            >
+              <span>{lang}</span>
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {#if langMenuOpen}
+              <div class="absolute right-0 top-[calc(100%+5px)] z-50 min-w-[112px] overflow-hidden rounded-md border border-gray-300 bg-white shadow-md">
+                <button
+                  type="button"
+                  on:click={() => {
+                    langMenuOpen = false;
+                    switchLang("EN");
+                  }}
+                  class="block w-full px-3 py-1.5 text-left text-[11.5px] {lang === 'EN'
+                    ? 'bg-emerald-50 font-bold text-[#0a8d19]'
+                    : 'font-medium text-gray-800 hover:bg-emerald-50/60'}"
+                >
+                  EN (English)
+                </button>
+                <button
+                  type="button"
+                  on:click={() => {
+                    langMenuOpen = false;
+                    switchLang("TL");
+                  }}
+                  class="block w-full px-3 py-1.5 text-left text-[11.5px] {lang === 'TL'
+                    ? 'bg-emerald-50 font-bold text-[#0a8d19]'
+                    : 'font-medium text-gray-800 hover:bg-emerald-50/60'}"
+                >
+                  TL (Tagalog)
+                </button>
+              </div>
+            {/if}
+          </div>
+        </div>
+      </header>
+
+      <div
+        bind:this={chatBodyRef}
+        class="flex flex-1 flex-col gap-2.5 overflow-y-auto bg-transparent px-[18px] pt-[22px] pb-[18px]"
+      >
+        {#each messages as msg (msg.id)}
           {#if msg.sender === "bot"}
-            <div class="chibi-msg-avatar" title={msg.name}>
-              <img src={msg.avatar} alt={msg.name} />
+            <div class="flex w-full items-start gap-2.5" data-msg-id={msg.id}>
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#b8bfc6]">
+                <img
+                  src={assistants[assistant].avatar}
+                  alt={assistants[assistant].name}
+                  class="h-full w-full object-cover"
+                />
+              </div>
+
+              <div class="flex max-w-[215px] flex-col items-start">
+                <div
+                  class="rounded-[6px] bg-[#c5dfb8] px-[13px] py-[10px] text-[10.5px] leading-[1.35] text-gray-900 {highlightedMsgId === msg.id ? 'outline outline-2 outline-[#0a8d19]' : ''}"
+                >
+                  {@html msg.text}
+                </div>
+                <span class="mt-1 self-end text-[8.5px] text-gray-900">
+                  {msg.time}
+                </span>
+              </div>
+            </div>
+
+            {#if msg.isInitial && showingMainTopics}
+              <div
+                data-topics-list
+                class="mt-1 mr-1 ml-auto flex w-[210px] shrink-0 flex-col items-start"
+              >
+                <div class="mb-2 inline-block rounded-[5px] bg-[#c4c4c4] px-2.5 py-1.5 text-[9.5px] font-bold uppercase leading-none text-gray-900">
+                  {uiText[lang].chooseTopic}
+                </div>
+
+                <div class="flex w-full flex-col gap-[7px]">
+                  {#each topics[lang] as topic}
+                    <button
+                      type="button"
+                      on:click={() => handleSelectQuestion(topic)}
+                      class="group flex w-full items-center justify-between gap-2 rounded-[6px] border border-gray-400 bg-white/95 px-2.5 py-[7px] text-left text-[10px] leading-[1.3] text-gray-900 transition-colors hover:border-[#0a8d19] hover:bg-white focus:outline-none"
+                    >
+                      <span class="flex-1">{topic}</span>
+                      <svg
+                        class="h-3 w-3 shrink-0 text-gray-500 transition-transform group-hover:translate-x-0.5 group-hover:text-[#0a8d19]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
+            {#if !msg.isInitial && !showingMainTopics && msg.id === activeBotMsgId && msg.followUps && msg.followUps.length > 0}
+              <div class="mt-0.5 mr-auto ml-[46px] flex w-[215px] shrink-0 flex-col items-start">
+                <div class="mb-2 inline-block rounded-[5px] bg-[#c4c4c4] px-2.5 py-1.5 text-[9.5px] font-bold uppercase leading-none text-gray-900">
+                  {uiText[lang].followUpTitle}
+                </div>
+                <div class="flex w-full flex-col gap-[7px]">
+                  {#each msg.followUps as chip}
+                    <button
+                      type="button"
+                      on:click={() => handleSelectQuestion(chip)}
+                      class="group flex w-full items-center justify-between gap-2 rounded-[6px] border border-gray-400 bg-white/95 px-2.5 py-[7px] text-left text-[10px] leading-[1.3] text-gray-900 transition-colors hover:border-[#0a8d19] hover:bg-white focus:outline-none"
+                    >
+                      <span class="flex-1">{chip}</span>
+                      <svg
+                        class="h-3 w-3 shrink-0 text-gray-500 transition-transform group-hover:translate-x-0.5 group-hover:text-[#0a8d19]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                  {/each}
+                </div>
+
+                <button
+                  type="button"
+                  on:click={handleBackToTopics}
+                  class="mt-[7px] w-full rounded-[6px] border border-[#0a8d19] bg-[#e8f5e9]/95 px-2.5 py-1.5 text-center text-[9.5px] font-bold leading-tight text-[#0a8d19] transition-colors hover:bg-[#0a8d19] hover:text-white focus:outline-none"
+                >
+                  {uiText[lang].backToTopics}
+                </button>
+              </div>
+            {/if}
+          {:else}
+            <div class="flex flex-col items-end">
+              <div class="max-w-[210px] rounded-[6px] bg-[#0a8d19] px-3 py-2 text-[10.5px] font-medium leading-[1.35] text-white">
+                {msg.text}
+              </div>
+              <span class="mt-1 text-[8.5px] text-gray-900">
+                {msg.time}
+              </span>
             </div>
           {/if}
-          <div class="chibi-msg-box">
-            <div class="chibi-msg-bubble {msg.sender}">
-              {@html msg.text}
+        {/each}
+
+        {#if isTyping}
+          <div class="flex items-center pl-[46px]">
+            <div class="inline-flex items-center gap-1 rounded-[6px] bg-[#c5dfb8] px-3 py-2">
+              <span class="h-1 w-1 animate-bounce rounded-full bg-gray-900"></span>
+              <span class="h-1 w-1 animate-bounce rounded-full bg-gray-900 [animation-delay:0.15s]"></span>
+              <span class="h-1 w-1 animate-bounce rounded-full bg-gray-900 [animation-delay:0.3s]"></span>
             </div>
-            <div class="chibi-msg-time">{msg.time}</div>
           </div>
-        </div>
-      {/each}
-
-      {#if isTyping}
-        <div class="chibi-typing-row">
-          <div class="chibi-msg-avatar">
-            <img src={currentProfile.avatar} alt={currentProfile.name[lang]} />
-          </div>
-          <div class="chibi-typing-bubble">
-            <span class="chibi-dot"></span>
-            <span class="chibi-dot"></span>
-            <span class="chibi-dot"></span>
-          </div>
-        </div>
-      {/if}
-
-      {#if showOptions && !isTyping}
-        <div class="chibi-faq-container" transition:fade>
-          <span class="chibi-faq-label">{currentDict.selectQuestion}</span>
-          {#each currentFaqs as faq}
-            <button
-              class="chibi-faq-item"
-              on:click={() => handleQuestionClick(faq)}
-            >
-              {faq.question}
-            </button>
-          {/each}
-        </div>
-      {:else if showRating && userRating === 0}
-        <div class="chibi-rating-card" transition:fade>
-          <p>{currentDict.limitReached}</p>
-          <div class="chibi-stars">
-            {#each [1, 2, 3, 4, 5] as star}
-              <button
-                class="chibi-star-btn"
-                on:click={() => handleRating(star)}
-                title="{star} Star"
-              >
-                ★
-              </button>
-            {/each}
-          </div>
-        </div>
-      {:else if userRating === 0 && !isTyping}
-        <div class="chibi-reset-container" transition:fade>
-          <button class="chibi-reset-btn" on:click={resetOptions}>
-            {currentDict.askAnother}
-          </button>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
-  </div>
-{/if}
-
-<style>
-  .chibi-widget-container {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 99999;
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
-    pointer-events: auto;
-    font-family: 'Outfit', 'Inter', sans-serif;
-  }
-
-  .chibi-stage {
-    position: relative;
-    width: 140px;
-    height: 140px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    cursor: pointer;
-    background: transparent;
-    padding: 0;
-    border: none;
-    overflow: visible;
-  }
-
-  .chibi-ground-shadow {
-    position: absolute;
-    bottom: 0px;
-    width: 65px;
-    height: 14px;
-    background: radial-gradient(ellipse at center, rgba(16, 70, 36, 0.35) 0%, rgba(16, 70, 36, 0.08) 55%, transparent 75%);
-    border-radius: 50%;
-    pointer-events: none;
-  }
-
-  .chibi-character-actor {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-  }
-
-  /* ------------------- BOY: Dr. Leo Walk Cycles ------------------- */
-  .chibi-character-actor.actor-boy.state-walk-in,
-  .chibi-character-actor.state-walk-in {
-    animation: boySlowWalkIn 2.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
-  }
-
-  @keyframes boySlowWalkIn {
-    0% { transform: translateX(115px); opacity: 0; }
-    10% { opacity: 1; }
-    100% { transform: translateX(0); opacity: 1; }
-  }
-
-  .chibi-character-actor.actor-boy.state-arrived {
-    transform: translateX(0);
-    opacity: 1;
-    animation: chibiGentleBreathe 2.6s ease-in-out infinite;
-  }
-
-  .chibi-character-actor.actor-boy.state-walk-out,
-  .chibi-character-actor.state-walk-out {
-    animation: boySlowWalkOut 2.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
-  }
-
-  @keyframes boySlowWalkOut {
-    0% { transform: translateX(0) scaleX(-1); opacity: 1; }
-    80% { opacity: 1; }
-    100% { transform: translateX(130px) scaleX(-1); opacity: 0; }
-  }
-
-  /* ------------------- GIRL: Nurse Mika Walk & Wave Cycles ------------------- */
-  .chibi-character-actor.actor-girl.state-walk-in {
-    animation: girlStraightWalkIn 2.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
-  }
-
-  @keyframes girlStraightWalkIn {
-    0% { transform: translateX(115px); opacity: 0; }
-    10% { opacity: 1; }
-    100% { transform: translateX(0); opacity: 1; }
-  }
-
-  .chibi-character-actor.actor-girl.state-wave-hello {
-    transform: translateX(0);
-    opacity: 1;
-    animation: chibiGentleBreathe 2.4s ease-in-out infinite;
-  }
-
-  .chibi-character-actor.actor-girl.state-arrived {
-    transform: translateX(0);
-    opacity: 1;
-    animation: chibiGentleBreathe 2.4s ease-in-out infinite;
-  }
-
-  .chibi-character-actor.actor-girl.state-wave-bye {
-    transform: translateX(0);
-    opacity: 1;
-    animation: chibiGentleBreathe 2.4s ease-in-out infinite;
-  }
-
-  .chibi-character-actor.actor-girl.state-walk-out {
-    animation: girlStraightWalkOut 2.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
-  }
-
-  @keyframes girlStraightWalkOut {
-    0% { transform: translateX(0) scaleX(-1); opacity: 1; }
-    80% { opacity: 1; }
-    100% { transform: translateX(130px) scaleX(-1); opacity: 0; }
-  }
-
-  @keyframes chibiGentleBreathe {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-2.5px); }
-  }
-
-  .chibi-character-actor.state-arrived {
-    transform: translateX(0);
-    opacity: 1;
-  }
-
-  .chibi-sprite {
-    display: block;
-    image-rendering: pixelated;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: crisp-edges;
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.16));
-  }
-
-  /* Boy Chibi Sprite: 16 frames, 380x655 per frame (height 124px, width 72px) */
-  .chibi-sprite-boy {
-    width: 72px;
-    height: 124px;
-    background-image: url('/sdn/public/assets/boy_walk_spritesheet.png');
-    background-size: 1152px 124px;
-    background-repeat: no-repeat;
-    animation: boyStep 1.0s steps(16) infinite;
-  }
-
-  .chibi-character-actor.state-arrived .chibi-sprite-boy {
-    animation: none !important;
-    background-position: 0 0 !important;
-  }
-
-  @keyframes boyStep {
-    from { background-position: 0 0; }
-    to { background-position: -1152px 0; }
-  }
-
-  /* Girl Chibi Walking Sprite: 16 frames natural leg walk cycle with walking eye blinks, 360x635 per frame (height 120px, width 68px) */
-  .chibi-sprite-girl {
-    width: 68px;
-    height: 120px;
-    background-image: url('/sdn/public/assets/girl_walk_spritesheet.png');
-    background-size: 1088px 120px;
-    background-repeat: no-repeat;
-    animation: girlStep 1.0s steps(16) infinite;
-  }
-
-  /* When girl is arrived, stand cleanly on both feet and blink eyes smoothly!
-     girl_idle_spritesheet.png has 4 frames:
-     Frame 0 (0px): Open eyes (normal resting face)
-     Frame 1 (-68px): Half-closed eyes (natural eyelid drop transition)
-     Frame 2 (-136px): Fully closed eyes (sweet smiling anime curved lashes)
-     Frame 3 (-204px): Half-open eyes (natural eyelid opening transition) */
-  .chibi-character-actor.actor-girl.state-arrived .chibi-sprite-girl {
-    background-image: url('/sdn/public/assets/girl_idle_spritesheet.png') !important;
-    background-size: 272px 120px !important;
-    animation: girlIdleBlink 3.6s steps(1) infinite !important;
-  }
-
-  @keyframes girlIdleBlink {
-    0%, 91.5%, 98.5%, 100% {
-      background-position: 0 0;
-    }
-    92%, 97.5% {
-      background-position: -68px 0;
-    }
-    93.5%, 96% {
-      background-position: -136px 0;
-    }
-  }
-
-  /* Girl Waving Sprite: 4 frames, 480x635 per frame (height 120px, width 91px)
-     Raised arm holding pen, swinging back and forth with smiling/blinking face! */
-  .chibi-sprite-girl-wave {
-    width: 91px;
-    height: 120px;
-    margin-left: -11px;
-    background-image: url('/sdn/public/assets/girl_wave_spritesheet.png');
-    background-size: 364px 120px;
-    background-repeat: no-repeat;
-    animation: girlWave 0.75s steps(4) infinite;
-  }
-
-  @keyframes girlWave {
-    from { background-position: 0 0; }
-    to { background-position: -364px 0; }
-  }
-
-  .chibi-ask-me-bubble {
-    position: absolute;
-    top: -46px;
-    left: -86px;
-    width: 96px;
-    height: 52px;
-    background-image: url('/sdn/public/assets/chibi_ask_me.png');
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-    image-rendering: pixelated;
-    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
-    cursor: pointer;
-    z-index: 20;
-    animation: askMePopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both,
-               askMeFloat 3s ease-in-out infinite 0.6s;
-    transition: transform 0.2s ease, filter 0.2s ease, width 0.2s ease, height 0.2s ease, top 0.2s ease, left 0.2s ease;
-  }
-
-  .chibi-ask-me-bubble.is-tl {
-    width: 124px;
-    height: 68px;
-    top: -62px;
-    left: -114px;
-    background-image: url('/sdn/public/assets/chibi_ask_me_tl.png') !important;
-  }
-
-  @keyframes askMePopIn {
-    0% { opacity: 0; transform: scale(0.2) translateY(18px) rotate(-6deg); }
-    70% { opacity: 1; transform: scale(1.1) translateY(-3px) rotate(1deg); }
-    100% { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
-  }
-
-  @keyframes askMeFloat {
-    0% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
-    100% { transform: translateY(0); }
-  }
-
-  .chibi-chat-window {
-    position: fixed;
-    bottom: 5rem;
-    right: 2rem;
-    width: 390px;
-    height: 560px;
-    max-height: calc(100vh - 7rem);
-    background: #fafcfb;
-    border-radius: 20px;
-    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.22);
-    display: flex;
-    flex-direction: column;
-    z-index: 100000;
-    overflow: hidden;
-    font-family: 'Inter', sans-serif;
-    border: 1px solid #e0ece5;
-  }
-
-  .chibi-chat-header {
-    background: linear-gradient(135deg, #1b532e 0%, #286b46 50%, #1f5634 100%);
-    color: white;
-    padding: 1.15rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .chibi-header-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-  }
-
-  .chibi-avatar-single {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: #ffffff;
-    border: 2.5px solid #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    cursor: pointer;
-  }
-
-  .chibi-avatar-single img {
-    width: 88%;
-    height: 88%;
-    object-fit: contain;
-    object-position: center bottom;
-    transform: translateY(2px);
-    image-rendering: pixelated;
-  }
-
-  .chibi-header-text h3 {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #ffffff;
-  }
-
-  .chibi-header-text p {
-    margin: 2px 0 0 0;
-    font-size: 0.75rem;
-    color: #a7f3d0;
-    font-weight: 500;
-  }
-
-  .chibi-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .chibi-lang-switch {
-    display: flex;
-    background: rgba(0, 0, 0, 0.22);
-    border-radius: 20px;
-    padding: 2px;
-  }
-
-  .chibi-lang-btn {
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 14px;
-    cursor: pointer;
-  }
-
-  .chibi-lang-btn.active {
-    background: #ffffff;
-    color: #1e5a32;
-  }
-
-  .chibi-close-btn {
-    background: rgba(255, 255, 255, 0.12);
-    border: none;
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-
-  .chibi-chat-body {
-    flex: 1;
-    padding: 1.25rem 1rem;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    background-color: #f7faf8;
-  }
-
-  .chibi-msg-row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-  }
-
-  .chibi-msg-row.user {
-    justify-content: flex-end;
-  }
-
-  .chibi-msg-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #ffffff;
-    border: 1.5px solid #d1fae5;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    flex-shrink: 0;
-    overflow: hidden;
-    margin-bottom: 2px;
-  }
-
-  .chibi-msg-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    image-rendering: pixelated;
-  }
-
-  .chibi-msg-box {
-    display: flex;
-    flex-direction: column;
-    max-width: 80%;
-  }
-
-  .chibi-msg-row.user .chibi-msg-box {
-    align-items: flex-end;
-  }
-
-  .chibi-msg-bubble {
-    padding: 12px 16px;
-    border-radius: 20px;
-    font-size: 0.92rem;
-    line-height: 1.5;
-    word-wrap: break-word;
-    color: #1e293b;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
-  }
-
-  .chibi-msg-bubble.bot {
-    background: #ffffff;
-    border: 1px solid #e2ece6;
-    border-bottom-left-radius: 4px;
-  }
-
-  .chibi-msg-bubble.user {
-    background: linear-gradient(135deg, #1b532e 0%, #286b46 100%);
-    color: #ffffff;
-    border-bottom-right-radius: 4px;
-  }
-
-  .chibi-msg-time {
-    font-size: 0.68rem;
-    color: #94a3b8;
-    margin-top: 4px;
-    margin-left: 6px;
-    font-weight: 500;
-  }
-
-  .chibi-typing-row {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-  }
-
-  .chibi-typing-bubble {
-    background: #ffffff;
-    border: 1px solid #e2ece6;
-    border-radius: 18px;
-    border-bottom-left-radius: 4px;
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .chibi-dot {
-    width: 7px;
-    height: 7px;
-    background-color: #10b981;
-    border-radius: 50%;
-    animation: typingBlink 1.4s infinite ease-in-out both;
-  }
-  .chibi-dot:nth-child(1) { animation-delay: -0.32s; }
-  .chibi-dot:nth-child(2) { animation-delay: -0.16s; }
-
-  @keyframes typingBlink {
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-    40% { transform: scale(1.1); opacity: 1; }
-  }
-
-  .chibi-faq-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 6px;
-    padding-left: 48px;
-  }
-
-  .chibi-faq-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #4b6b55;
-  }
-
-  .chibi-faq-item {
-    background: #ffffff;
-    border: 1.5px solid #d5e7dc;
-    color: #1e5a32;
-    padding: 10px 14px;
-    border-radius: 16px;
-    text-align: left;
-    font-size: 0.86rem;
-    font-weight: 600;
-    cursor: pointer;
-    line-height: 1.4;
-    transition: all 0.2s ease;
-  }
-
-  .chibi-faq-item:hover {
-    background: #f0fdf4;
-    border-color: #10b981;
-    transform: translateY(-2px);
-  }
-
-  .chibi-reset-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-  }
-
-  .chibi-reset-btn {
-    background: #ffffff;
-    border: 1.5px solid #10b981;
-    color: #10b981;
-    font-size: 0.86rem;
-    font-weight: 700;
-    padding: 8px 18px;
-    border-radius: 20px;
-    cursor: pointer;
-  }
-
-  .chibi-rating-card {
-    background: #ffffff;
-    border: 1px solid #d5e7dc;
-    border-radius: 16px;
-    padding: 16px;
-    text-align: center;
-  }
-
-  .chibi-stars {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .chibi-star-btn {
-    background: none;
-    border: none;
-    font-size: 1.8rem;
-    color: #cbd5e1;
-    cursor: pointer;
-  }
-  .chibi-star-btn:hover {
-    color: #f59e0b;
-    transform: scale(1.25);
-  }
-
-  @media (max-width: 600px) {
-    .chibi-widget-container { bottom: 0.85rem; right: 0.85rem; }
-    .chibi-stage {
-      transform: scale(0.85);
-      transform-origin: bottom right;
-    }
-    .chibi-chat-window { width: calc(100vw - 1.5rem); right: 0.75rem; bottom: 4.8rem; height: 490px; }
-  }
-
-  @media (max-width: 380px) {
-    .chibi-stage {
-      transform: scale(0.78);
-      transform-origin: bottom right;
-    }
-  }
-</style>
+  {/if}
+</div>

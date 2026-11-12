@@ -79,7 +79,7 @@
             </div>
 
             <!-- Google Maps Style Navigation Floating Card / HUD -->
-            <div id="map-nav-hud" class="absolute top-3 left-3 right-24 md:left-4 md:right-auto md:max-w-xs bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-xl border border-gray-200 transition-all duration-300 pointer-events-auto" style="z-index: 500; display: none;">
+            <div id="map-nav-hud" class="absolute top-3 left-3 bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-xl border border-gray-200 transition-all duration-300 pointer-events-auto" style="z-index: 500; display: none; width: 280px; max-width: calc(100% - 6.5rem); right: auto;">
               <div class="flex items-start justify-between gap-2.5">
                 <div class="flex items-start gap-2.5">
                   <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
@@ -109,20 +109,40 @@
               </div>
 
               <!-- Quick Start Point Selector -->
-              <div class="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                <div class="flex items-center gap-1 text-gray-500">
-                  <span class="text-gray-400">From:</span>
-                  <select id="select-route-start" class="bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-700 font-medium text-[11px] focus:outline-none focus:border-blue-500 cursor-pointer">
+              <div class="nav-hud-footer mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between gap-2 text-[11px]">
+                <div class="flex items-center gap-1 text-gray-500 min-w-0">
+                  <span class="text-gray-400 shrink-0">From:</span>
+                  <select id="select-route-start" class="min-w-0 max-w-[9.5rem] bg-gray-50 border border-gray-200 rounded px-2 py-0.5 text-gray-700 font-medium text-[11px] focus:outline-none focus:border-blue-500 cursor-pointer">
                     <option value="you_are_here">📍 You Are Here (Campus Path)</option>
                     <option value="gate">🚪 Main Entrance (Gate 2)</option>
                   </select>
                 </div>
-                <button id="btn-fit-route" class="text-[11px] text-blue-600 font-semibold hover:text-blue-800 transition-colors">Fit Route</button>
+                <button id="btn-fit-route" class="shrink-0 whitespace-nowrap text-[11px] text-blue-600 font-semibold hover:text-blue-800 transition-colors">Fit Route</button>
               </div>
             </div>
 
             <!-- Leaflet Map Container -->
             <div id="inline-map-container" class="absolute inset-0" style="z-index: 1;"></div>
+          </div>
+
+          <!-- Destination picker: shown only while the map modal is open -->
+          <div id="modal-dest-panel" class="sitemap-modal-dest-panel flex-col min-h-0">
+            <div class="shrink-0 flex items-center justify-between gap-2 pb-2">
+              <p class="text-sm font-semibold text-gray-800">Choose a destination</p>
+              <span class="text-[11px] text-gray-400">Updates the route above</span>
+            </div>
+            <div class="shrink-0 flex items-center gap-2 pb-2">
+              <input
+                type="text"
+                id="modal-dest-search"
+                placeholder="Search buildings"
+                data-i18n-ph="map_search"
+                class="min-w-0 flex-1 text-sm bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-green-600"
+              />
+              <button type="button" id="btn-modal-show-all" class="sitemap-pill-btn sitemap-pill-active">All</button>
+              <button type="button" id="btn-modal-show-visited" class="sitemap-pill-btn sitemap-pill-inactive">Visited</button>
+            </div>
+            <div id="modal-directory-list" role="list" class="overflow-y-auto flex-1 min-h-0 p-1 space-y-1.5 overscroll-contain"></div>
           </div>
         </div>
       </div>
@@ -133,7 +153,7 @@
 
 <!-- Pop-up Map Modal Backdrop (Outside data-aos section so position:fixed covers viewport below Navbar) -->
 <div id="sitemap-modal-backdrop" class="sitemap-modal-backdrop-inline" aria-hidden="true">
-  <div id="sitemap-modal-holder" class="sitemap-modal-holder-inline"></div>
+  <div id="sitemap-modal-holder" class="sitemap-modal-holder-inline flex flex-col min-h-0"></div>
 </div>
 
 <style>
@@ -384,10 +404,12 @@
   }
 
   .sitemap-modal-holder-inline {
-    width: min(90vw, 1020px);
-    height: calc(100vh - 125px);
-    max-height: 740px;
+    width: min(94vw, 1020px);
+    height: calc(100vh - 110px);
+    max-height: 820px;
     display: flex;
+    flex-direction: column;
+    min-height: 0;
     transform: translateY(14px) scale(0.98);
     transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -398,9 +420,67 @@
 
   .sitemap-modal-holder-inline .sitemap-card-frame-inline {
     cursor: default;
-    padding: 16px;
+    padding: 12px;
     border-radius: 26px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sitemap-modal-dest-panel {
+    display: none;
+  }
+
+  .sitemap-modal-holder-inline .sitemap-canvas-wrapper-inline {
+    flex: 0 0 56%;
+    height: 56%;
+    min-height: 0;
+  }
+
+  .sitemap-modal-holder-inline .sitemap-modal-dest-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .sitemap-modal-dest-panel .sitemap-pill-btn {
+    padding: 0.35rem 0.75rem;
+    min-width: 0;
+    font-size: 0.7rem;
+  }
+
+  .modal-dest-btn.modal-dest-active {
+    background-color: #f0fdf4;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 1px #16a34a;
+  }
+
+  .sitemap-modal-dest-panel .overflow-y-auto::-webkit-scrollbar { width: 6px; }
+  .sitemap-modal-dest-panel .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
+  .sitemap-modal-dest-panel .overflow-y-auto::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+  @media (max-width: 767px) {
+    .sitemap-modal-backdrop-inline {
+      padding: 0.5rem;
+      align-items: stretch;
+    }
+    .sitemap-modal-holder-inline {
+      width: 100%;
+      height: 100%;
+      max-height: none;
+    }
+    .sitemap-modal-holder-inline .sitemap-canvas-wrapper-inline {
+      flex-basis: 52%;
+      height: 52%;
+    }
   }
 
   .sitemap-modal-holder-inline .sitemap-modal-close-btn {
@@ -409,6 +489,29 @@
 
   .sitemap-modal-holder-inline .sitemap-fixed-compass-inline {
     top: 56px;
+  }
+
+  .sitemap-modal-holder-inline #map-nav-hud {
+    left: 14px;
+    right: auto !important;
+    width: 280px;
+    max-width: calc(100% - 6.5rem);
+  }
+
+  .sitemap-modal-holder-inline #map-nav-hud .nav-hud-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .sitemap-modal-holder-inline #select-route-start {
+    width: auto;
+    max-width: 9.5rem;
+  }
+
+  .sitemap-modal-holder-inline #btn-fit-route {
+    align-self: center;
   }
 
   .sitemap-canvas-wrapper-inline {
@@ -616,130 +719,183 @@
       let currentDestMarker = null;
       const mostVisitedIds = [16, 24, 37, 5, 1, 14, 25]; // Hardcoded top visited IDs
 
-      // --- HOSPITAL WALKWAY NAVIGATION GRAPH ---
+      // --- HOSPITAL WALKWAY NAVIGATION GRAPH (STRICTLY ON OUTDOOR PATHWAYS & ROADS) ---
       const nodes = {
-          'gate':          { y: 102, x: 238 },
-          'road_entry':    { y: 170, x: 220 },
-          'you_are_here':  { y: 320, x: 200 },
-          'spine_south':   { y: 350, x: 315 },
-          'spine_mid':     { y: 460, x: 315 },
-          'crossroads':    { y: 535, x: 315 },
-          'spine_north':   { y: 620, x: 315 },
-          'wards_entry':   { y: 720, x: 315 },
-          'north_curve_1': { y: 775, x: 300 },
-          'north_curve_2': { y: 840, x: 260 },
-          'north_curve_3': { y: 900, x: 230 },
-          'north_end':     { y: 952, x: 185 },
-          'east_entry':    { y: 200, x: 380 },
-          'east_1':        { y: 250, x: 380 },
-          'east_2':        { y: 277, x: 450 },
-          'east_3':        { y: 331, x: 450 },
-          'east_4':        { y: 378, x: 450 },
-          'east_5':        { y: 416, x: 450 },
-          'east_6':        { y: 446, x: 450 },
-          'east_crossway': { y: 535, x: 450 },
-          'east_stp':      { y: 583, x: 470 },
-          'pav_lower':     { y: 620, x: 390 },
-          'pav_mid':       { y: 662, x: 370 },
-          'pav_upper':     { y: 715, x: 380 },
-          'pav_far_east':  { y: 775, x: 412 },
-          'west_opu':      { y: 245, x: 150 },
-          'west_1':        { y: 390, x: 140 },
-          'west_2':        { y: 422, x: 140 },
-          'west_3':        { y: 476, x: 140 },
-          'west_crossway': { y: 535, x: 140 },
-          'west_4':        { y: 591, x: 140 },
-          'west_5':        { y: 658, x: 170 },
-          'west_6':        { y: 702, x: 170 },
-          'west_7':        { y: 723, x: 140 },
-          'west_north':    { y: 840, x: 140 }
+          // Entrance / South Main Road (strictly on road)
+          'gate':           { y: 102, x: 205 },
+          'road_entry':     { y: 155, x: 205 },
+          'canteen_spur':   { y: 160, x: 220 },
+          'main_road_east': { y: 140, x: 370 },
+          'main_road_west': { y: 155, x: 155 },
+
+          // South Plaza / You Are Here Hub
+          'plaza_south':    { y: 240, x: 205 },
+          'plaza_east':     { y: 240, x: 280 },
+          'you_are_here':   { y: 320, x: 200 },
+          'yah_east':       { y: 320, x: 240 },
+          'yah_west':       { y: 320, x: 140 },
+
+          // Central Walkway Promenade (Bypasses Bldg 40, Bldg 3, Bldg 4, Bldg 5, Bldg 32, Bldg 6)
+          'corridor_s1':    { y: 380, x: 240 }, // east of Bldg 40, west of Bldg 3/4
+          'corridor_s2':    { y: 450, x: 250 }, // south of Covered Court 32, west of Bldg 5
+          'corridor_cross': { y: 495, x: 275 }, // south of Covered Court, open breezeway junction
+          'corridor_mid':   { y: 570, x: 275 }, // between Covered Court 32 and CCU 6
+          'corridor_ot':    { y: 660, x: 275 }, // between OT 34 and CCU 6
+          'corridor_n1':    { y: 735, x: 275 }, // north of CCU 6 and OT 34
+
+          // East Breezeway (between Bldg 5 and Bldg 6, connecting to East Road)
+          'breeze_mid':     { y: 495, x: 375 }, // open outdoor area between Bldg 5, 24 and 6
+          'breeze_east':    { y: 495, x: 475 }, // connects to east road
+
+          // West Road System (along western boundary past 28, 29-A, 30, 41, 31, 36, 35)
+          'west_opu':       { y: 235, x: 155 }, // near OPU 28
+          'west_1':         { y: 320, x: 140 }, // junction near You Are Here
+          'west_2':         { y: 422, x: 140 }, // near Lazareto 30 / Malasakit 41
+          'west_3':         { y: 476, x: 140 }, // near Chapel 31
+          'west_cross':     { y: 495, x: 155 }, // crossway to central corridor
+          'west_4':         { y: 580, x: 155 }, // between Bldg 36 and Covered Court 32
+          'west_5':         { y: 660, x: 155 }, // west of OT 34
+          'west_6':         { y: 702, x: 175 }, // east of Isolation 33 / Male Dorm 35
+          'west_7':         { y: 735, x: 175 }, // east of Male Dorm 35
+          'west_north':     { y: 830, x: 180 }, // east of Power House 17
+          'west_top':       { y: 900, x: 180 }, // approaches Linen & Laundry 15
+
+          // East Road System (past General Hospital 16, Lab 18, NDU 19, MMU 21, HOPS 24, COA 25, Dorm 26)
+          'east_entry':     { y: 200, x: 425 }, // entrance to General Hospital / Radiology
+          'east_1':         { y: 240, x: 445 }, // between Radiology 2 and Gen Hospital 16
+          'east_2':         { y: 280, x: 475 }, // in front of Lab 18
+          'east_3':         { y: 335, x: 460 }, // in front of NDU 19 / Dorm 20
+          'east_4':         { y: 375, x: 460 }, // in front of MMU 21
+          'east_5':         { y: 415, x: 455 }, // in front of Warehouse 22 / MRF 23
+          'east_6':         { y: 450, x: 455 }, // in front of HOPS 24 / COA 25
+          'east_crossway':  { y: 535, x: 475 }, // in front of Male Dorm 26
+          'east_stp':       { y: 585, x: 475 }, // STP 27
+          'east_pav_entry': { y: 620, x: 475 }, // entrance to Male Ward 7
+          'east_pav_mid':   { y: 685, x: 475 }, // near Obs Unit 9 / Nurse Station 8
+          'east_pav_upper': { y: 735, x: 475 }, // near Female Ward 10
+          'east_pav_top':   { y: 780, x: 475 }, // near Old Infirmary 12
+
+          // Northern Campus Loop & Facilities (Bldgs 11, 13, 14, 38, 15)
+          'north_junc_1':   { y: 765, x: 260 }, // north junction connecting central, west and pavilions
+          'north_junc_2':   { y: 815, x: 260 }, // past Old CCU 11 & Cadaver 13
+          'north_tb_dots':  { y: 870, x: 235 }, // in front of TB-Dots 14
+          'north_waste':    { y: 910, x: 255 }, // road in front of Waste Autoclave 38
+          'north_top_road': { y: 930, x: 255 }, // road above Bldg 38
+          'north_end':      { y: 952, x: 215 }  // Linen and Laundry 15
       };
 
       // Building closest walkway connection mapping
       const bldgAttach = {
-          1: 'gate',
-          2: 'east_1',
-          3: 'spine_south',
-          4: 'spine_south',
-          5: 'spine_mid',
-          6: 'pav_lower',
-          7: 'pav_lower',
-          8: 'pav_mid',
-          9: 'pav_mid',
-          10: 'pav_upper',
-          11: 'north_curve_1',
-          12: 'pav_far_east',
-          13: 'north_curve_1',
-          14: 'north_curve_2',
-          15: 'north_end',
-          16: 'east_entry',
-          17: 'north_curve_1',
-          18: 'east_2',
-          19: 'east_3',
-          20: 'east_3',
-          21: 'east_4',
-          22: 'east_5',
-          23: 'east_5',
-          24: 'east_6',
-          25: 'east_6',
-          26: 'east_crossway',
-          27: 'east_stp',
-          28: 'west_opu',
-          30: 'west_2',
-          31: 'west_3',
-          32: 'crossroads',
-          33: 'west_6',
-          34: 'west_5',
-          35: 'west_7',
-          36: 'west_4',
-          37: 'road_entry',
-          38: 'north_curve_3',
-          39: 'pav_mid',
-          40: 'west_1',
-          41: 'west_2'
+          1:  'gate',           // Guard House Gate 2
+          2:  'east_1',         // Radiology Complex
+          3:  'yah_east',       // EFMU Building
+          4:  'corridor_s1',    // HIMU
+          5:  'corridor_s2',    // Finance Management
+          6:  'corridor_mid',   // Custodial Care Unit (west main entrance on promenade)
+          7:  'east_pav_entry', // Male Ward Pavilion
+          8:  'east_pav_mid',   // Nurse Station
+          9:  'east_pav_mid',   // Observation Unit
+          10: 'east_pav_upper', // Female Ward Pavilion
+          11: 'north_junc_1',   // Old CCU
+          12: 'east_pav_top',   // Old Infirmary Unit
+          13: 'north_junc_2',   // Cadaver Holding Area
+          14: 'north_tb_dots',  // TB-Dots
+          15: 'north_end',      // Linen and Laundry
+          16: 'east_entry',     // General Hospital
+          17: 'west_north',     // Power House
+          18: 'east_2',         // Laboratory Complex
+          19: 'east_3',         // Nutrition and Dietetics (NDU)
+          20: 'east_3',         // Staff Dormitory
+          21: 'east_4',         // Procurement and Materials (MMU)
+          22: 'east_5',         // Warehouse
+          23: 'east_5',         // Material Recovery Facility
+          24: 'breeze_mid',     // HOPS
+          25: 'east_6',         // COA Building
+          26: 'east_crossway',  // Male Dorm
+          27: 'east_stp',       // Sewerage Treatment Plant
+          28: 'west_opu',       // OPU Building
+          30: 'west_2',         // Lazareto Treatment Hub
+          31: 'west_3',         // Chapel
+          32: 'corridor_mid',   // Covered Court
+          33: 'west_6',         // Isolation Building-1
+          34: 'corridor_ot',    // Occupational Therapy Building
+          35: 'west_7',         // Male Dorm A&B
+          36: 'west_4',         // Isolation Building-2 (Bayanihan Bldg)
+          37: 'canteen_spur',   // Canteen (PACD)
+          38: 'north_waste',    // Integrated Medical Waste Autoclave Machine House
+          39: 'corridor_ot',    // Nurse Station (Male Ward)
+          40: 'corridor_s1',    // Medical Ward
+          41: 'west_2'          // Malasakit Center Building
       };
 
       const edges = [
+          // South / Entrance
           ['gate', 'road_entry'],
-          ['road_entry', 'you_are_here'],
-          ['road_entry', 'west_opu'],
-          ['road_entry', 'east_entry'],
-          ['you_are_here', 'spine_south'],
-          ['you_are_here', 'west_1'],
-          ['spine_south', 'spine_mid'],
-          ['spine_mid', 'crossroads'],
-          ['crossroads', 'spine_north'],
-          ['spine_north', 'wards_entry'],
-          ['wards_entry', 'north_curve_1'],
-          ['north_curve_1', 'north_curve_2'],
-          ['north_curve_2', 'north_curve_3'],
-          ['north_curve_3', 'north_end'],
-          ['crossroads', 'east_crossway'],
+          ['road_entry', 'main_road_east'],
+          ['road_entry', 'main_road_west'],
+          ['road_entry', 'plaza_south'],
+          ['road_entry', 'canteen_spur'],
+
+          // South Plaza & Connections
+          ['plaza_south', 'road_entry'],
+          ['plaza_south', 'you_are_here'],
+          ['plaza_south', 'yah_east'],
+
+          // Main Road East & East Entry
+          ['main_road_east', 'east_entry'],
+          ['east_entry', 'east_1'],
+          ['east_1', 'east_2'],
+          ['east_2', 'east_3'],
+          ['east_3', 'east_4'],
+          ['east_4', 'east_5'],
+          ['east_5', 'east_6'],
+          ['east_6', 'breeze_east'],
+          ['breeze_east', 'east_crossway'],
           ['east_crossway', 'east_stp'],
-          ['east_crossway', 'east_6'],
-          ['east_6', 'east_5'],
-          ['east_5', 'east_4'],
-          ['east_4', 'east_3'],
-          ['east_3', 'east_2'],
-          ['east_2', 'east_1'],
-          ['east_1', 'east_entry'],
-          ['spine_south', 'east_1'],
-          ['spine_north', 'pav_lower'],
-          ['pav_lower', 'pav_mid'],
-          ['pav_mid', 'pav_upper'],
-          ['wards_entry', 'pav_upper'],
-          ['pav_upper', 'pav_far_east'],
+          ['east_crossway', 'east_pav_entry'],
+          ['east_pav_entry', 'east_pav_mid'],
+          ['east_pav_mid', 'east_pav_upper'],
+          ['east_pav_upper', 'east_pav_top'],
+
+          // Breezeway between Central and East Road
+          ['breeze_east', 'breeze_mid'],
+          ['breeze_mid', 'corridor_cross'],
+
+          // West Road
+          ['main_road_west', 'west_opu'],
           ['west_opu', 'west_1'],
           ['west_1', 'west_2'],
           ['west_2', 'west_3'],
-          ['west_3', 'west_crossway'],
-          ['crossroads', 'west_crossway'],
-          ['west_crossway', 'west_4'],
+          ['west_3', 'west_cross'],
+          ['west_cross', 'west_4'],
           ['west_4', 'west_5'],
           ['west_5', 'west_6'],
           ['west_6', 'west_7'],
           ['west_7', 'west_north'],
-          ['west_north', 'north_end']
+          ['west_north', 'west_top'],
+          ['west_top', 'north_end'],
+
+          // West Road <-> Central Connections
+          ['west_1', 'you_are_here'],
+          ['west_cross', 'corridor_s2'],
+          ['west_7', 'corridor_n1'],
+
+          // South Plaza <-> You Are Here <-> Central Corridor
+          ['you_are_here', 'yah_east'],
+          ['yah_east', 'corridor_s1'],
+          ['corridor_s1', 'corridor_s2'],
+          ['corridor_s2', 'corridor_cross'],
+          ['corridor_cross', 'corridor_mid'],
+          ['corridor_mid', 'corridor_ot'],
+          ['corridor_ot', 'corridor_n1'],
+
+          // North Campus Network
+          ['corridor_n1', 'north_junc_1'],
+          ['north_junc_1', 'north_junc_2'],
+          ['north_junc_2', 'north_tb_dots'],
+          ['north_tb_dots', 'north_waste'],
+          ['north_waste', 'north_top_road'],
+          ['north_top_road', 'north_end']
       ];
 
       // Build graph adjacency list
@@ -813,7 +969,7 @@
           clearRouteLayers();
 
           const startKey = currentStartPointKey;
-          const targetNode = bldgAttach[loc.id] || 'crossroads';
+          const targetNode = bldgAttach[loc.id] || 'corridor_cross';
           const pathKeys = dijkstra(startKey, targetNode);
 
           const latLngs = [];
@@ -915,19 +1071,23 @@
           clearRouteLayers();
           activeDestinationId = null;
           document.getElementById('map-nav-hud').style.display = 'none';
-          document.querySelectorAll('#inline-directory-list li').forEach(li => {
-              li.classList.remove('active-dir-item');
+          document.querySelectorAll('#inline-directory-list li, #modal-directory-list [data-loc-id]').forEach(el => {
+              el.classList.remove('active-dir-item', 'modal-dest-active');
           });
           fitWholeSiteMap(true);
       }
 
       function highlightSidebarItem(id) {
-          document.querySelectorAll('#inline-directory-list li').forEach(li => {
-              if (parseInt(li.dataset.locId) === id) {
-                  li.classList.add('active-dir-item');
-                  li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              } else {
-                  li.classList.remove('active-dir-item');
+          document.querySelectorAll('#inline-directory-list li, #modal-directory-list [data-loc-id]').forEach(el => {
+              const match = parseInt(el.dataset.locId, 10) === id;
+              const inModalList = !!el.closest('#modal-directory-list');
+              el.classList.toggle('active-dir-item', match && !inModalList);
+              el.classList.toggle('modal-dest-active', match && inModalList);
+              if (!match) return;
+              if (inModalList && isSitemapModalOpen) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              } else if (!inModalList && !isSitemapModalOpen) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
               }
           });
       }
@@ -984,10 +1144,27 @@
           });
       }
 
+      function escapeHtml(value) {
+          return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;'
+          }[ch]));
+      }
+
       function renderSidebar(data) {
           const listEl = document.getElementById('inline-directory-list');
+          const modalListEl = document.getElementById('modal-directory-list');
           listEl.innerHTML = '';
-          if (data.length === 0) return;
+          modalListEl.innerHTML = '';
+
+          if (data.length === 0) {
+              listEl.innerHTML = '<li class="p-4 text-center text-sm text-gray-400">No locations found.</li>';
+              modalListEl.innerHTML = '<p class="p-3 text-center text-sm text-gray-400">No locations found.</p>';
+              return;
+          }
           
           data.forEach(loc => {
               const li = document.createElement('li');
@@ -996,11 +1173,13 @@
               if (activeDestinationId === loc.id) {
                   li.classList.add('active-dir-item');
               }
+              const idLabel = loc.id > 99 ? '•' : loc.id;
+              const safeName = escapeHtml(loc.name);
               li.innerHTML = `
                   <div class="flex items-center gap-2.5 overflow-hidden">
-                      <div class="bg-gray-100 text-green-800 font-bold rounded-full w-7 h-7 flex items-center justify-center shrink-0 text-xs shadow-sm">${loc.id > 99 ? '•' : loc.id}</div>
+                      <div class="bg-gray-100 text-green-800 font-bold rounded-full w-7 h-7 flex items-center justify-center shrink-0 text-xs shadow-sm">${idLabel}</div>
                       <div class="truncate">
-                          <h4 class="font-bold text-gray-800 text-[13px] leading-tight truncate">${loc.name}</h4>
+                          <h4 class="font-bold text-gray-800 text-[13px] leading-tight truncate">${safeName}</h4>
                           <span class="text-[11px] text-gray-400">Click for directions</span>
                       </div>
                   </div>
@@ -1011,40 +1190,91 @@
                   drawRouteTo(loc);
               });
               listEl.appendChild(li);
+
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.dataset.locId = loc.id;
+              btn.setAttribute('role', 'listitem');
+              btn.className = 'modal-dest-btn w-full text-left rounded-xl border border-gray-200 bg-white px-3 py-2.5 flex items-center gap-2.5 transition-colors hover:bg-green-50 hover:border-green-400';
+              if (activeDestinationId === loc.id) {
+                  btn.classList.add('modal-dest-active');
+              }
+              btn.innerHTML = `
+                  <span class="bg-gray-100 text-green-800 font-bold rounded-full w-7 h-7 flex items-center justify-center shrink-0 text-xs">${idLabel}</span>
+                  <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-semibold text-gray-800 leading-tight truncate">${safeName}</span>
+                      <span class="block text-[11px] text-gray-400 mt-0.5">Walking route</span>
+                  </span>
+                  <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>`;
+              btn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  drawRouteTo(loc);
+              });
+              modalListEl.appendChild(btn);
           });
       }
 
-      document.getElementById('inline-search').addEventListener('input', (e) => {
-          const term = e.target.value.toLowerCase();
-          let filtered = locationsData.filter(loc => 
-              loc.name.toLowerCase().includes(term) || (loc.description && loc.description.toLowerCase().includes(term))
+      function applyDirectoryFilter(term) {
+          const query = (term || '').toLowerCase();
+          let filtered = locationsData.filter(loc =>
+              loc.name.toLowerCase().includes(query) || (loc.description && loc.description.toLowerCase().includes(query))
           );
           if (currentFilter === 'VISITED') {
               filtered = filtered.filter(loc => mostVisitedIds.includes(loc.id));
           }
           renderSidebar(filtered);
+      }
+
+      function syncSearchInputs(source) {
+          const inlineSearch = document.getElementById('inline-search');
+          const modalSearch = document.getElementById('modal-dest-search');
+          if (!inlineSearch || !modalSearch || !source) return;
+          if (source === inlineSearch) modalSearch.value = inlineSearch.value;
+          if (source === modalSearch) inlineSearch.value = modalSearch.value;
+      }
+
+      function paintFilterPills() {
+          const allActive = currentFilter !== 'VISITED';
+          [
+              ['btn-show-all', 'btn-modal-show-all'],
+              ['btn-show-visited', 'btn-modal-show-visited']
+          ].forEach(([pageId, modalId], index) => {
+              const active = index === 0 ? allActive : !allActive;
+              [pageId, modalId].forEach(id => {
+                  const btn = document.getElementById(id);
+                  if (!btn) return;
+                  btn.className = 'sitemap-pill-btn ' + (active ? 'sitemap-pill-active' : 'sitemap-pill-inactive');
+              });
+          });
+      }
+
+      function setDirectoryFilter(mode) {
+          currentFilter = mode;
+          paintFilterPills();
+          const inlineSearch = document.getElementById('inline-search');
+          applyDirectoryFilter(inlineSearch ? inlineSearch.value : '');
+      }
+
+      document.getElementById('inline-search').addEventListener('input', (e) => {
+          syncSearchInputs(e.target);
+          applyDirectoryFilter(e.target.value);
       });
 
-      document.getElementById('btn-show-all').addEventListener('click', () => {
-          currentFilter = 'ALL';
-          const btnAll = document.getElementById('btn-show-all');
-          const btnVisited = document.getElementById('btn-show-visited');
-          
-          btnAll.className = 'sitemap-pill-btn sitemap-pill-active';
-          btnVisited.className = 'sitemap-pill-btn sitemap-pill-inactive';
-          
-          document.getElementById('inline-search').dispatchEvent(new Event('input'));
+      document.getElementById('modal-dest-search').addEventListener('input', (e) => {
+          e.stopPropagation();
+          syncSearchInputs(e.target);
+          applyDirectoryFilter(e.target.value);
       });
 
-      document.getElementById('btn-show-visited').addEventListener('click', () => {
-          currentFilter = 'VISITED';
-          const btnAll = document.getElementById('btn-show-all');
-          const btnVisited = document.getElementById('btn-show-visited');
-          
-          btnVisited.className = 'sitemap-pill-btn sitemap-pill-active';
-          btnAll.className = 'sitemap-pill-btn sitemap-pill-inactive';
-          
-          document.getElementById('inline-search').dispatchEvent(new Event('input'));
+      document.getElementById('btn-show-all').addEventListener('click', () => setDirectoryFilter('ALL'));
+      document.getElementById('btn-modal-show-all').addEventListener('click', (e) => {
+          e.stopPropagation();
+          setDirectoryFilter('ALL');
+      });
+      document.getElementById('btn-show-visited').addEventListener('click', () => setDirectoryFilter('VISITED'));
+      document.getElementById('btn-modal-show-visited').addEventListener('click', (e) => {
+          e.stopPropagation();
+          setDirectoryFilter('VISITED');
       });
 
       // --- CLICKABLE MAP POP-UP MODAL (Same Concept as Steps/Guide UI) ---
@@ -1057,8 +1287,8 @@
 
       function preventPageScrollOnSitemapModal(e) {
           if (!isSitemapModalOpen) return;
-          // Allow wheel zoom inside the Leaflet map container while blocking page scroll
-          if (e.target && e.target.closest && e.target.closest('#inline-map-container')) {
+          // Allow map zoom and destination-list scrolling; block the page behind the modal
+          if (e.target && e.target.closest && e.target.closest('#inline-map-container, #modal-dest-panel')) {
               return;
           }
           e.preventDefault();
@@ -1101,7 +1331,7 @@
       cardFrame.addEventListener('click', (e) => {
           if (isSitemapModalOpen) return;
           // Don't trigger modal open if clicking HUD clear/fit buttons or zoom controls directly
-          if (e.target && e.target.closest && e.target.closest('#map-nav-hud, .leaflet-control-zoom, #btn-close-sitemap-modal')) {
+          if (e.target && e.target.closest && e.target.closest('#map-nav-hud, .leaflet-control-zoom, #btn-close-sitemap-modal, #modal-dest-panel')) {
               return;
           }
           openSitemapModal();
@@ -1109,8 +1339,14 @@
 
       closeModalBtn.addEventListener('click', closeSitemapModal);
 
+      modalBackdrop.addEventListener('click', (e) => {
+          if (!isSitemapModalOpen) return;
+          if (e.target === modalBackdrop) closeSitemapModal(e);
+      });
+
       document.addEventListener('keydown', (e) => {
           if (!isSitemapModalOpen) return;
+          if (e.target && e.target.closest && e.target.closest('#modal-dest-panel, #map-nav-hud')) return;
           if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
               e.preventDefault();
           }

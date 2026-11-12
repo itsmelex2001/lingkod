@@ -10,22 +10,22 @@
 
       <!-- Stage Area below 'HOW TO USE LINGKOD?' (Only this area blurs when a guide is selected) -->
       <div id="howto-stage-area" class="howto-stage-area-inline">
-        <div class="howto-grid-inline">
+        <div class="howto-grid-inline max-md:grid max-md:grid-cols-4 max-md:gap-2">
           <?php
             $howtoSteps = [
               ['num' => '1', 'text' => 'Click "Book<br>Appointment."'],
-              ['num' => '2', 'text' => 'Select a Service.'],
-              ['num' => '3', 'text' => 'Select Your Patient<br>Type.'],
-              ['num' => '4', 'text' => 'Proceed to<br>Registration or Login.'],
+              ['num' => '2', 'text' => 'Select "Already Have an Account"<br>or "New Patient".'],
+              ['num' => '3', 'text' => 'Register and Verify<br>Your Account.'],
+              ['num' => '4', 'text' => 'Log In to Book<br>an Appointment.'],
               ['num' => '5', 'text' => 'Fill Out the Required<br>Form.'],
-              ['num' => '6', 'text' => 'Confirm Your<br>Registration.'],
-              ['num' => '7', 'text' => 'Proceed to the Next<br>Step.'],
-              ['num' => '8', 'text' => 'Create Your<br>Account.'],
+              ['num' => '6', 'text' => 'Confirm Your<br>Appointment.'],
+              ['num' => '7', 'text' => 'Wait for Appointment<br>Approval.'],
+              ['num' => '8', 'text' => 'Confirmed<br>Appointment.'],
             ];
             foreach ($howtoSteps as $idx => $step):
           ?>
             <div 
-              class="howto-card-inline" 
+              class="howto-card-inline max-md:box-border max-md:flex max-md:h-auto max-md:min-w-0 max-md:flex-col max-md:items-center max-md:justify-center max-md:overflow-hidden max-md:p-1.5 max-md:text-center" 
               data-aos="fade-up" 
               data-aos-delay="<?= ($idx % 4) * 70 ?>"
               onclick="openHowtoModal(<?= $idx ?>)"
@@ -33,8 +33,8 @@
               tabindex="0"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openHowtoModal(<?= $idx ?>);}"
             >
-              <span class="howto-num-inline"><?= $step['num'] ?></span>
-              <p class="howto-text-inline" data-i18n-html="howto_<?= $idx ?>"><?= $step['text'] ?></p>
+              <span class="howto-num-inline max-md:mb-1 max-md:text-sm max-md:leading-none"><?= $step['num'] ?></span>
+              <p class="howto-text-inline max-md:text-center max-md:text-[10px] max-md:leading-tight max-md:break-words" data-i18n-html="howto_<?= $idx ?>"><?= $step['text'] ?></p>
             </div>
           <?php endforeach; ?>
         </div>
@@ -87,7 +87,7 @@
                 <!-- Single Visual Frame -->
                 <div id="howto-visual-single" class="howto-visual-single-wrap">
                   <div class="howto-placeholder-scene">
-                    <svg viewBox="0 0 800 280" preserveAspectRatio="none" class="howto-scene-svg" xmlns="http://www.w3.org/2000/svg">
+                    <svg viewBox="0 0 800 280" preserveAspectRatio="xMidYMid slice" class="howto-scene-svg" xmlns="http://www.w3.org/2000/svg">
                       <defs>
                         <linearGradient id="skyGradSingle" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stop-color="#bae6fd"/>
@@ -113,7 +113,7 @@
                 <!-- Dual Visual Frames (For Step 4) -->
                 <div id="howto-visual-dual" class="howto-visual-dual-wrap" style="display: none;">
                   <div class="howto-placeholder-scene">
-                    <svg viewBox="0 0 400 260" preserveAspectRatio="none" class="howto-scene-svg" xmlns="http://www.w3.org/2000/svg">
+                    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" class="howto-scene-svg" xmlns="http://www.w3.org/2000/svg">
                       <rect width="400" height="260" fill="url(#skyGradSingle)"/>
                       <g fill="#ffffff">
                         <path d="M5 75h35a14 14 0 0 0 0-28 18 18 0 0 0-35 0z"/>
@@ -124,7 +124,7 @@
                     </svg>
                   </div>
                   <div class="howto-placeholder-scene">
-                    <svg viewBox="0 0 400 260" preserveAspectRatio="none" class="howto-scene-svg" xmlns="http://www.w3.org/2000/svg">
+                    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" class="howto-scene-svg" xmlns="http://www.w3.org/2000/svg">
                       <rect width="400" height="260" fill="url(#skyGradSingle)"/>
                       <g fill="#ffffff">
                         <path d="M5 75h35a14 14 0 0 0 0-28 18 18 0 0 0-35 0z"/>
@@ -186,7 +186,7 @@
     <div class="services-cards-area-inline">
       <div class="container-inline-services">
         <!-- Tiles Grid -->
-        <div id="inline-tiles-grid" class="tiles-grid-inline">
+        <div id="inline-tiles-grid" class="tiles-grid-inline max-md:grid max-md:min-w-0 max-md:grid-cols-3 max-md:gap-2">
           <?php
             $departments = [
               [
@@ -219,8 +219,8 @@
               ],
               [
                 'id' => 'psychiatry',
-                'name' => 'OPU<br>Psychiatry',
-                'subname' => 'Outpatient Psychiatry Unit',
+                'name' => 'Psychiatry',
+                'subname' => '',
                 'image' => '/sdn/public/assets/psychiatry_img(orig).jpeg',
                 'link' => '/sdn/pages/regis-psychiatry.php',
                 'services' => [
@@ -235,16 +235,16 @@
           ?>
           <?php foreach($departments as $i => $dept): ?>
             <div 
-              class="dept-tile-inline" 
+              class="dept-tile-inline max-md:aspect-[3/5] max-md:h-auto max-md:min-w-0 max-md:overflow-hidden" 
               data-aos="fade-up"
               data-aos-delay="<?= $i * 100 ?>"
             >
-              <div class="tile-bg-img-inline" style="background-image: url('<?= $dept['image'] ?>');"></div>
+              <div class="tile-bg-img-inline max-md:bg-cover max-md:bg-center max-md:bg-no-repeat" style="background-image: url('<?= $dept['image'] ?>');"></div>
               <div class="tile-overlay-inline"></div>
 
               <!-- Default Title Content (Visible when cursor is out) -->
-              <div class="tile-content-inline">
-                <h4 class="tile-title-inline"><?= $dept['name'] ?></h4>
+              <div class="tile-content-inline max-md:p-1.5 max-md:text-center">
+                <h4 class="tile-title-inline max-md:text-[10px] max-md:leading-tight max-md:break-words"><?= $dept['name'] ?></h4>
                 <?php if (!empty($dept['subname'])): ?>
                   <p class="tile-subtitle-inline"><?= $dept['subname'] ?></p>
                 <?php endif; ?>
@@ -498,29 +498,38 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.25rem;
+    width: 100%;
   }
   .howto-nav-arrow-btn {
-    width: 38px;
-    height: 38px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background-color: #575757;
+    background-color: #475569;
     color: #ffffff;
     border: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    flex-shrink: 0;
-    transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+    z-index: 15;
+    transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, visibility 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
   }
   .howto-nav-arrow-btn:hover {
-    background-color: #1d630b;
-    transform: scale(1.08);
+    background-color: #15803d;
+    transform: translateY(-50%) scale(1.1);
   }
   .howto-nav-arrow-btn:active {
-    transform: scale(0.95);
+    transform: translateY(-50%) scale(0.95);
+  }
+  .howto-nav-prev {
+    left: 0.5rem;
+  }
+  .howto-nav-next {
+    right: 0.5rem;
   }
   .howto-nav-arrow-btn.hidden-arrow {
     visibility: hidden;
@@ -528,26 +537,50 @@
     pointer-events: none;
   }
   .howto-visual-single-wrap {
-    flex: 1;
+    width: 100%;
+    max-width: 520px;
     height: 100%;
+    max-height: 235px;
+    aspect-ratio: 16 / 9;
+    margin: 0 auto;
+    border-radius: 18px;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .howto-visual-dual-wrap {
-    flex: 1;
+    width: 100%;
+    max-width: 640px;
+    height: 100%;
+    max-height: 235px;
+    margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.4rem;
-    height: 100%;
+    gap: 1.25rem;
   }
   .howto-placeholder-scene {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #e0f2fe;
+    background: #0f172a;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
   }
-  .howto-scene-svg {
+  .howto-scene-svg,
+  .howto-placeholder-scene video,
+  .howto-placeholder-scene img,
+  .howto-visual-single-wrap video,
+  .howto-visual-single-wrap img {
     width: 100%;
     height: 100%;
+    object-fit: cover;
     display: block;
   }
   .howto-modal-reminder-inline {
@@ -608,18 +641,21 @@
   }
   .services-section-inline {
     position: relative;
+    width: 100%;
     padding: 0;
     background: #ffffff;
     z-index: 2;
   }
   .services-header-band-inline {
+    width: 100%;
+    margin: 0;
     background: #e6fce2;
-    padding: 2.25rem 2rem 2rem;
-    clip-path: polygon(0 18px, 50% 0, 100% 18px, 100% calc(100% - 14px), 50% 100%, 0 calc(100% - 14px));
+    padding: 2.4rem 2rem 1.7rem;
+    box-sizing: border-box;
   }
   .services-cards-area-inline {
     padding: 0.75rem 2rem 4rem;
-    background: linear-gradient(to bottom, #ffffff 0%, #ffffff 42%, #daf8d5 76%, #b2eba9 100%);
+    background: #ffffff;
   }
   .container-inline-services {
     position: relative;
@@ -852,7 +888,40 @@
     .services-cards-area-inline { padding: 1rem 1.5rem 4rem; }
   }
   @media (max-width: 540px) {
-    .howto-grid-inline { grid-template-columns: 1fr; }
+    .howto-grid-inline { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+    .howto-card-inline { height: auto; min-width: 0; padding: 0.375rem; overflow: hidden; }
+    .howto-num-inline { font-size: 0.875rem; margin-bottom: 0.25rem; line-height: 1; }
+    .howto-text-inline { font-size: 10px; line-height: 1.15; overflow-wrap: break-word; word-break: break-word; text-align: center; }
+  }
+
+  /* Phone only: keep prev/next in the white card, outside the illustration. */
+  @media (max-width: 720px) {
+    .howto-modal-card-inline {
+      height: auto;
+      padding: 1.6rem 1rem 1.25rem;
+    }
+    .howto-modal-stage-row {
+      gap: 0.65rem;
+    }
+    .howto-nav-arrow-btn {
+      position: static;
+      transform: none;
+      flex-shrink: 0;
+    }
+    .howto-nav-arrow-btn:hover {
+      transform: scale(1.08);
+    }
+    .howto-nav-arrow-btn:active {
+      transform: scale(0.96);
+    }
+    .howto-visual-single-wrap,
+    .howto-visual-dual-wrap {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+      max-width: none;
+      margin: 0;
+    }
   }
 </style>
 
@@ -871,31 +940,29 @@
     {
       step: 'STEP 2',
       stepTl: 'HAKBANG 2',
-      title: 'Select a Service.',
-      titleTl: 'Pumili ng Serbisyo.',
+      title: 'Select "Already Have an Account" or "New Patient".',
+      titleTl: 'Piliin ang "May Account Na" o "Bagong Pasyente".',
       layout: 'single',
-      desc: 'You will see three available services. Choose the service that best matches your needs or the type of appointment you want to request.',
-      descTl: 'Makikita mo ang tatlong available na serbisyo. Piliin ang serbisyong tumutugma sa iyong pangangailangan o sa uri ng appointment na nais mong hilingin.'
+      desc: 'A prompt will appear asking for your patient status. Choose "Already Have an Account" if you are a returning patient to sign in, or select "New Patient" to begin registration.',
+      descTl: 'May lalabas na opsyon para sa estado ng pasyente. Piliin ang "May Account Na" kung dati ka nang may account upang mag-sign in, o piliin ang "Bagong Pasyente" upang simulan ang rehistrasyon.'
     },
     {
       step: 'STEP 3',
       stepTl: 'HAKBANG 3',
-      title: 'Select Your Patient Type.',
-      titleTl: 'Piliin ang Uri ng Pasyente.',
+      title: 'Register and Verify Your Account.',
+      titleTl: 'Magrehistro at Mag-verify ng Account.',
       layout: 'single',
-      desc: 'You will see three available services. Choose the service that best matches your needs or the type of appointment you want to request.',
-      descTl: 'Makikita mo ang tatlong available na serbisyo. Piliin ang serbisyong tumutugma sa iyong pangangailangan o sa uri ng appointment na nais mong hilingin.'
+      desc: 'For new patients, fill out the registration form with your personal details and create your account credentials. You must then verify your account through email before you can log in.',
+      descTl: 'Para sa mga bagong pasyente, sagutan ang registration form gamit ang iyong personal na detalye at lumikha ng account credentials. I-verify ang iyong account sa email bago mag-log in.'
     },
     {
       step: 'STEP 4',
       stepTl: 'HAKBANG 4',
-      title: 'Proceed to Registration or Login.',
-      titleTl: 'Magpatuloy sa Rehistrasyon o Pag-login.',
-      layout: 'dual',
-      descLeft: '<strong>First-Time Patient:</strong> Proceed to the registration form and provide the required information.',
-      descLeftTl: '<strong>Unang Beses na Pasyente:</strong> Magpatuloy sa registration form at ibigay ang kinakailangang impormasyon.',
-      descRight: '<strong>Returning Patient:</strong> Log in using your existing account credentials.',
-      descRightTl: '<strong>Bumabalik na Pasyente:</strong> Mag-log in gamit ang iyong kasalukuyang account.'
+      title: 'Log In to Book an Appointment.',
+      titleTl: 'Mag-login para Magpa-appointment.',
+      layout: 'single',
+      desc: 'After successfully logging in to your patient account, navigate to the patient portal and click "Book Appointment" to begin your consultation request.',
+      descTl: 'Pagkatapos mag-log in sa iyong patient account, magtungo sa patient portal at i-click ang "Book Appointment" upang simulan ang iyong kahilingan sa konsultasyon.'
     },
     {
       step: 'STEP 5',
@@ -903,37 +970,37 @@
       title: 'Fill Out the Required Form.',
       titleTl: 'Sagutan ang Kinakailangang Form.',
       layout: 'single',
-      desc: 'Complete the form by providing all the necessary information. If you selected the Inquiry Only option, you will also be provided with an inquiry form. Fill it out with the required details.',
-      descTl: 'Kumpletuhin ang form sa pamamagitan ng pagbibigay ng lahat ng kinakailangang impormasyon. Kung pinili mo ang Inquiry Only, bibigyan ka rin ng inquiry form. Sagutan ito ng kinakailangang detalye.'
+      desc: 'First, review and accept the Data Privacy Consent (R.A. 10173) by scrolling to the bottom and confirming. Then, fill out your chief complaint and choose your consultation schedule.',
+      descTl: 'Una, basahin at tanggapin ang Data Privacy Consent (R.A. 10173) sa pamamagitan ng pag-scroll pababa at pag-confirm. Pagkatapos, punan ang iyong chief complaint at piliin ang iskedyul ng konsultasyon.'
     },
     {
       step: 'STEP 6',
       stepTl: 'HAKBANG 6',
-      title: 'Confirm Your Registration.',
-      titleTl: 'Kumpirmahin ang Rehistrasyon.',
+      title: 'Confirm Your Appointment.',
+      titleTl: 'Kumpirmahin ang Appointment.',
       layout: 'single',
-      desc: 'After completing the form, carefully review the information you provided. Once everything is correct, click the Confirm Registration button.',
-      descTl: 'Pagkatapos kumpletuhin ang form, suriing mabuti ang impormasyong ibinigay. Kapag tama na ang lahat, i-click ang Confirm Registration.'
+      desc: 'Review your entered information, clinic date, and consultation details carefully. Once confirmed, click Submit to queue your appointment request.',
+      descTl: 'Suriing mabuti ang lahat ng ibinigay na impormasyon, petsa ng clinic, at detalye ng konsultasyon. Kapag tama na ang lahat, i-click ang Submit upang maipila ang appointment.'
     },
     {
       step: 'STEP 7',
       stepTl: 'HAKBANG 7',
-      title: 'Proceed to the Next Step.',
-      titleTl: 'Magpatuloy sa Susunod na Hakbang.',
+      title: 'Wait for Appointment Approval.',
+      titleTl: 'Maghintay ng Pag-apruba ng Appointment.',
       layout: 'single',
-      desc: 'After confirming your registration, click Next to continue with the process of creating your account.',
-      descTl: 'Pagkatapos kumpirmahin ang rehistrasyon, i-click ang Next upang magpatuloy sa paggawa ng iyong account.'
+      desc: 'Your appointment will be queued for review. Monitor its status in your Patient Dashboard under Upcoming Appointments while our clinical staff reviews your complaints and assigns the proper department.',
+      descTl: 'Ang iyong appointment ay nakapila para sa pagsusuri. Subaybayan ang estado nito sa iyong Patient Dashboard sa ilalim ng Upcoming Appointments habang sinusuri ng clinical staff ang iyong complaint at itinatalaga ang tamang departamento.'
     },
     {
       step: 'STEP 8',
       stepTl: 'HAKBANG 8',
-      title: 'Confirm Your Registration.',
-      titleTl: 'Kumpirmahin ang Rehistrasyon.',
+      title: 'Confirmed Appointment.',
+      titleTl: 'Kumpirmadong Appointment.',
       layout: 'single',
-      desc: 'Provide the required account credentials, such as your email address and password. Follow the instructions displayed on the screen to complete your account creation.',
-      descTl: 'Ibigay ang kinakailangang detalye ng account, tulad ng email address at password. Sundin ang mga tagubilin sa screen upang matapos ang paggawa ng account.',
-      reminder: '<strong>Reminder:</strong> Make sure that all the information you provide is accurate and complete to avoid delays during the registration and appointment process.',
-      reminderTl: '<strong>Paalala:</strong> Siguraduhing tama at kumpleto ang lahat ng impormasyon upang maiwasan ang pagkaantala sa rehistrasyon at appointment.'
+      desc: 'Once approved by the hospital staff, your appointment status will change to "Confirmed". You will receive reminder notifications with complete visit instructions before your clinic day.',
+      descTl: 'Kapag naaprubahan na ng hospital staff, ang estado ng appointment ay magiging "Confirmed". Makakatanggap ka ng mga abiso ng paalala kasama ang kumpletong tagubilin bago ang araw ng iyong konsultasyon.',
+      reminder: '<strong>Reminder:</strong> Please arrive on time at the Outpatient Triage desk on your confirmed appointment date with a valid ID.',
+      reminderTl: '<strong>Paalala:</strong> Mangyaring pumunta sa tamang oras sa Outpatient Triage desk sa iyong kumpirmadong petsa ng appointment na may dalang valid ID.'
     }
   ];
 
@@ -1047,7 +1114,7 @@
   }
 
   function handleHowtoBackdropClick(e) {
-    // Require clicking the 'X' button to close and re-enable scrolling
+    if (e.target === e.currentTarget) closeHowtoModal();
   }
 
   function nextHowtoStep() {

@@ -13,10 +13,11 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
 <head>
     <meta charset="UTF-8">
     <title>Admin Portal | LINGKOD</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
     <link rel="stylesheet" href="/sdn/public/css/admin-portal.css?v=<?= time() ?>" />
     <link rel="stylesheet" href="/sdn/public/css/portal-chrome.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=<?= time() ?>" />
 </head>
 <body class="portal-layout">
     <aside class="sidebar">
@@ -34,27 +35,27 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
         </div>
         <nav class="sidebar-nav">
             <a href="#" class="nav-link active" data-view="dashboard">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
                 Overview
             </a>
             <a href="#" class="nav-link" data-view="rbac">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 User Management
             </a>
             <a href="#" class="nav-link" data-view="doctors">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                 Doctors
             </a>
             <a href="#" class="nav-link" data-view="pmi">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 Patient Master Index
             </a>
             <a href="#" class="nav-link" data-view="reports">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                 Reports & Analytics
             </a>
             <a href="#" class="nav-link" data-view="audit">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 Audit Log
             </a>
         </nav>
@@ -67,7 +68,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div class="admin-topbar-right">
                 <div class="admin-notif-wrap" id="adminNotifWrap">
                     <button type="button" class="admin-notif-btn" id="adminNotifBtn" onclick="toggleAdminNotifications(event)" title="Notifications" aria-label="Notifications">
-                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                         </svg>
@@ -85,19 +86,19 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 </div>
                 <div class="admin-profile-wrap" id="adminProfileWrap">
                     <button type="button" class="admin-profile-circle" id="adminProfileBtn" onclick="toggleAdminProfileMenu(event)" title="<?= htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['user'] ?? 'Admin') ?>" aria-label="Account menu">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                             <circle cx="12" cy="7" r="4"></circle>
                         </svg>
                     </button>
                     <div class="admin-profile-dropdown" id="adminProfileDropdown">
                         <a href="/sdn/pages/logout.php" class="admin-profile-logout-btn">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                                <polyline points="10 17 5 12 10 7"></polyline>
-                                <line x1="15" y1="12" x2="5" y2="12"></line>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
                             </svg>
-                            <span>Logout</span>
+                            <span>Sign out</span>
                         </a>
                     </div>
                 </div>
@@ -131,7 +132,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                             <option value="week">This Week</option>
                         </select>
                         <button class="btn btn-outline btn-reset-filters" onclick="resetChartFilter()">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
                             <span>Refresh</span>
                         </button>
                     </div>
@@ -155,7 +156,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <!-- RBAC Search & Department Filter Toolbar -->
             <div class="rbac-action-toolbar pmi-action-toolbar">
                 <div class="pmi-search-wrap">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="rbacSearchInput" class="form-control pmi-search-input" placeholder="Search staff name..." oninput="filterRBACTable()">
                 </div>
                 <div class="pmi-filters-wrap">
@@ -177,7 +178,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         </select>
                     </div>
                     <button class="btn btn-outline btn-reset-filters" onclick="resetRBACFilters()" title="Refresh Filters">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
                         <span>Refresh</span>
                     </button>
                 </div>
@@ -234,7 +235,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <!-- Doctor Search & Department Filter Toolbar -->
             <div class="doctor-action-toolbar pmi-action-toolbar">
                 <div class="pmi-search-wrap">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="docSearchInput" class="form-control pmi-search-input" placeholder="Search doctor name or specialization..." oninput="filterDoctorsTable()">
                 </div>
                 <div class="pmi-filters-wrap">
@@ -256,7 +257,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         </select>
                     </div>
                     <button class="btn btn-outline btn-reset-filters" onclick="resetDoctorFilters()" title="Refresh Filters">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
                         <span>Refresh</span>
                     </button>
                 </div>
@@ -315,7 +316,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <div class="pmi-stats-grid">
                 <div class="pmi-stat-card">
                     <div class="pmi-stat-icon-wrap icon-appointments">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     </div>
                     <div class="pmi-stat-details">
                         <h3 id="pmi-stat-appointments">0</h3>
@@ -324,7 +325,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 </div>
                 <div class="pmi-stat-card">
                     <div class="pmi-stat-icon-wrap icon-slots">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     </div>
                     <div class="pmi-stat-details">
                         <h3 id="pmi-stat-slots">0</h3>
@@ -333,7 +334,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 </div>
                 <div class="pmi-stat-card">
                     <div class="pmi-stat-icon-wrap icon-patients">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     </div>
                     <div class="pmi-stat-details">
                         <h3 id="pmi-stat-patients">0</h3>
@@ -345,7 +346,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <!-- PMI Filter & Search Toolbar -->
             <div class="pmi-action-toolbar">
                 <div class="pmi-search-wrap">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="pmiSearchInput" class="form-control pmi-search-input" placeholder="Search patient name or ID..." oninput="filterPMITable()">
                 </div>
                 <div class="pmi-filters-wrap">
@@ -373,7 +374,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         </select>
                     </div>
                     <button class="btn btn-outline btn-reset-filters" onclick="resetPMIFilter()" title="Refresh Filters">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
                         <span>Refresh</span>
                     </button>
                 </div>
@@ -426,11 +427,11 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-outline" id="btnReportPrint" onclick="printReports()" title="Print executive clinical statistical report">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         <span>Print Report</span>
                     </button>
                     <button class="btn btn-primary" id="btnReportExport" onclick="exportReportsCsv()" title="Download all time patient dataset as CSV">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         <span>Export CSV</span>
                     </button>
                 </div>
@@ -457,7 +458,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         </select>
                     </div>
                     <button class="btn btn-outline btn-reset-filters" onclick="resetReportFilters()" title="Refresh Report Filters">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
                         <span>Refresh</span>
                     </button>
                     <span id="reportLastUpdated" style="margin-left:auto; font-size:0.8rem; color:#64748b; align-self:center;"></span>
@@ -652,7 +653,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
             <!-- Audit Log Category & Sort Toolbar -->
             <div class="rbac-action-toolbar pmi-action-toolbar" style="margin-bottom: 16px; flex-shrink: 0;">
                 <div class="pmi-search-wrap">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="auditSearchInput" class="form-control pmi-search-input" placeholder="Search action, user, or details..." oninput="filterAndSortAuditTable()">
                 </div>
                 <div class="pmi-filters-wrap">
@@ -678,7 +679,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                         </select>
                     </div>
                     <button class="btn btn-outline btn-reset-filters" onclick="resetAuditFilters()" title="Refresh Audit Log">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.3"/></svg>
                         <span>Refresh</span>
                     </button>
                 </div>
@@ -747,7 +748,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 <div style="position: relative;">
                     <input type="password" id="staffPass" class="form-control" placeholder="Min. 6 characters" style="padding-right: 42px;">
                     <button type="button" onclick="togglePasswordVisibility('staffPass')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0; display: flex; align-items: center;">
-                        <svg id="eyeIcon-staffPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <svg id="eyeIcon-staffPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                 </div>
             </div>
@@ -797,7 +798,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
                 <div style="position: relative;">
                     <input type="password" id="editStaffPass" class="form-control" placeholder="Min. 6 characters (optional)" style="padding-right: 42px;">
                     <button type="button" onclick="togglePasswordVisibility('editStaffPass')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0; display: flex; align-items: center;">
-                        <svg id="eyeIcon-editStaffPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <svg id="eyeIcon-editStaffPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                 </div>
             </div>
@@ -822,7 +823,7 @@ if (empty($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
     <div id="confirmModal" class="modal" style="z-index: 1050;">
         <div class="modal-content" style="max-width: 400px; text-align: center; padding: 2rem;">
             <div style="margin-bottom: 1.5rem;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                     <line x1="12" y1="9" x2="12" y2="13"></line>
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>

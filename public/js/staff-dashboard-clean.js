@@ -26,15 +26,63 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── 1. Live Clock Removed (Header Kept Clean) ──
 
   // ── 2. Toast Feedback ──
-  function showToast(msg, duration = 2800) {
+  let toastTimer = null;
+  function showToast(msg, duration = 2800, tone = 'success') {
     if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.style.display = 'block';
-    setTimeout(() => {
-      toastEl.style.display = 'none';
+    const isError = tone === 'error';
+    toastEl.classList.toggle('is-error', isError);
+    toastEl.innerHTML = `<span class="toast-clean-mark" aria-hidden="true">${isError ? '!' : '✓'}</span><span>${escapeHtml(String(msg || ''))}</span>`;
+    toastEl.classList.add('is-visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove('is-visible');
     }, duration);
   }
   window.showToast = showToast;
+
+  function showConfirm({ title, message, confirmText, cancelText, danger }) {
+    const modal = document.getElementById('staffConfirmModal');
+    const titleEl = document.getElementById('staffConfirmTitle');
+    const messageEl = document.getElementById('staffConfirmMessage');
+    const okBtn = document.getElementById('staffConfirmOk');
+    const cancelBtn = document.getElementById('staffConfirmCancel');
+    const closeBtn = document.getElementById('staffConfirmClose');
+    if (!modal || !okBtn || !cancelBtn) {
+      return Promise.resolve(false);
+    }
+
+    titleEl.textContent = title || 'Confirm';
+    messageEl.textContent = message || '';
+    okBtn.textContent = confirmText || 'Confirm';
+    cancelBtn.textContent = cancelText || 'Go back';
+    okBtn.className = danger ? 'btn-clean danger-outline' : 'btn-clean primary';
+    modal.classList.add('open');
+
+    return new Promise((resolve) => {
+      const finish = (accepted) => {
+        modal.classList.remove('open');
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        closeBtn.removeEventListener('click', onCancel);
+        modal.removeEventListener('click', onBackdrop);
+        document.removeEventListener('keydown', onKey);
+        resolve(accepted);
+      };
+      const onOk = () => finish(true);
+      const onCancel = () => finish(false);
+      const onBackdrop = (e) => {
+        if (e.target === modal) finish(false);
+      };
+      const onKey = (e) => {
+        if (e.key === 'Escape') finish(false);
+      };
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      closeBtn.addEventListener('click', onCancel);
+      modal.addEventListener('click', onBackdrop);
+      document.addEventListener('keydown', onKey);
+    });
+  }
 
   // ── 3. View Navigation ──
   function switchView(viewName) {
@@ -51,6 +99,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'records') renderRecords();
   }
   window.switchView = switchView;
+
+  const staffProfileBtn = document.getElementById('staffProfileBtn');
+  const staffProfileDropdown = document.getElementById('staffProfileDropdown');
+  const staffProfileSettings = document.getElementById('staffProfileSettings');
+
+  function closeStaffProfile() {
+    staffProfileDropdown?.classList.remove('show');
+    staffProfileBtn?.setAttribute('aria-expanded', 'false');
+  }
+
+  staffProfileBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = !staffProfileDropdown.classList.contains('show');
+    staffProfileDropdown.classList.toggle('show', willOpen);
+    staffProfileBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+
+  staffProfileSettings?.addEventListener('click', () => {
+    closeStaffProfile();
+    switchView('settings');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#staffProfileContainer')) closeStaffProfile();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeStaffProfile();
+  });
 
   document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -93,6 +170,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return s === 'for_approval' || s === 'pending' || s === 'for approval';
   }
 
+  function isConfirmedStatus(st) {
+    const s = (st || '').toLowerCase().trim();
+    return s === 'approved' || s === 'confirmed';
+  }
+
   function isInClinicStatus(st) {
     const s = (st || '').toLowerCase().trim();
     return s === 'arrived' || s === 'ongoing';
@@ -109,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const todayVisits = allPatients.filter(p => (p.appointment_date === todayStr) || (p.created_at && p.created_at.startsWith(todayStr))).length;
     const forApproval = allPatients.filter(p => inApprovalStatus(p.status)).length;
-    const confirmed   = allPatients.filter(p => (p.status || '').toLowerCase() === 'approved').length;
+    const confirmed   = allPatients.filter(p => isConfirmedStatus(p.status)).length;
     const inClinic    = allPatients.filter(p => isInClinicStatus(p.status)).length;
     const completed   = allPatients.filter(p => (p.status || '').toLowerCase() === 'completed').length;
 
@@ -148,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (consultStatus !== 'all') {
         const s = (p.status || '').toLowerCase();
         if (consultStatus === 'for_approval' && !inApprovalStatus(s)) return false;
-        if (consultStatus === 'approved' && s !== 'approved') return false;
+        if (consultStatus === 'approved' && !isConfirmedStatus(s)) return false;
         if (consultStatus === 'in_clinic' && !isInClinicStatus(s)) return false;
         if (consultStatus === 'completed' && s !== 'completed') return false;
         if (consultStatus === 'cancelled' && !isCancelledStatus(s)) return false;
@@ -180,25 +262,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const statusPill = renderStatusPill(statusNorm);
       const docOptions = renderDoctorDropdownOptions(p.assigned_doctor);
 
-      let actions = '';
+      let primaryAction = '';
+      let menuItems = '';
       if (inApprovalStatus(statusNorm)) {
-        actions = `
-          <button type="button" class="btn-clean primary sm" onclick="handleApprove('${p.patient_id}')">Approve</button>
-          <button type="button" class="btn-clean danger-outline sm" onclick="handleReject('${p.patient_id}')">Decline</button>
-        `;
-      } else if (statusNorm === 'approved') {
-        actions = `
-          <button type="button" class="btn-clean primary sm" onclick="handleCheckIn('${p.patient_id}')">Check-in</button>
-        `;
+        primaryAction = `<button type="button" class="btn-clean primary sm" onclick="handleApprove('${p.patient_id}')">Approve</button>`;
+        menuItems = `<button type="button" class="row-menu-item danger" onclick="handleReject('${p.patient_id}')">Decline</button>`;
+      } else if (statusNorm === 'approved' || statusNorm === 'confirmed') {
+        primaryAction = `<button type="button" class="btn-clean primary sm" onclick="handleCheckIn('${p.patient_id}')">Check in</button>`;
+        menuItems = `<button type="button" class="row-menu-item danger" onclick="handleReject('${p.patient_id}')">Cancel</button>`;
       } else if (statusNorm === 'arrived') {
-        actions = `
-          <button type="button" class="btn-clean primary sm" onclick="handleStartConsult('${p.patient_id}')">Start Consult</button>
-        `;
+        primaryAction = `<button type="button" class="btn-clean primary sm" onclick="handleStartConsult('${p.patient_id}')">Start Consult</button>`;
+        menuItems = `<button type="button" class="row-menu-item danger" onclick="handleReject('${p.patient_id}')">Cancel</button>`;
       } else if (statusNorm === 'ongoing') {
-        actions = `
-          <button type="button" class="btn-clean primary sm" onclick="openClinicalNoteModal('${p.patient_id}', '${escapeHtml(p.full_name)}')">Complete</button>
-        `;
+        primaryAction = `<button type="button" class="btn-clean primary sm" onclick="openClinicalNoteModal('${p.patient_id}', '${escapeHtml(p.full_name)}')">Complete</button>`;
+        menuItems = `<button type="button" class="row-menu-item danger" onclick="handleReject('${p.patient_id}')">Cancel</button>`;
       }
+      menuItems += `<button type="button" class="row-menu-item" onclick="openPatientDetailsModal('${p.patient_id}')">Details</button>`;
 
       const isLockedDoc = statusNorm === 'completed' || isCancelledStatus(statusNorm);
       const rawDept = (p.department || '').trim();
@@ -235,33 +314,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const prevBadge = p.previous_appointment_date
-        ? `<div style="margin-top:3px; display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; padding:1px 7px; border-radius:999px;" title="Previous appointment date &amp; time">
-             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-             <span>Prev: ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</span>
-           </div>`
+        ? `<div class="date-stack-sub" title="Previous appointment">Previous ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' · ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
         : '';
 
       return `
         <tr>
           <td>
-            <div class="patient-row-flex">
-              <div class="date-badge-mini">
-                <span class="m-lbl">${dateParts.month}</span>
-                <span class="d-lbl">${dateParts.day}</span>
-              </div>
-              <div>
-                <div class="patient-cell-name">
-                  <span>${escapeHtml(p.full_name || 'Patient')}</span>
-                  ${typeTag}
-                </div>
-                <div class="patient-cell-meta">${escapeHtml(p.patient_id)} &bull; ${escapeHtml(p.contact_number || 'No phone')}</div>
-              </div>
+            <div class="patient-cell-name">
+              <span>${escapeHtml(p.full_name || 'Patient')}</span>
+              ${typeTag}
             </div>
+            <div class="patient-cell-meta">${escapeHtml(p.patient_id)} · ${escapeHtml(p.contact_number || 'No phone')}</div>
           </td>
           <td>
-            <div style="font-weight:600; color:#0f172a;">${escapeHtml(dateParts.full)}</div>
-            <div class="patient-cell-meta">${escapeHtml(timeLabel)} &bull; ${escapeHtml(p.consultation_mode || 'Face-to-Face')}</div>
-            ${prevBadge}
+            <div class="date-stack">
+              <div class="date-stack-main">${escapeHtml(dateParts.monthDay)}</div>
+              <div class="date-stack-sub">${escapeHtml(dateParts.year)} · ${escapeHtml(timeLabel)}</div>
+              ${prevBadge}
+            </div>
           </td>
           <td>
             <div>${deptCellHtml}</div>
@@ -272,9 +342,14 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${docCellHtml}</td>
           <td>${statusPill}</td>
           <td>
-            <div class="table-action-group">
-              ${actions}
-              <button type="button" class="btn-clean outline sm" onclick="openPatientDetailsModal('${p.patient_id}')">Details</button>
+            <div class="row-actions">
+              ${primaryAction}
+              <div class="row-menu">
+                <button type="button" class="row-menu-btn" aria-label="More actions" onclick="toggleRowMenu(event, this)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
+                </button>
+                <div class="row-menu-pop">${menuItems}</div>
+              </div>
             </div>
           </td>
         </tr>
@@ -345,21 +420,21 @@ document.addEventListener('DOMContentLoaded', () => {
         : 'Attending Physician';
 
       const prevRecBadge = p.previous_appointment_date
-        ? `<div style="margin-top:3px; display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; padding:1px 7px; border-radius:999px;">
-             <span>Prev: ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</span>
-           </div>`
+        ? `<div class="date-stack-sub">Previous ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' · ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
         : '';
 
       return `
         <tr>
           <td>
             <div class="patient-cell-name">${escapeHtml(p.full_name || 'Patient')}</div>
-            <div class="patient-cell-meta">${escapeHtml(p.patient_id)} &bull; ${escapeHtml(p.gender || '-')}</div>
+            <div class="patient-cell-meta">${escapeHtml(p.patient_id)} · ${escapeHtml(p.gender || '-')}</div>
           </td>
           <td>
-            <div style="font-weight:600;">${escapeHtml(dateParts.full)}</div>
-            <div class="patient-cell-meta">${escapeHtml(timeLabel)}</div>
-            ${prevRecBadge}
+            <div class="date-stack">
+              <div class="date-stack-main">${escapeHtml(dateParts.monthDay)}</div>
+              <div class="date-stack-sub">${escapeHtml(dateParts.year)} · ${escapeHtml(timeLabel)}</div>
+              ${prevRecBadge}
+            </div>
           </td>
           <td>
             <div style="font-size:0.75rem; font-weight:700; color:#0369a1; margin-bottom:2px;">${escapeHtml(p.department || 'Triage Pending')}</div>
@@ -383,14 +458,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 8. Formatting Helpers ──
   function formatDateBadge(rawDate) {
-    if (!rawDate) return { month: 'NOW', day: '--', full: 'Today' };
+    if (!rawDate) return { month: 'NOW', day: '--', full: 'Today', monthDay: 'Today', year: '' };
     const clean = String(rawDate).split(' ')[0];
     const d = new Date(clean + 'T00:00:00');
-    if (isNaN(d.getTime())) return { month: 'TBD', day: '--', full: rawDate };
+    if (isNaN(d.getTime())) return { month: 'TBD', day: '--', full: rawDate, monthDay: String(rawDate), year: '' };
     const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
     const day = String(d.getDate());
+    const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const year = String(d.getFullYear());
     const full = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    return { month, day, full };
+    return { month, day, monthDay, year, full };
   }
 
   function formatTime12(t) {
@@ -408,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderStatusPill(st) {
     const s = (st || 'pending').toLowerCase();
     if (inApprovalStatus(s)) return '<span class="status-pill for_approval">For Approval</span>';
-    if (s === 'approved') return '<span class="status-pill approved">Confirmed</span>';
+    if (isConfirmedStatus(s)) return '<span class="status-pill approved">Confirmed</span>';
     if (s === 'arrived') return '<span class="status-pill arrived">Checked In</span>';
     if (s === 'ongoing') return '<span class="status-pill ongoing">In Consultation</span>';
     if (s === 'completed') return '<span class="status-pill completed">Completed</span>';
@@ -427,6 +504,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 9. Consultation Workflow Actions ──
   window.handleAssignDepartment = async function(patientId, newDept) {
+    const p = (allPatients || []).find(item => item.patient_id === patientId);
+    if (p) {
+      const s = (p.status || '').toLowerCase();
+      if (s === 'completed' || isCancelledStatus(s)) {
+        showToast('Department cannot be changed for completed or cancelled appointments.');
+        return;
+      }
+    }
     if (!newDept || newDept === 'Triage Pending') {
       showToast('Please select a valid department to assign.');
       return;
@@ -445,10 +530,10 @@ document.addEventListener('DOMContentLoaded', () => {
           openPatientDetailsModal(patientId);
         }
       } else {
-        showToast(res.message || 'Could not update department.');
+        showToast(res.message || 'Could not update department.', 2800, 'error');
       }
     } catch (e) {
-      showToast('Network error.');
+      showToast('Network error.', 2800, 'error');
     }
   };
 
@@ -458,6 +543,12 @@ document.addEventListener('DOMContentLoaded', () => {
   window.openTriageAssignModal = function(patientId) {
     const p = (allPatients || []).find(item => item.patient_id === patientId);
     if (!p) return;
+
+    const s = (p.status || '').toLowerCase();
+    if (s === 'completed' || isCancelledStatus(s)) {
+      showToast('Department assignment is finalized for this patient.');
+      return;
+    }
 
     const pidInput = document.getElementById('triagePatientId');
     if (pidInput) pidInput.value = p.patient_id;
@@ -519,7 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedDept = deptSelect ? deptSelect.value : '';
 
     if (!selectedDept || selectedDept === 'Triage Pending') {
-      showToast('Please select a valid hospital department.');
+      showToast('Please select a valid hospital department.', 2800, 'error');
       return;
     }
 
@@ -548,13 +639,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }).then(r => r.json());
 
       if (res.success) {
-        showToast('Appointment confirmed.');
+        showToast('Appointment confirmed. The patient now sees Confirmed.');
         loadData();
       } else {
-        showToast(res.message || 'Could not confirm appointment.');
+        showToast(res.message || 'Could not confirm appointment.', 2800, 'error');
       }
     } catch (e) {
-      showToast('Network error.');
+      showToast('Network error.', 2800, 'error');
     }
   }
 
@@ -572,22 +663,36 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.handleReject = async function(patientId) {
-    if (!confirm('Decline this appointment request?')) return;
+    const p = (allPatients || []).find(item => item.patient_id === patientId);
+    const waiting = inApprovalStatus(p?.status);
+    const patientName = p?.full_name || 'this patient';
+    const accepted = await showConfirm({
+      title: waiting ? 'Decline this request?' : 'Cancel this visit?',
+      message: waiting
+        ? `${patientName} is still waiting for approval. Declining it marks the visit as cancelled in the patient portal.`
+        : `${patientName} will see this visit as cancelled in the patient portal.`,
+      confirmText: waiting ? 'Decline request' : 'Cancel visit',
+      cancelText: 'Keep visit',
+      danger: true
+    });
+    if (!accepted) return;
     try {
       const res = await fetch('/sdn/api/patients.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reject', patient_id: patientId })
-      }).then(r => r.json());
+        body: JSON.stringify({ action: 'cancel', patient_id: patientId })
+      });
+      const data = await res.json();
 
-      if (res.success) {
-        showToast('Appointment declined.');
+      if (data.success) {
+        showToast(waiting ? 'Request declined. The patient will see it as cancelled.' : 'Visit cancelled.');
         loadData();
       } else {
-        showToast(res.message || 'Could not decline appointment.');
+        showToast(data.message || 'Could not cancel appointment.', 2800, 'error');
       }
     } catch (e) {
-      showToast('Network error.');
+      console.error('Cancel error:', e);
+      showToast('Error connecting to server.', 2800, 'error');
     }
   };
 
@@ -597,16 +702,18 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'arrived', patient_id: patientId })
-      }).then(r => r.json());
+      });
+      const data = await res.json();
 
-      if (res.success) {
-        showToast('Patient checked in.');
+      if (data.success) {
+        showToast('Patient checked in. Their portal now shows Checked In.');
         loadData();
       } else {
-        showToast(res.message || 'Error checking in.');
+        showToast(data.message || 'Error checking in.', 2800, 'error');
       }
     } catch (e) {
-      showToast('Network error.');
+      console.error('Check-in error:', e);
+      showToast('Error connecting to server.', 2800, 'error');
     }
   };
 
@@ -616,16 +723,18 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'ongoing', patient_id: patientId })
-      }).then(r => r.json());
+      });
+      const data = await res.json();
 
-      if (res.success) {
-        showToast('Consultation started.');
+      if (data.success) {
+        showToast('Consultation started. Their portal now shows In Consultation.');
         loadData();
       } else {
-        showToast(res.message || 'Error starting consultation.');
+        showToast(data.message || 'Error starting consultation.', 2800, 'error');
       }
     } catch (e) {
-      showToast('Network error.');
+      console.error('Start consult error:', e);
+      showToast('Error starting consultation. Please try again.', 2800, 'error');
     }
   };
 
@@ -818,6 +927,127 @@ document.addEventListener('DOMContentLoaded', () => {
   if (doseInp) doseInp.addEventListener('input', updatePrescriptionText);
   if (qtyInp) qtyInp.addEventListener('input', updatePrescriptionText);
 
+  // ── 9.9 CDSS Cascading Autocomplete for Diagnosis ──
+  const diagInput = document.getElementById('noteDiagnosis');
+  const cdssDrop = document.getElementById('cdssDropdown');
+  const cdssSpin = document.getElementById('noteDiagnosisSpinner');
+  let cdssDebounceTimer = null;
+
+  if (diagInput && cdssDrop) {
+    diagInput.addEventListener('input', (e) => {
+      const q = e.target.value.trim();
+      if (cdssDebounceTimer) clearTimeout(cdssDebounceTimer);
+
+      if (q.length < 2) {
+        cdssDrop.style.display = 'none';
+        cdssDrop.innerHTML = '';
+        if (cdssSpin) cdssSpin.style.display = 'none';
+        return;
+      }
+
+      if (cdssSpin) cdssSpin.style.display = 'block';
+
+      cdssDebounceTimer = setTimeout(async () => {
+        try {
+          const dept = window.activeConcludePatientDept || window.STAFF_DEPT || '';
+          const res = await fetch(`/sdn/api/guidelines.php?query=${encodeURIComponent(q)}&department=${encodeURIComponent(dept)}`).then(r => r.json());
+          const list = Array.isArray(res) ? res : (res.data || []);
+          if (cdssSpin) cdssSpin.style.display = 'none';
+
+          if (!list.length) {
+            cdssDrop.style.display = 'none';
+            cdssDrop.innerHTML = '';
+            return;
+          }
+
+          cdssDrop.innerHTML = `
+            <div style="padding:6px 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">
+              Clinical Decision Support (CDSS) Guidelines (${list.length})
+            </div>
+          ` + list.map((g, i) => `
+            <div class="cdss-option" data-idx="${i}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f1f5f9; transition:background 0.15s ease;" onmouseover="this.style.background='#ecfdf5'" onmouseout="this.style.background='#ffffff'">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; color:#0f172a; font-size:0.86rem;">${escapeHtml(g.diagnosis)}</span>
+                <span style="font-size:0.68rem; font-weight:700; color:#047857; background:#d1fae5; border:1px solid #a7f3d0; padding:1px 6px; border-radius:999px;">${escapeHtml(g.department)}</span>
+              </div>
+              <div style="font-size:0.75rem; color:#475569; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                <strong>Plan:</strong> ${escapeHtml(g.treatment_plan)}
+              </div>
+              <div style="font-size:0.74rem; color:#059669; margin-top:2px; display:flex; align-items:center; gap:6px;">
+                <span style="font-weight:700;">Rx:</span>
+                <span>${escapeHtml(g.medicine_name)} &bull; ${escapeHtml(g.dosage_instructions)} (${escapeHtml(g.default_quantity)})</span>
+              </div>
+            </div>
+          `).join('');
+
+          cdssDrop.style.display = 'block';
+
+          const optionEls = cdssDrop.querySelectorAll('.cdss-option');
+          optionEls.forEach(el => {
+            el.addEventListener('click', () => {
+              const idx = parseInt(el.getAttribute('data-idx'), 10);
+              const selected = list[idx];
+              if (selected) {
+                applyCdssGuideline(selected);
+              }
+            });
+          });
+        } catch (err) {
+          if (cdssSpin) cdssSpin.style.display = 'none';
+          cdssDrop.style.display = 'none';
+        }
+      }, 280);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!diagInput.contains(e.target) && !cdssDrop.contains(e.target)) {
+        cdssDrop.style.display = 'none';
+      }
+    });
+  }
+
+  window.applyCdssGuideline = function(g) {
+    if (!g) return;
+    const diagInput = document.getElementById('noteDiagnosis');
+    const treatInput = document.getElementById('noteTreatment');
+    const medSelect = document.getElementById('noteMedicineSelect');
+    const doseInput = document.getElementById('noteDosage');
+    const qtyInput = document.getElementById('noteQuantity');
+    const rxText = document.getElementById('notePrescription');
+    const cdssDrop = document.getElementById('cdssDropdown');
+
+    if (diagInput) diagInput.value = g.diagnosis;
+    if (treatInput) treatInput.value = g.treatment_plan;
+
+    if (medSelect && g.medicine_name) {
+      let matched = false;
+      for (let i = 0; i < medSelect.options.length; i++) {
+        if (medSelect.options[i].text.toLowerCase().includes(g.medicine_name.toLowerCase()) ||
+            g.medicine_name.toLowerCase().includes(medSelect.options[i].text.toLowerCase())) {
+          medSelect.selectedIndex = i;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        const opt = new Option(`${g.medicine_name} (${g.dosage_instructions})`, 'CDSS_CUSTOM_' + Date.now(), true, true);
+        medSelect.add(opt);
+      }
+    }
+
+    if (doseInput) doseInput.value = g.dosage_instructions;
+    if (qtyInput) qtyInput.value = g.default_quantity;
+
+    if (rxText && g.medicine_name) {
+      rxText.value = `Rx: ${g.medicine_name} #${g.default_quantity}\nSig: ${g.dosage_instructions}`;
+    }
+
+    if (cdssDrop) {
+      cdssDrop.style.display = 'none';
+      cdssDrop.innerHTML = '';
+    }
+  };
+
   // ── 10. Clinical Note & Complete Modal ──
   const noteModal = document.getElementById('clinicalNoteModal');
   window.openClinicalNoteModal = function(patientId, patientName) {
@@ -832,11 +1062,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('noteDosage')) document.getElementById('noteDosage').value = '';
     if (document.getElementById('noteQuantity')) document.getElementById('noteQuantity').value = '';
 
+    const cdssDrop = document.getElementById('cdssDropdown');
+    if (cdssDrop) {
+      cdssDrop.style.display = 'none';
+      cdssDrop.innerHTML = '';
+    }
+
     populateMedicineDropdown(window.activeConcludePatientDept);
     noteModal.classList.add('open');
   };
 
   window.closeClinicalNoteModal = function() {
+    const cdssDrop = document.getElementById('cdssDropdown');
+    if (cdssDrop) {
+      cdssDrop.style.display = 'none';
+      cdssDrop.innerHTML = '';
+    }
     noteModal.classList.remove('open');
   };
 
@@ -854,7 +1095,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const key = getDepartmentDrugKey(patientDept);
     const list = DOH_MEDICINES[key] || DOH_MEDICINES.general;
     const selIdx = selectEl ? selectEl.value : '';
-    const medicineName = (selIdx !== '' && list[selIdx]) ? list[selIdx].name : '';
+    let medicineName = (selIdx !== '' && list[selIdx]) ? list[selIdx].name : '';
+    if (!medicineName && selectEl && selectEl.selectedIndex > 0) {
+      medicineName = selectEl.options[selectEl.selectedIndex].text.split('(')[0].trim();
+    }
     const dosage = doseInput ? doseInput.value.trim() : '';
     const quantity = qtyInput ? qtyInput.value.trim() : '';
 
@@ -1328,6 +1572,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(patientId)}&_=${Date.now()}`).then(r => r.json());
       if (res && res.success && res.data) {
         const p = res.data;
+        const statusNorm = (p.status || '').toLowerCase();
+        const isCompleted = statusNorm === 'completed';
+        const isCancelled = isCancelledStatus(statusNorm);
+        const isLocked = isCompleted || isCancelled;
         const dateParts = formatDateBadge(p.appointment_date || p.created_at);
         const timeLabel = formatTime12(p.scheduled_time) || '8:00 AM';
         const rawDept = (p.department || '').trim();
@@ -1380,25 +1628,49 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
 
-          <div style="background:#f8fafc; border:1.5px solid ${isTriagePending ? '#fcd34d' : '#cbd5e1'}; border-radius:8px; padding:0.85rem;">
+          <div style="background:#f8fafc; border:1.5px solid ${isLocked ? '#cbd5e1' : (isTriagePending ? '#fcd34d' : '#cbd5e1')}; border-radius:8px; padding:0.85rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <span style="font-size:0.75rem; color:#0f172a; font-weight:700; text-transform:uppercase;">
                 Triage Routing &amp; Department Assignment
               </span>
-              ${isTriagePending ? '<span style="font-size:0.7rem; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:2px 8px; border-radius:999px;">⚠️ Needs Assignment</span>' : '<span style="font-size:0.7rem; font-weight:600; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:2px 8px; border-radius:999px;">Assigned</span>'}
+              ${isCompleted 
+                ? '<span style="font-size:0.7rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:2px 8px; border-radius:999px;">🔒 Finalized &bull; Completed</span>'
+                : (isCancelled
+                  ? '<span style="font-size:0.7rem; font-weight:600; color:#64748b; background:#f1f5f9; border:1px solid #cbd5e1; padding:2px 8px; border-radius:999px;">🔒 Locked &bull; Cancelled</span>'
+                  : (isTriagePending 
+                    ? '<span style="font-size:0.7rem; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:2px 8px; border-radius:999px;">⚠️ Needs Assignment</span>' 
+                    : '<span style="font-size:0.7rem; font-weight:600; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:2px 8px; border-radius:999px;">Assigned</span>'
+                  )
+                )
+              }
             </div>
             <div style="font-size:0.78rem; color:#64748b; margin-bottom:8px;">
-              Verify the patient\'s chief complaint above. You can assign or correct their department at any time.
+              ${isCompleted
+                ? 'This consultation is completed. Department assignment is locked and cannot be changed.'
+                : (isCancelled
+                  ? 'This appointment is cancelled. Department routing cannot be modified.'
+                  : 'Verify the patient\'s chief complaint above. You can assign or correct their department at any time.'
+                )
+              }
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <select id="modalDeptSelect" class="form-control-clean" style="flex:1; font-weight:600; font-size:0.85rem; padding:6px 10px;">
-                <option value="Triage Pending" ${isTriagePending ? 'selected' : ''}>⚠️ Triage Pending (Needs Assignment)</option>
-                <option value="General Medical" ${deptNorm.includes('general') ? 'selected' : ''}>General Medical</option>
-                <option value="Neurology" ${deptNorm.includes('neuro') ? 'selected' : ''}>Neurology</option>
-                <option value="OPU Psychiatry" ${deptNorm.includes('psych') || deptNorm.includes('opu') ? 'selected' : ''}>OPU Psychiatry</option>
-              </select>
-              <button type="button" class="btn-clean primary sm" onclick="handleAssignDepartment('${p.patient_id}', document.getElementById('modalDeptSelect').value)">Save Department</button>
-            </div>
+            ${isLocked ? `
+              <div style="display:flex; gap:8px; align-items:center;">
+                <div style="flex:1; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:7px 12px; font-weight:600; font-size:0.85rem; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
+                  <span>${escapeHtml(rawDept || 'General Medical')}</span>
+                  <span style="font-size:0.7rem; font-weight:700; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; padding:1px 6px; border-radius:4px;">Read Only</span>
+                </div>
+              </div>
+            ` : `
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="modalDeptSelect" class="form-control-clean" style="flex:1; font-weight:600; font-size:0.85rem; padding:6px 10px;">
+                  <option value="Triage Pending" ${isTriagePending ? 'selected' : ''}>⚠️ Triage Pending (Needs Assignment)</option>
+                  <option value="General Medical" ${deptNorm.includes('general') ? 'selected' : ''}>General Medical</option>
+                  <option value="Neurology" ${deptNorm.includes('neuro') ? 'selected' : ''}>Neurology</option>
+                  <option value="OPU Psychiatry" ${deptNorm.includes('psych') || deptNorm.includes('opu') ? 'selected' : ''}>OPU Psychiatry</option>
+                </select>
+                <button type="button" class="btn-clean primary sm" onclick="handleAssignDepartment('${p.patient_id}', document.getElementById('modalDeptSelect').value)">Save Department</button>
+              </div>
+            `}
           </div>
 
           ${(p.medical_history_diagnosis || p.medical_history_prescription) ? `
@@ -1745,4 +2017,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   loadData();
+});
+
+window.toggleRowMenu = function(event, btn) {
+  event.preventDefault();
+  event.stopPropagation();
+  const pop = btn.parentElement.querySelector('.row-menu-pop');
+  if (!pop) return;
+  const willOpen = !pop.classList.contains('open');
+  document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
+  if (!willOpen) return;
+  const rect = btn.getBoundingClientRect();
+  pop.style.position = 'fixed';
+  pop.style.top = (rect.bottom + 6) + 'px';
+  pop.style.left = Math.max(8, rect.right - 176) + 'px';
+  pop.classList.add('open');
+  btn.setAttribute('aria-expanded', 'true');
+};
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
 });

@@ -1,669 +1,958 @@
 /**
- * CHIBI CHATBOT CONTROLLER - LINKod Assistants
- * 
- * Features:
- * - Walking slowly from the right side into position
- * - After walking in, "ASK ME" speech bubble pops up
- * - After staying, walks out to the right side
- * - Alternating sequence: Boy walks in/out -> Girl walks in/out
- * - Single head circle avatar in the chatbot conversation
- * - Contextual assistant: if asking the girl, she's in the conversation; if boy, he is
- * - Removed floating green dot and 'MMWGH' text badge
+ * CHIBI CHATBOT CONTROLLER - LINGKOD Assistant (Nurse Mika & Dr. Leo)
+ * Elevated Ultra-Compact Flat UI with Interactive FAQs, Follow-up Chips, and 4-Question Star Rating
  */
+(function () {
+  'use strict';
 
-  (function () {
-    'use strict';
+  const HEADER_ICONS = {
+    girl: `
+      <svg class="chibi-header-icon chibi-icon-cap" viewBox="0 0 64 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 13C21 5.5 43 5.5 48 13" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M7 17.5C18 10.5 46 10.5 57 17.5L51.5 34.5C40 28 24 28 12.5 34.5L7 17.5Z" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"/>
+        <path d="M30.2 17H33.8V20.8H37.6V24.2H33.8V28H30.2V24.2H26.4V20.8H30.2V17Z" stroke="#ffffff" stroke-width="1.9" stroke-linejoin="round"/>
+      </svg>
+    `,
+    boy: `
+      <svg class="chibi-header-icon chibi-icon-steth" viewBox="0 0 56 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20.5" cy="6.5" r="2.3" stroke="#ffffff" stroke-width="2.1"/>
+        <circle cx="35.5" cy="6.5" r="2.3" stroke="#ffffff" stroke-width="2.1"/>
+        <path d="M18.5 6.8C13.5 8 12.5 18 17.8 24C21.2 27.8 25.2 29.2 28 29.2C30.8 29.2 34.8 27.8 38.2 24C43.5 18 42.5 8 37.5 6.8" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round"/>
+        <path d="M15.2 18.8C19.8 25.5 36.2 25.5 40.8 18.8" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M28 29.2V35.5C28 43 21.5 49 16 48C11.2 47.2 10.8 41.2 16 39.2C21.2 37.2 28.2 43 34.2 47.2C38.5 50.2 43 49 44.5 45.5" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round"/>
+        <circle cx="45.5" cy="41.5" r="5" stroke="#ffffff" stroke-width="2.2"/>
+        <circle cx="45.5" cy="41.5" r="2.2" stroke="#ffffff" stroke-width="1.8"/>
+      </svg>
+    `
+  };
 
-    // Assistant Profiles
-    const ASSISTANTS = {
-      girl: {
-        name: { EN: "Nurse Mika", TL: "Nurse Mika" },
-        role: { EN: "LINKod Nursing Assistant", TL: "LINKod Nursing Assistant" },
-        avatar: "/sdn/public/assets/chibi_girl_avatar.png",
-        welcome: {
-          EN: "Hello! 👋 I'm Nurse Mika, your LINKod assistant.<br/>How can I help you today?",
-          TL: "Kumusta! 👋 Ako si Nurse Mika, inyong LINKod assistant.<br/>Paano ko kayo matutulungan ngayon?"
-        }
-      },
-      boy: {
-        name: { EN: "Dr. Leo", TL: "Dr. Leo" },
-        role: { EN: "LINKod Medical Assistant", TL: "LINKod Medical Assistant" },
-        avatar: "/sdn/public/assets/chibi_boy_avatar.png",
-        welcome: {
-          EN: "Hello! 👋 I'm Dr. Leo, your LINKod healthcare guide.<br/>How can I assist you today?",
-          TL: "Kumusta! 👋 Ako si Dr. Leo, inyong healthcare guide.<br/>Paano ko kayo matutulungan ngayon?"
-        }
+  const ASSISTANTS = {
+    girl: {
+      name: { EN: "Nurse Mika", TL: "Nurse Mika" },
+      role: { EN: "LINGKOD ASSISTANT", TL: "LINGKOD ASSISTANT" },
+      avatar: "/sdn/public/assets/chibi_girl_avatar.png",
+      welcome: {
+        EN: "Hello! I am Nurse Mika, your LINGKOD assistant. How can I help you today?",
+        TL: "Kumusta! Ako si Nurse Mika, inyong LINGKOD assistant. Paano ko kayo matutulungan ngayon?"
       }
-    };
-
-    const dict = {
-      EN: {
-        selectQuestion: "Choose a topic to ask:",
-        askAnother: "Ask another question",
-        limitReached: "You've reached the FAQ limit. Please rate your experience:",
-        feedbackThanks: (stars) => `You rated us ${stars} star${stars > 1 ? 's' : ''}! Thank you for your feedback! ⭐`,
-        bubble: "ASK ME"
-      },
-      TL: {
-        selectQuestion: "Pumili ng tanong:",
-        askAnother: "Magtanong muli",
-        limitReached: "Naabot na ang limitasyon ng FAQ. Pakibigyan kami ng rating:",
-        feedbackThanks: (stars) => `Binigyan mo kami ng ${stars} bituin! Maraming salamat sa iyong feedback! ⭐`,
-        bubble: "TANUNGIN MO AKO"
+    },
+    boy: {
+      name: { EN: "Dr. Leo", TL: "Dr. Leo" },
+      role: { EN: "LINGKOD ASSISTANT", TL: "LINGKOD ASSISTANT" },
+      avatar: "/sdn/public/assets/chibi_boy_avatar.png",
+      welcome: {
+        EN: "Hello! I am Nurse Mika, your LINGKOD assistant. How can I help you today?",
+        TL: "Kumusta! Ako si Dr. Leo, inyong LINGKOD assistant. Paano ko kayo matutulungan ngayon?"
       }
-    };
-
-    const faqs = {
-      EN: [
-        {
-          question: "How do I request an appointment/schedule?",
-          answer: "Click 'Book Appointment' on the homepage, select your department, and complete the registration. <strong>Staff Verification Protocol:</strong> Our clinic staff will call your contact number to verify your appointment before admitting you to the consultation queue. Please keep your phone line active!"
-        },
-        {
-          question: "What are the hospital's operating hours & doctor schedules?",
-          answer: "Our main emergency triage operates 24/7. Outpatient clinic consultations and telehealth services are open Monday to Friday from 8:00 AM to 5:00 PM. Real-time doctor availability and open slots can be tracked directly on our homepage live stats counter."
-        },
-        {
-          question: "Where can I find the nearest Service Delivery Network (SDN) facility?",
-          answer: "You can view all affiliated hospital, RHU, and BHS partner locations on our interactive 'Location Map'. Our attending staff can also initiate seamless inter-department referrals or transfers if specialized evaluation is required."
-        },
-        {
-          question: "What should I bring for my consultation & EMR triage?",
-          answer: "Please bring a valid government/student ID, your active contact phone number, and any prior medical records, lab results, or prescription lists. Our staff records triage vitals into your electronic medical record (EMR) and issues printable clinical notes."
-        }
-      ],
-      TL: [
-        {
-          question: "Paano ako mag-request ng appointment/iskedyul?",
-          answer: "Pindutin ang 'Book Appointment' sa homepage, piliin ang inyong departamento, at punan ang registration form. <strong>Staff Verification Protocol:</strong> Tatawagan po kayo ng clinic staff sa inyong numero upang kumpirmahin ang appointment bago kayo ipasok sa queue ng doktor. Pakisigurong aktibo ang inyong linya!"
-        },
-        {
-          question: "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
-          answer: "Ang Emergency Department ay bukas 24/7. Ang outpatient clinics at telehealth ay bukas Lunes hanggang Biyernes, 8:00 AM hanggang 5:00 PM. Makikita rin ninyo ang live available doctor slots sa aming homepage live stats counter."
-        },
-        {
-          question: "Saan ko makikita ang pinakamalapit na pasilidad ng SDN?",
-          answer: "Makikita ang lahat ng kaakibat na partner hospitals, RHUs, at BHS facilities sa aming interactive 'Location Map'. Maaari ring mag-proseso ang aming staff ng electronic referral o transfer sa ibang departamento kung kinakailangan."
-        },
-        {
-          question: "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
-          answer: "Mangyaring magdala ng valid ID, aktibong cellphone number, at anumang nakaraang laboratory results o reseta ng gamot. Itatala ng aming staff ang inyong triage vitals sa inyong electronic medical record (EMR) at magbibigay ng opisyal na printable clinical notes."
-        }
-      ]
-    };
-
-    // State
-    let currentLang = 'EN';
-    let isOpen = false;
-    let activeChibi = 'boy'; // Current chibi walking on the stage ('boy' or 'girl')
-    let chatAssistant = 'boy'; // Current assistant in the chat conversation ('boy' or 'girl')
-    let questionCount = 0;
-    let isTyping = false;
-    let messages = [];
-
-    // Cycle Timers
-    let timerStep1 = null;
-    let timerStep2 = null;
-    let timerStep3 = null;
-    let timerStep4 = null;
-    let timerStep5 = null;
-
-    function formatTime() {
-      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+  };
 
-    // --- Initialize UI ---
-    function initChibiChatbot() {
-      if (document.getElementById('chibi-chatbot-root')) return;
+  const topics = {
+    EN: [
+      "How do I request an appointment/schedule?",
+      "What are the hospital's operating hours & doctor schedules?",
+      "Where I can find the nearest MMWGH hospital?",
+      "What should I bring for my consultation & EMR triage?"
+    ],
+    TL: [
+      "Paano ako mag-request ng appointment/iskedyul?",
+      "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+      "Saan ko makikita ang pinakamalapit na ospital ng MMWGH?",
+      "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?"
+    ]
+  };
 
-      const root = document.createElement('div');
-      root.id = 'chibi-chatbot-root';
-      root.innerHTML = `
+  const dict = {
+    EN: {
+      selectQuestion: "CHOOSE A TOPIC TO ASK:",
+      followUpLabel: "CHOOSE A FOLLOW-UP QUESTION:",
+      backToTopics: "← Back to Main Topics",
+      closeAria: "Close support chat",
+      defaultUnmatched:
+        "I could not locate an exact match for your inquiry. Please choose one of the core appointment workflow topics below:",
+      defaultFollowUps: [
+        "How do I check my appointment status on the portal?",
+        "Can I make a same-day appointment or walk-in booking?",
+        "What should I bring for my consultation & EMR triage?"
+      ]
+    },
+    TL: {
+      selectQuestion: "PUMILI NG TANONG:",
+      followUpLabel: "MGA KAUGNAY NA TANONG:",
+      backToTopics: "← Bumalik sa Pangunahing Tanong",
+      closeAria: "Isara ang support chat",
+      defaultUnmatched:
+        "Hindi nahanap ang eksaktong sagot para sa inyong tanong. Pumili sa mga sumusunod na paksa:",
+      defaultFollowUps: [
+        "Paano ko masusuri ang status ng aking appointment sa portal?",
+        "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?"
+      ]
+    }
+  };
+
+  const faqs = {
+    EN: [
+      {
+        id: "request-appointment",
+        question: "How do I request an appointment/schedule?",
+        keywords: ["request", "appointment", "schedule", "book", "reserve", "slot"],
+        answer:
+          "Click <strong>'Book Appointment'</strong> on the homepage, select your desired clinical department, and complete the registration. <strong>Staff Verification Protocol:</strong> Our clinic staff will call your active phone number to confirm your details before placing you in the physician queue. Please keep your phone line active!",
+        followUps: [
+          "Why does clinic staff call before confirming my appointment?",
+          "Can I make a same-day appointment or walk-in booking?",
+          "What should I bring for my consultation & EMR triage?"
+        ]
+      },
+      {
+        id: "hospital-hours",
+        question: "What are the hospital's operating hours & doctor schedules?",
+        keywords: ["hours", "operating", "doctor", "schedules", "time", "open", "opd", "emergency"],
+        answer:
+          "The <strong>Emergency Triage</strong> operates 24/7. <strong>Outpatient (OPD) specialty clinics</strong> and telehealth services run Monday through Friday from <strong>8:00 AM to 5:00 PM</strong>. Live doctor availability and open slots can be inspected in the Schedules section.",
+        followUps: [
+          "How do I check live doctor availability and clinic schedules?",
+          "What is the cut-off time for same-day clinic queues?",
+          "Can I make a same-day appointment or walk-in booking?"
+        ]
+      },
+      {
+        id: "sdn-facility",
+        question: "Where I can find the nearest MMWGH hospital?",
+        keywords: ["where", "nearest", "mmwgh", "hospital", "sdn", "facility", "location", "rhu", "bhs", "network"],
+        answer:
+          "Access the interactive <strong>'Location Map'</strong> on our portal to view Mariveles Mental Wellness and General Hospital (MMWGH) and all affiliated Service Delivery Network (SDN) facilities, Rural Health Units (RHUs), and Barangay Health Stations (BHS).",
+        followUps: [
+          "How do I check my appointment status on the portal?",
+          "What should I bring for my consultation & EMR triage?",
+          "Why is Data Privacy Act (DPA) consent required?"
+        ]
+      },
+      {
+        id: "consultation-requirements",
+        question: "What should I bring for my consultation & EMR triage?",
+        keywords: ["bring", "consultation", "triage", "emr", "requirements", "documents", "id", "vitals"],
+        answer:
+          "Please present a valid government, company, or student ID, your active contact phone number, and any prior medical records, lab results, or prescription lists. Our staff records triage vitals into your electronic medical record (EMR) and issues printable clinical notes.",
+        followUps: [
+          "Why is Data Privacy Act (DPA) consent required?",
+          "How do I check my appointment status on the portal?",
+          "What happens if I miss the phone verification call?"
+        ]
+      },
+      {
+        id: "portal-status",
+        question: "How do I check my appointment status on the portal?",
+        keywords: ["portal", "status", "check", "dashboard", "queue", "reference"],
+        answer:
+          "Log in with your registered mobile number or patient reference number under the <strong>Patient Portal</strong> tab. Your dashboard displays your scheduled date, designated physician, and real-time consultation queue position.",
+        followUps: [
+          "Where can I view clinical notes and doctor prescriptions?",
+          "What happens if I miss the phone verification call?",
+          "Why is Data Privacy Act (DPA) consent required?"
+        ]
+      },
+      {
+        id: "portal-records",
+        question: "Where can I view clinical notes and doctor prescriptions?",
+        keywords: ["notes", "prescriptions", "records", "clinical", "pdf", "medical", "lab"],
+        answer:
+          "Completed consultation summaries, digital prescriptions, and laboratory referral forms are automatically archived in your <strong>Patient Portal &gt; Medical Records</strong> section as downloadable PDFs.",
+        followUps: [
+          "How do I check my appointment status on the portal?",
+          "What should I bring for my consultation & EMR triage?",
+          "Why is Data Privacy Act (DPA) consent required?"
+        ]
+      },
+      {
+        id: "dpa-consent",
+        question: "Why is Data Privacy Act (DPA) consent required?",
+        keywords: ["privacy", "dpa", "consent", "data", "confidential", "security", "law", "act"],
+        answer:
+          "Under <strong>Republic Act 10173 (Data Privacy Act of 2012)</strong>, explicit consent is required before processing healthcare data. Your personal identifiable information and medical records remain encrypted and restricted strictly to attending medical personnel.",
+        followUps: [
+          "What patient information is collected and how is it protected?",
+          "How do I check my appointment status on the portal?",
+          "Can I make a same-day appointment or walk-in booking?"
+        ]
+      },
+      {
+        id: "dpa-protection",
+        question: "What patient information is collected and how is it protected?",
+        keywords: ["collected", "protected", "stored", "safety", "records", "personal"],
+        answer:
+          "We collect basic demographic details, contact information, and triage vitals. Records are hosted within certified healthcare data infrastructure conforming to Department of Health (DOH) security guidelines.",
+        followUps: [
+          "Why is Data Privacy Act (DPA) consent required?",
+          "Why does clinic staff call before confirming my appointment?",
+          "Can I make a same-day appointment or walk-in booking?"
+        ]
+      },
+      {
+        id: "same-day",
+        question: "Can I make a same-day appointment or walk-in booking?",
+        keywords: ["same-day", "same day", "today", "walk-in", "walkin", "urgent"],
+        answer:
+          "Online same-day bookings are accepted for morning clinics until <strong>10:00 AM</strong>, subject to slot quotas. For acute or emergency conditions, report directly to the <strong>24/7 Emergency Triage</strong> without needing prior booking.",
+        followUps: [
+          "What is the cut-off time for same-day clinic queues?",
+          "What are the hospital's operating hours & doctor schedules?",
+          "Why does clinic staff call before confirming my appointment?"
+        ]
+      },
+      {
+        id: "cutoff-time",
+        question: "What is the cut-off time for same-day clinic queues?",
+        keywords: ["cut-off", "cutoff", "time", "deadline", "queue", "limit", "morning"],
+        answer:
+          "Outpatient departments enforce a strict <strong>10:00 AM cut-off</strong> for morning clinics and <strong>2:00 PM cut-off</strong> for afternoon clinics to ensure timely physical triage and examination.",
+        followUps: [
+          "Can I make a same-day appointment or walk-in booking?",
+          "What are the hospital's operating hours & doctor schedules?",
+          "Why does clinic staff call before confirming my appointment?"
+        ]
+      },
+      {
+        id: "schedules",
+        question: "How do I check live doctor availability and clinic schedules?",
+        keywords: ["schedule", "doctor", "availability", "roster", "physician", "slots", "calendar"],
+        answer:
+          "Open the <strong>Schedules</strong> module to inspect weekly rosters across specialties (Internal Medicine, Pediatrics, OB-GYN, Surgery). Open daily slots update dynamically according to duty shifts.",
+        followUps: [
+          "What are the hospital's operating hours & doctor schedules?",
+          "Can I make a same-day appointment or walk-in booking?",
+          "How do I check my appointment status on the portal?"
+        ]
+      },
+      {
+        id: "verification-call",
+        question: "Why does clinic staff call before confirming my appointment?",
+        keywords: ["call", "phone", "verify", "verification", "confirm", "staff", "nurse"],
+        answer:
+          "A nurse or admitting officer conducts a brief phone verification to review symptom urgency and ensure allocation to the proper specialty department before locking your consultation slot.",
+        followUps: [
+          "What happens if I miss the phone verification call?",
+          "What should I bring for my consultation & EMR triage?",
+          "Why is Data Privacy Act (DPA) consent required?"
+        ]
+      },
+      {
+        id: "missed-call",
+        question: "What happens if I miss the phone verification call?",
+        keywords: ["missed", "miss", "unanswered", "retry", "released", "cancel"],
+        answer:
+          "Staff make up to <strong>two retry attempts</strong> within 30 minutes. If unreachable, the pending slot is released back to the general queue. You can re-initiate booking or call our support hotline directly.",
+        followUps: [
+          "Why does clinic staff call before confirming my appointment?",
+          "How do I check my appointment status on the portal?",
+          "Can I make a same-day appointment or walk-in booking?"
+        ]
+      }
+    ],
+    TL: [
+      {
+        id: "request-appointment",
+        question: "Paano ako mag-request ng appointment/iskedyul?",
+        keywords: ["request", "appointment", "iskedyul", "book", "magpa-schedule"],
+        answer:
+          "Pindutin ang <strong>'Book Appointment'</strong> sa homepage, piliin ang inyong departamento, at sagutan ang form. <strong>Staff Verification Protocol:</strong> Tatawagan po kayo ng clinic staff sa inyong numero upang kumpirmahin ang detalye bago ilagay sa queue ng doktor. Pakisigurong aktibo ang inyong linya!",
+        followUps: [
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?"
+        ]
+      },
+      {
+        id: "hospital-hours",
+        question: "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+        keywords: ["oras", "operasyon", "iskedyul", "doktor", "bukas", "emergency", "opd"],
+        answer:
+          "Bukas ang <strong>Emergency Triage</strong> 24 oras araw-araw. Ang <strong>Outpatient (OPD) clinics</strong> at telehealth ay bukas Lunes hanggang Biyernes mula <strong>8:00 AM hanggang 5:00 PM</strong>.",
+        followUps: [
+          "Paano masusuri ang availability ng doktor at iskedyul ng klinika?",
+          "Ano ang cut-off time para sa same-day clinic queues?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
+        ]
+      },
+      {
+        id: "sdn-facility",
+        question: "Saan ko makikita ang pinakamalapit na ospital ng MMWGH?",
+        keywords: ["saan", "mmwgh", "ospital", "pasilidad", "sdn", "lokasyon", "rhu", "bhs", "mapa"],
+        answer:
+          "Maaari ninyong tingnan ang aming interactive na <strong>'Location Map'</strong> upang makita ang MMWGH, partner hospitals, RHU, at BHS stations. Maaari ring mag-asikaso ang staff ng inter-facility electronic referral.",
+        followUps: [
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
+        ]
+      },
+      {
+        id: "consultation-requirements",
+        question: "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+        keywords: ["dalhin", "dokumento", "id", "kailangan", "triage", "vitals", "emr"],
+        answer:
+          "Magdala ng valid ID, inyong aktibong cellphone number, at anumang lumang laboratory results o reseta. Itatala ng aming nursing staff ang inyong vitals sa inyong Electronic Medical Record (EMR).",
+        followUps: [
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Ano ang mangyayari kung hindi nasagot ang verification call?"
+        ]
+      },
+      {
+        id: "portal-status",
+        question: "Paano ko masusuri ang status ng aking appointment sa portal?",
+        keywords: ["portal", "status", "tingnan", "appointment", "iskedyul", "queue"],
+        answer:
+          "Mag-log in sa <strong>Patient Portal</strong> gamit ang inyong registered mobile number o reference number. Makikita rito ang petsa, nakatalagang doktor, at queue status.",
+        followUps: [
+          "Saan makikita ang clinical notes at reseta ng doktor?",
+          "Ano ang mangyayari kung hindi nasagot ang verification call?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
+        ]
+      },
+      {
+        id: "portal-records",
+        question: "Saan makikita ang clinical notes at reseta ng doktor?",
+        keywords: ["notes", "reseta", "doktor", "rekord", "laboratory", "pdf"],
+        answer:
+          "Ang mga clinical summary, lab referral forms, at digital na reseta ay naka-archive sa <strong>Patient Portal &gt; Medical Records</strong> bilang mga nada-download na PDF.",
+        followUps: [
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
+        ]
+      },
+      {
+        id: "dpa-consent",
+        question: "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+        keywords: ["privacy", "dpa", "consent", "datos", "batas", "proteksyon"],
+        answer:
+          "Ayon sa <strong>Republic Act 10173 (Data Privacy Act ng 2012)</strong>, kailangan ang inyong pahintulot upang maiproseso ang inyong medical data nang may mataas na antas ng encryption at seguridad.",
+        followUps: [
+          "Anong impormasyon ang kinokolekta at paano pinoprotektahan?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
+        ]
+      },
+      {
+        id: "dpa-protection",
+        question: "Anong impormasyon ang kinokolekta at paano pinoprotektahan?",
+        keywords: ["kinokolekta", "protektado", "datos", "ingat", "seguridad"],
+        answer:
+          "Kinokolekta lamang ang pangalan, contact details, at triage vitals alinsunod sa mga pamantayan ng Department of Health (DOH).",
+        followUps: [
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
+        ]
+      },
+      {
+        id: "same-day",
+        question: "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+        keywords: ["same-day", "walk-in", "ngayon", "urgent", "emergency"],
+        answer:
+          "Tumatanggap ng online same-day bookings hanggang <strong>10:00 AM</strong> depende sa natitirang slots. Para sa mga agarang emergency, dumiretso sa <strong>24/7 Emergency Triage</strong>.",
+        followUps: [
+          "Ano ang cut-off time para sa same-day clinic queues?",
+          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?"
+        ]
+      },
+      {
+        id: "cutoff-time",
+        question: "Ano ang cut-off time para sa same-day clinic queues?",
+        keywords: ["cut-off", "cutoff", "oras", "deadline", "pila"],
+        answer:
+          "Ipinapatupad ang <strong>10:00 AM cut-off</strong> sa pang-umaga at <strong>2:00 PM cut-off</strong> sa panghapon upang masiguro ang masusing konsultasyon.",
+        followUps: [
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?"
+        ]
+      },
+      {
+        id: "schedules",
+        question: "Paano masusuri ang availability ng doktor at iskedyul ng klinika?",
+        keywords: ["iskedyul", "doktor", "availability", "duty", "slots"],
+        answer:
+          "Buksan ang <strong>Schedules</strong> tab upang makita ang talaan ng mga doktor sa iba't ibang klinika at ang natitirang consultation quota.",
+        followUps: [
+          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?"
+        ]
+      },
+      {
+        id: "verification-call",
+        question: "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+        keywords: ["tawag", "staff", "kumpirmahin", "verification", "telepono"],
+        answer:
+          "Tumatawag ang nurse o admissions officer upang tiyaking angkop ang departamento para sa inyong sintomas bago pinal na i-lock ang inyong schedule.",
+        followUps: [
+          "Ano ang mangyayari kung hindi nasagot ang verification call?",
+          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
+          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
+        ]
+      },
+      {
+        id: "missed-call",
+        question: "Ano ang mangyayari kung hindi nasagot ang verification call?",
+        keywords: ["hindi nasagot", "missed", "retry", "nakansela"],
+        answer:
+          "Magtatangkang tumawag ang staff nang <strong>dalawang beses</strong> sa loob ng 30 minuto. Kung walang sagot, ibabalik ang slot sa pangkalahatang queue.",
+        followUps: [
+          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
+          "Paano ko masusuri ang status ng aking appointment sa portal?",
+          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
+        ]
+      }
+    ]
+  };
+
+  // State
+  let currentLang = 'EN';
+  let isOpen = false;
+  let activeChibi = 'girl'; // Nurse Mika default
+  let chatAssistant = 'girl';
+  let isTyping = false;
+  let messages = [];
+  let showingMainTopics = true;
+  let activeBotMsgId = 'initial';
+
+  // Cycle Timers for walking animation
+  let timerStep1 = null;
+  let timerStep2 = null;
+  let timerStep3 = null;
+  let timerStep4 = null;
+
+  function formatTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    return `${timeStr} | ${dateStr}`;
+  }
+
+  function initChibiChatbot() {
+    if (document.getElementById('chibi-chatbot-root')) return;
+
+    const root = document.createElement('div');
+    root.id = 'chibi-chatbot-root';
+    root.innerHTML = `
       <!-- Floating Chibi Widget in Bottom-Right -->
       <div class="chibi-widget-container" id="chibiWidget">
         <div class="chibi-stage" id="chibiStage" title="Click to ask me!" role="button" tabindex="0">
-          <div class="chibi-ground-shadow"></div>
-
-          <!-- Dynamic Actor (Walking from right, popping bubble, walking out) -->
-          <div class="chibi-character-actor" id="chibiActor">
-            <!-- Injected dynamically -->
-          </div>
+          <div class="chibi-character-actor" id="chibiActor"></div>
         </div>
       </div>
 
       <!-- Chat Conversation Window -->
       <div class="chibi-chat-window" id="chibiChatWindow" role="dialog" aria-modal="true" aria-hidden="true">
-        <!-- Header with SINGLE Head Circle -->
         <div class="chibi-chat-header">
-          <div class="chibi-header-info">
-            <!-- Single Head Circle Avatar -->
-            <div class="chibi-avatar-single" id="headerAvatarCircle" data-assistant="${chatAssistant}" title="Click to switch assistant">
-              <img id="headerAvatarImg" src="${ASSISTANTS[chatAssistant].avatar}" alt="${ASSISTANTS[chatAssistant].name[currentLang]}" />
+          <button type="button" class="chibi-close-btn" id="chibiCloseBtn" aria-label="Close Chat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <div class="chibi-header-top" id="headerInfoToggle" title="Click to switch between Nurse Mika & Dr. Leo">
+            <div class="chibi-header-icon-wrap" id="chibiHeaderIconWrap">
+              ${HEADER_ICONS[chatAssistant]}
             </div>
-            <div class="chibi-header-text">
-              <h3 id="chibiHeaderName">${ASSISTANTS[chatAssistant].name[currentLang]}</h3>
-              <p id="chibiHeaderRole">${ASSISTANTS[chatAssistant].role[currentLang]}</p>
-            </div>
+            <h3 id="chibiHeaderName">${ASSISTANTS[chatAssistant].name[currentLang]}</h3>
           </div>
 
-          <div class="chibi-header-actions">
-            <div class="chibi-lang-switch">
-              <button class="chibi-lang-btn active" data-lang="EN" id="btnLangEN">EN</button>
-              <button class="chibi-lang-btn" data-lang="TL" id="btnLangTL">TL</button>
+          <div class="chibi-header-divider"></div>
+
+          <div class="chibi-header-bottom">
+            <p id="chibiHeaderRole">${ASSISTANTS[chatAssistant].role[currentLang]}</p>
+
+            <div class="chibi-lang-dropdown">
+              <button type="button" class="chibi-lang-trigger" id="chibiLangTrigger" aria-label="Switch Language">
+                <span id="chibiLangCode">${currentLang}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div class="chibi-lang-menu" id="chibiLangMenu" hidden>
+                <button type="button" class="chibi-lang-option active" data-lang="EN" id="btnLangEN">EN (English)</button>
+                <button type="button" class="chibi-lang-option" data-lang="TL" id="btnLangTL">TL (Tagalog)</button>
+              </div>
             </div>
-            <button class="chibi-close-btn" id="chibiCloseBtn" aria-label="Close Chat">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
           </div>
         </div>
 
         <!-- Chat Conversation Body -->
-        <div class="chibi-chat-body" id="chibiChatBody">
-          <!-- Messages will be rendered here -->
-        </div>
+        <div class="chibi-chat-body" id="chibiChatBody"></div>
       </div>
     `;
 
-      document.body.appendChild(root);
+    document.body.appendChild(root);
 
-      // Event Listeners
-      const stage = document.getElementById('chibiStage');
-      const closeBtn = document.getElementById('chibiCloseBtn');
-      const btnEN = document.getElementById('btnLangEN');
-      const btnTL = document.getElementById('btnLangTL');
-      const avatarCircle = document.getElementById('headerAvatarCircle');
+    // Event Listeners
+    const stage = document.getElementById('chibiStage');
+    const closeBtn = document.getElementById('chibiCloseBtn');
+    const langTrigger = document.getElementById('chibiLangTrigger');
+    const langMenu = document.getElementById('chibiLangMenu');
+    const btnEN = document.getElementById('btnLangEN');
+    const btnTL = document.getElementById('btnLangTL');
+    const headerInfo = document.getElementById('headerInfoToggle');
 
-      stage.addEventListener('click', () => openChatWith(activeChibi));
-      stage.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') openChatWith(activeChibi);
-      });
-      closeBtn.addEventListener('click', toggleChat);
+    stage.addEventListener('click', () => openChatWith(activeChibi));
+    stage.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') openChatWith(activeChibi);
+    });
+    closeBtn.addEventListener('click', toggleChat);
 
-      btnEN.addEventListener('click', () => switchLanguage('EN'));
-      btnTL.addEventListener('click', () => switchLanguage('TL'));
-
-      // Clicking single head circle in header switches assistant
-      avatarCircle.addEventListener('click', toggleHeaderAssistant);
-
-      // Coordinate with splash screen
-      if (document.body && document.body.classList.contains('splash-active')) {
-        const widget = document.getElementById('chibiWidget');
-        widget.classList.add('chatbot-hidden');
-
-        const observer = new MutationObserver(() => {
-          if (!document.body.classList.contains('splash-active')) {
-            widget.classList.remove('chatbot-hidden');
-            startWalkingCycle();
-            observer.disconnect();
-          }
-        });
-        observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-      } else {
-        startWalkingCycle();
-      }
-    }
-
-    // --- Walking Loop: Walk In From Right -> Pop ASK ME -> Walk Out to Right -> Next Chibi ---
-    function startWalkingCycle() {
-      clearCycleTimers();
-      runSingleWalkCycle(activeChibi);
-    }
-
-    function clearCycleTimers() {
-      if (timerStep1) clearTimeout(timerStep1);
-      if (timerStep2) clearTimeout(timerStep2);
-      if (timerStep3) clearTimeout(timerStep3);
-      if (timerStep4) clearTimeout(timerStep4);
-      if (timerStep5) clearTimeout(timerStep5);
-    }
-
-    function bindBubbleClick() {
-      const bubble = document.getElementById('chibiAskMeBubble');
-      if (bubble) {
-        bubble.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openChatWith(activeChibi);
-        });
-      }
-    }
-
-    function runSingleWalkCycle(chibi) {
-      if (isOpen) return; // Pause walking cycle while chat is open
-
-      const actor = document.getElementById('chibiActor');
-      if (!actor) return;
-
-      activeChibi = chibi;
-
-      if (chibi === 'girl') {
-        // ====================================================
-        // NURSE MIKA CYCLE:
-        // 1. Walk in smoothly from the right (2.6s) with leg strides and walking eye-blinks
-        // 2. Wave hello enthusiastically with pen (1.6s) as "ASK ME" pops up!
-        // 3. Stand on both feet with speech bubble & periodic eye-blinking (3.6s)
-        // 4. Wave bye-bye before leaving (1.4s)
-        // 5. Turn around and walk out smoothly (2.2s)
-        // ====================================================
-        actor.className = 'chibi-character-actor actor-girl state-walk-in';
-        actor.innerHTML = `
-          <div class="chibi-sprite chibi-sprite-girl" aria-label="Nurse Mika"></div>
-        `;
-
-        // 2. After walking in (2.6s): Wave Hello with pen + pop up "ASK ME" bubble!
-        timerStep1 = setTimeout(() => {
-          if (isOpen) return;
-
-          actor.className = 'chibi-character-actor actor-girl state-wave-hello';
-          actor.innerHTML = `
-            <div class="chibi-ask-me-bubble ${currentLang === 'TL' ? 'is-tl' : ''}" id="chibiAskMeBubble" title="${currentLang === 'TL' ? 'TANUNGIN MO AKO' : 'ASK ME'}"></div>
-            <div class="chibi-sprite chibi-sprite-girl-wave" aria-label="Nurse Mika Waving Hello"></div>
-          `;
-          bindBubbleClick();
-
-          // 3. After waving hello (1.6s): Stand on both feet with periodic eye-blinking & bubble (3.6s)
-          timerStep2 = setTimeout(() => {
-            if (isOpen) return;
-
-            actor.className = 'chibi-character-actor actor-girl state-arrived';
-            actor.innerHTML = `
-              <div class="chibi-ask-me-bubble ${currentLang === 'TL' ? 'is-tl' : ''}" id="chibiAskMeBubble" title="${currentLang === 'TL' ? 'TANUNGIN MO AKO' : 'ASK ME'}"></div>
-              <div class="chibi-sprite chibi-sprite-girl" aria-label="Nurse Mika Standing"></div>
-            `;
-            bindBubbleClick();
-
-            // 4. After standing idle (3.6s): Wave Bye before walking out!
-            timerStep3 = setTimeout(() => {
-              if (isOpen) return;
-
-              actor.className = 'chibi-character-actor actor-girl state-wave-bye';
-              actor.innerHTML = `
-                <div class="chibi-sprite chibi-sprite-girl-wave" aria-label="Nurse Mika Waving Bye"></div>
-              `;
-
-              // 5. After waving bye (1.4s): Turn around and walk out to the right (2.2s)
-              timerStep4 = setTimeout(() => {
-                if (isOpen) return;
-
-                actor.className = 'chibi-character-actor actor-girl state-walk-out';
-                actor.innerHTML = `
-                  <div class="chibi-sprite chibi-sprite-girl" aria-label="Nurse Mika"></div>
-                `;
-
-                // 6. Once walked out (2.2s): Switch to Dr. Leo
-                timerStep5 = setTimeout(() => {
-                  if (isOpen) return;
-                  runSingleWalkCycle('boy');
-                }, 2200);
-
-              }, 1400);
-
-            }, 3600);
-
-          }, 1600);
-
-        }, 2600);
-
-      } else {
-        // ====================================================
-        // DR. LEO CYCLE (Unchanged)
-        // ====================================================
-        // STEP 1: Walk in smoothly from the right side at natural pace (2.6s)
-        actor.className = 'chibi-character-actor actor-boy state-walk-in';
-        actor.innerHTML = `
-          <div class="chibi-sprite chibi-sprite-boy" aria-label="Dr. Leo"></div>
-        `;
-
-        // STEP 2: After walking in (2.6s), stop cleanly on both feet and pop up bubble
-        timerStep1 = setTimeout(() => {
-          if (isOpen) return;
-
-          actor.className = 'chibi-character-actor actor-boy state-arrived';
-          actor.innerHTML = `
-            <div class="chibi-ask-me-bubble ${currentLang === 'TL' ? 'is-tl' : ''}" id="chibiAskMeBubble" title="${currentLang === 'TL' ? 'TANUNGIN MO AKO' : 'ASK ME'}"></div>
-            <div class="chibi-sprite chibi-sprite-boy" aria-label="Dr. Leo"></div>
-          `;
-          bindBubbleClick();
-
-          // STEP 3: After staying with bubble (5.5s), walk out to right side (2.2s)
-          timerStep2 = setTimeout(() => {
-            if (isOpen) return;
-
-            // Walk out to right side (2.2s)
-            actor.className = 'chibi-character-actor actor-boy state-walk-out';
-            actor.innerHTML = `
-              <div class="chibi-sprite chibi-sprite-boy" aria-label="Dr. Leo"></div>
-            `;
-
-            // STEP 4: Once walked out, switch to Nurse Mika
-            timerStep3 = setTimeout(() => {
-              if (isOpen) return;
-              runSingleWalkCycle('girl');
-            }, 2200);
-
-          }, 5500);
-
-        }, 2600);
-      }
-    }
-
-    // --- Open Chat with Targeted Assistant (Boy or Girl) ---
-    function openChatWith(chibi) {
-      chatAssistant = chibi;
-      updateHeaderAssistantUI();
-      resetConversationForAssistant();
-
-      if (!isOpen) {
-        toggleChat();
-      }
-    }
-
-    // --- Toggle Chat Window ---
-    function toggleChat() {
-      isOpen = !isOpen;
-      const windowEl = document.getElementById('chibiChatWindow');
-      const widgetEl = document.getElementById('chibiWidget');
-
-      if (isOpen) {
-        clearCycleTimers();
-        windowEl.classList.add('is-open');
-        windowEl.setAttribute('aria-hidden', 'false');
-        widgetEl.style.opacity = '0.35';
-        scrollToBottom();
-      } else {
-        windowEl.classList.remove('is-open');
-        windowEl.setAttribute('aria-hidden', 'true');
-        widgetEl.style.opacity = '1';
-        // Resume walking cycle
-        startWalkingCycle();
-      }
-    }
-
-    // --- Toggle Assistant Inside Chat Header ---
-    function toggleHeaderAssistant() {
-      chatAssistant = (chatAssistant === 'boy') ? 'girl' : 'boy';
-      updateHeaderAssistantUI();
-      resetConversationForAssistant();
-    }
-
-    function updateHeaderAssistantUI() {
-      const prof = ASSISTANTS[chatAssistant];
-      const imgEl = document.getElementById('headerAvatarImg');
-      const nameEl = document.getElementById('chibiHeaderName');
-      const roleEl = document.getElementById('chibiHeaderRole');
-      const circleEl = document.getElementById('headerAvatarCircle');
-
-      if (circleEl) {
-        circleEl.setAttribute('data-assistant', chatAssistant);
-      }
-      if (imgEl) {
-        imgEl.src = prof.avatar;
-        imgEl.alt = prof.name[currentLang];
-      }
-      if (nameEl) nameEl.textContent = prof.name[currentLang];
-      if (roleEl) roleEl.textContent = prof.role[currentLang];
-    }
-
-    // --- Switch Language ---
-    function switchLanguage(lang) {
-      if (currentLang === lang) return;
-      currentLang = lang;
-
-      document.getElementById('btnLangEN').classList.toggle('active', lang === 'EN');
-      document.getElementById('btnLangTL').classList.toggle('active', lang === 'TL');
-
-      // Dynamically update speech bubble on stage if present
-      const bubble = document.getElementById('chibiAskMeBubble');
-      if (bubble) {
-        if (lang === 'TL') {
-          bubble.classList.add('is-tl');
-          bubble.title = 'TANUNGIN MO AKO';
+    if (langTrigger && langMenu) {
+      langTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = langMenu.hasAttribute('hidden');
+        if (isHidden) {
+          langMenu.removeAttribute('hidden');
         } else {
-          bubble.classList.remove('is-tl');
-          bubble.title = 'ASK ME';
+          langMenu.setAttribute('hidden', '');
         }
+      });
+
+      document.addEventListener('click', () => {
+        if (!langMenu.hasAttribute('hidden')) {
+          langMenu.setAttribute('hidden', '');
+        }
+      });
+    }
+
+    btnEN.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (langMenu) langMenu.setAttribute('hidden', '');
+      switchLanguage('EN');
+    });
+    btnTL.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (langMenu) langMenu.setAttribute('hidden', '');
+      switchLanguage('TL');
+    });
+    if (headerInfo) headerInfo.addEventListener('click', toggleHeaderAssistant);
+
+    if (document.body && document.body.classList.contains('splash-active')) {
+      const widget = document.getElementById('chibiWidget');
+      widget.classList.add('chatbot-hidden');
+
+      const observer = new MutationObserver(() => {
+        if (!document.body.classList.contains('splash-active')) {
+          widget.classList.remove('chatbot-hidden');
+          startWalkingCycle();
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    } else {
+      startWalkingCycle();
+    }
+  }
+
+  // --- Walking Loop ---
+  function startWalkingCycle() {
+    clearCycleTimers();
+    runSingleWalkCycle(activeChibi);
+  }
+
+  function clearCycleTimers() {
+    if (timerStep1) clearTimeout(timerStep1);
+    if (timerStep2) clearTimeout(timerStep2);
+    if (timerStep3) clearTimeout(timerStep3);
+    if (timerStep4) clearTimeout(timerStep4);
+  }
+
+  function bindBubbleClick() {
+    const bubble = document.getElementById('chibiAskMeBubble');
+    if (bubble) {
+      bubble.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openChatWith(activeChibi);
+      });
+    }
+  }
+
+  function runSingleWalkCycle(chibi) {
+    if (isOpen) return;
+
+    const actor = document.getElementById('chibiActor');
+    if (!actor) return;
+
+    activeChibi = chibi;
+    const spriteClass = chibi === 'girl' ? 'chibi-sprite-girl' : 'chibi-sprite-boy';
+    const characterName = chibi === 'girl' ? 'Nurse Mika' : 'Dr. Leo';
+
+    actor.className = 'chibi-character-actor state-walk-in';
+    actor.innerHTML = `<div class="chibi-sprite ${spriteClass}" aria-label="${characterName}"></div>`;
+
+    timerStep1 = setTimeout(() => {
+      if (isOpen) return;
+
+      actor.className = 'chibi-character-actor state-arrived';
+      actor.innerHTML = `
+        <div class="chibi-ask-me-bubble ${currentLang === 'TL' ? 'is-tl' : ''}" id="chibiAskMeBubble" title="${currentLang === 'TL' ? 'TANUNGIN MO AKO' : 'ASK ME'}"></div>
+        <div class="chibi-sprite ${spriteClass}" aria-label="${characterName}"></div>
+      `;
+      bindBubbleClick();
+
+      timerStep2 = setTimeout(() => {
+        if (isOpen) return;
+
+        actor.className = 'chibi-character-actor state-walk-out';
+        actor.innerHTML = `<div class="chibi-sprite ${spriteClass}" aria-label="${characterName}"></div>`;
+
+        timerStep3 = setTimeout(() => {
+          if (isOpen) return;
+          timerStep4 = setTimeout(() => {
+            if (isOpen) return;
+            const nextChibi = activeChibi === 'boy' ? 'girl' : 'boy';
+            runSingleWalkCycle(nextChibi);
+          }, 1200);
+        }, 2400);
+
+      }, 5000);
+    }, 2400);
+  }
+
+  function openChatWith(chibi) {
+    chatAssistant = chibi;
+    updateHeaderAssistantUI();
+    resetConversation();
+
+    if (!isOpen) {
+      toggleChat();
+    }
+  }
+
+  function toggleChat() {
+    isOpen = !isOpen;
+    const windowEl = document.getElementById('chibiChatWindow');
+    const widgetEl = document.getElementById('chibiWidget');
+
+    if (isOpen) {
+      clearCycleTimers();
+      windowEl.classList.add('is-open');
+      windowEl.setAttribute('aria-hidden', 'false');
+      if (widgetEl) {
+        widgetEl.style.opacity = '0';
+        widgetEl.style.pointerEvents = 'none';
       }
-
-      updateHeaderAssistantUI();
-      resetConversationForAssistant();
+      scrollToBottom();
+    } else {
+      windowEl.classList.remove('is-open');
+      windowEl.setAttribute('aria-hidden', 'true');
+      if (widgetEl) {
+        widgetEl.style.opacity = '1';
+        widgetEl.style.pointerEvents = 'auto';
+      }
+      startWalkingCycle();
     }
+  }
 
-    // --- Reset & Render Conversation for Chosen Assistant ---
-    function resetConversationForAssistant() {
-      questionCount = 0;
-      isTyping = false;
-      const prof = ASSISTANTS[chatAssistant];
+  function toggleHeaderAssistant() {
+    chatAssistant = (chatAssistant === 'boy') ? 'girl' : 'boy';
+    updateHeaderAssistantUI();
+    resetConversation();
+  }
 
-      messages = [
-        {
-          sender: 'bot',
-          text: prof.welcome[currentLang],
-          time: formatTime(),
-          avatar: prof.avatar,
-          name: prof.name[currentLang]
-        }
-      ];
+  function updateHeaderAssistantUI() {
+    const prof = ASSISTANTS[chatAssistant];
+    const iconWrap = document.getElementById('chibiHeaderIconWrap');
+    const nameEl = document.getElementById('chibiHeaderName');
+    const roleEl = document.getElementById('chibiHeaderRole');
 
-      renderMessages();
-    }
+    if (iconWrap) iconWrap.innerHTML = HEADER_ICONS[chatAssistant];
+    if (nameEl) nameEl.textContent = prof.name[currentLang];
+    if (roleEl) roleEl.textContent = prof.role[currentLang];
+  }
 
-    function renderMessages() {
-      const chatBody = document.getElementById('chibiChatBody');
-      if (!chatBody) return;
+  function switchLanguage(lang) {
+    if (currentLang === lang) return;
+    currentLang = lang;
 
-      chatBody.innerHTML = `
-      ${messages.map(m => `
-        <div class="chibi-msg-row ${m.sender}">
-          ${m.sender === 'bot' ? `
-            <div class="chibi-msg-avatar" title="${m.name}">
-              <img src="${m.avatar}" alt="${m.name}" />
-            </div>
-          ` : ''}
+    const langCode = document.getElementById('chibiLangCode');
+    const btnEN = document.getElementById('btnLangEN');
+    const btnTL = document.getElementById('btnLangTL');
+    if (langCode) langCode.textContent = lang;
+    if (btnEN) btnEN.classList.toggle('active', lang === 'EN');
+    if (btnTL) btnTL.classList.toggle('active', lang === 'TL');
+
+    updateHeaderAssistantUI();
+    resetConversation();
+  }
+
+  function resetConversation() {
+    isTyping = false;
+    showingMainTopics = true;
+    activeBotMsgId = 'initial';
+    const prof = ASSISTANTS[chatAssistant];
+
+    messages = [
+      {
+        id: 'initial',
+        sender: 'bot',
+        text: prof.welcome[currentLang],
+        time: formatTime(),
+        avatar: prof.avatar,
+        name: prof.name[currentLang],
+        isInitial: true
+      }
+    ];
+
+    renderChatBody(true);
+  }
+
+  function renderChatBody(autoScrollBottom = true) {
+    const chatBody = document.getElementById('chibiChatBody');
+    if (!chatBody) return;
+
+    chatBody.innerHTML = '';
+
+    messages.forEach((m) => {
+      if (m.sender === 'bot') {
+        const row = document.createElement('div');
+        row.className = 'chibi-msg-row bot';
+        if (m.id) row.setAttribute('data-msg-id', m.id);
+        row.innerHTML = `
+          <div class="chibi-msg-avatar">
+            <img src="${m.avatar}" alt="${m.name}" />
+          </div>
           <div class="chibi-msg-box">
-            <div class="chibi-msg-bubble ${m.sender}">
+            <div class="chibi-msg-bubble bot">
               ${m.text}
             </div>
             <span class="chibi-msg-time">${m.time}</span>
           </div>
-        </div>
-      `).join('')}
+        `;
+        chatBody.appendChild(row);
 
-      <div class="chibi-faq-container" id="faqOptionsList">
-        <span class="chibi-faq-label">${dict[currentLang].selectQuestion}</span>
-        ${faqs[currentLang].map((f, idx) => `
-          <button class="chibi-faq-item" data-idx="${idx}">
-            ${f.question}
-          </button>
-        `).join('')}
-      </div>
-    `;
+        // Initial 4 Topic Cards at original top area (only when showingMainTopics is true)
+        if (m.isInitial && showingMainTopics) {
+          const cardContainer = document.createElement('div');
+          cardContainer.className = 'chibi-faq-container';
+          cardContainer.id = 'initialTopicsList';
+          cardContainer.innerHTML = `
+            <div class="chibi-faq-label">${dict[currentLang].selectQuestion}</div>
+            <div class="chibi-faq-list">
+              ${topics[currentLang].map(topic => `
+                <button type="button" class="chibi-faq-item" data-question="${topic.replace(/"/g, '&quot;')}">
+                  <span class="chibi-faq-text">${topic}</span>
+                  <svg class="chibi-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              `).join('')}
+            </div>
+          `;
+          chatBody.appendChild(cardContainer);
 
-      bindFaqClicks();
+          cardContainer.querySelectorAll('.chibi-faq-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+              submitQuery(btn.dataset.question);
+            });
+          });
+        }
+
+        // Follow-up Question Chips under the active bot response (when showingMainTopics is false)
+        if (!m.isInitial && !showingMainTopics && m.id === activeBotMsgId && m.followUps && m.followUps.length > 0) {
+          const chipsContainer = document.createElement('div');
+          chipsContainer.className = 'chibi-followup-chips';
+          chipsContainer.innerHTML = `
+            <div class="chibi-faq-label">${dict[currentLang].followUpLabel}</div>
+            <div class="chibi-faq-list">
+              ${m.followUps.map(chip => `
+                <button type="button" class="chibi-chip-btn" data-question="${chip.replace(/"/g, '&quot;')}">
+                  <span class="chibi-faq-text">${chip}</span>
+                  <svg class="chibi-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              `).join('')}
+            </div>
+            <button type="button" class="chibi-back-topics-btn">
+              ${dict[currentLang].backToTopics}
+            </button>
+          `;
+          chatBody.appendChild(chipsContainer);
+
+          chipsContainer.querySelectorAll('.chibi-chip-btn').forEach(chipBtn => {
+            chipBtn.addEventListener('click', () => {
+              submitQuery(chipBtn.dataset.question);
+            });
+          });
+
+          const backBtn = chipsContainer.querySelector('.chibi-back-topics-btn');
+          if (backBtn) {
+            backBtn.addEventListener('click', () => {
+              showingMainTopics = true;
+              activeBotMsgId = 'initial';
+              renderChatBody(false);
+              chatBody.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+          }
+        }
+      } else {
+        // User message
+        const userRow = document.createElement('div');
+        userRow.className = 'chibi-msg-row user';
+        if (m.id) userRow.setAttribute('data-msg-id', m.id);
+        userRow.innerHTML = `
+          <div class="chibi-msg-box">
+            <div class="chibi-msg-bubble user">
+              ${m.text}
+            </div>
+            <span class="chibi-msg-time">${m.time}</span>
+          </div>
+        `;
+        chatBody.appendChild(userRow);
+      }
+    });
+
+    if (autoScrollBottom) {
       scrollToBottom();
     }
+  }
 
-    function bindFaqClicks() {
-      const items = document.querySelectorAll('.chibi-faq-item');
-      items.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const idx = parseInt(btn.dataset.idx, 10);
-          handleFaqSelection(idx);
-        });
-      });
+  function findBestMatch(queryText) {
+    const list = faqs[currentLang];
+    const clean = queryText.toLowerCase().trim();
+
+    const direct = list.find(
+      item =>
+        clean === item.question.toLowerCase() ||
+        clean.includes(item.question.toLowerCase()) ||
+        item.question.toLowerCase().includes(clean)
+    );
+    if (direct) return direct;
+
+    let bestScore = 0;
+    let selected = null;
+
+    for (const item of list) {
+      let score = 0;
+      for (const kw of item.keywords) {
+        if (clean.includes(kw.toLowerCase())) score += 1;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        selected = item;
+      }
     }
 
-    function handleFaqSelection(idx) {
-      if (isTyping) return;
-      const faqItem = faqs[currentLang][idx];
-      if (!faqItem) return;
+    return bestScore > 0 ? selected : null;
+  }
+
+  function submitQuery(queryText) {
+    if (isTyping) return;
+
+    const cleanKey = queryText.toLowerCase().trim();
+    const existingBot = messages.find(
+      m => m.sender === 'bot' && m.questionKey === cleanKey
+    );
+
+    // If this question was already asked earlier, scroll up to that earlier response
+    if (existingBot) {
+      showingMainTopics = false;
+      activeBotMsgId = existingBot.id;
+      renderChatBody(false);
 
       const chatBody = document.getElementById('chibiChatBody');
-      const optionsEl = document.getElementById('faqOptionsList');
-      if (optionsEl) optionsEl.remove();
+      if (chatBody) {
+        const targetRow = chatBody.querySelector(`[data-msg-id="${existingBot.id}"]`);
+        if (targetRow) {
+          targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const bubble = targetRow.querySelector('.chibi-msg-bubble.bot');
+          if (bubble) {
+            bubble.classList.add('chibi-bubble-highlight');
+            setTimeout(() => bubble.classList.remove('chibi-bubble-highlight'), 1400);
+          }
+        }
+      }
+      return;
+    }
 
-      // 1. User Message
-      const userMsg = {
-        sender: 'user',
-        text: faqItem.question,
-        time: formatTime()
-      };
-      messages.push(userMsg);
+    // Vanish the topics / previous follow-ups immediately when a new question is clicked
+    showingMainTopics = false;
+    activeBotMsgId = null;
 
-      const userRow = document.createElement('div');
-      userRow.className = 'chibi-msg-row user';
-      userRow.innerHTML = `
-      <div class="chibi-msg-box">
-        <div class="chibi-msg-bubble user">
-          ${userMsg.text}
-        </div>
-        <span class="chibi-msg-time">${userMsg.time}</span>
-      </div>
-    `;
-      chatBody.appendChild(userRow);
-      scrollToBottom();
+    messages.push({
+      id: 'user-' + Date.now(),
+      sender: 'user',
+      text: queryText,
+      time: formatTime()
+    });
+    renderChatBody(true);
 
-      // 2. Typing Indicator with Current Assistant's Avatar
-      isTyping = true;
-      const prof = ASSISTANTS[chatAssistant];
+    isTyping = true;
 
-      const typingRow = document.createElement('div');
-      typingRow.className = 'chibi-typing-row';
-      typingRow.id = 'chibiTyping';
-      typingRow.innerHTML = `
-      <div class="chibi-msg-avatar" title="${prof.name[currentLang]}">
-        <img src="${prof.avatar}" alt="${prof.name[currentLang]}" />
-      </div>
+    // Show Typing Indicator
+    const chatBody = document.getElementById('chibiChatBody');
+    const prof = ASSISTANTS[chatAssistant];
+
+    const typingRow = document.createElement('div');
+    typingRow.className = 'chibi-typing-row';
+    typingRow.id = 'chibiTyping';
+    typingRow.innerHTML = `
       <div class="chibi-typing-bubble">
         <span class="chibi-dot"></span>
         <span class="chibi-dot"></span>
         <span class="chibi-dot"></span>
       </div>
     `;
-      chatBody.appendChild(typingRow);
-      scrollToBottom();
+    chatBody.appendChild(typingRow);
+    scrollToBottom();
 
-      questionCount++;
+    setTimeout(() => {
+      const typ = document.getElementById('chibiTyping');
+      if (typ) typ.remove();
+      isTyping = false;
 
-      // 3. Bot Response from Current Assistant
-      setTimeout(() => {
-        const typ = document.getElementById('chibiTyping');
-        if (typ) typ.remove();
-        isTyping = false;
+      const match = findBestMatch(queryText);
+      let replyText = '';
+      let chips = [];
 
-        const botMsg = {
-          sender: 'bot',
-          text: faqItem.answer,
-          time: formatTime(),
-          avatar: prof.avatar,
-          name: prof.name[currentLang]
-        };
-        messages.push(botMsg);
-
-        const botRow = document.createElement('div');
-        botRow.className = 'chibi-msg-row bot';
-        botRow.innerHTML = `
-        <div class="chibi-msg-avatar" title="${botMsg.name}">
-          <img src="${botMsg.avatar}" alt="${botMsg.name}" />
-        </div>
-        <div class="chibi-msg-box">
-          <div class="chibi-msg-bubble bot">
-            ${botMsg.text}
-          </div>
-          <span class="chibi-msg-time">${botMsg.time}</span>
-        </div>
-      `;
-        chatBody.appendChild(botRow);
-
-        if (questionCount >= 4) {
-          showRatingWidget();
-        } else {
-          showAskAnotherButton();
-        }
-        scrollToBottom();
-      }, 450);
-    }
-
-    function showAskAnotherButton() {
-      const chatBody = document.getElementById('chibiChatBody');
-      const box = document.createElement('div');
-      box.className = 'chibi-reset-container';
-      box.id = 'chibiResetContainer';
-      box.innerHTML = `
-      <button class="chibi-reset-btn" id="btnAskAnother">
-        ${dict[currentLang].askAnother}
-      </button>
-    `;
-      chatBody.appendChild(box);
-
-      document.getElementById('btnAskAnother').addEventListener('click', () => {
-        box.remove();
-        const nextFaqContainer = document.createElement('div');
-        nextFaqContainer.className = 'chibi-faq-container';
-        nextFaqContainer.id = 'faqOptionsList';
-        nextFaqContainer.innerHTML = `
-        <span class="chibi-faq-label">${dict[currentLang].selectQuestion}</span>
-        ${faqs[currentLang].map((f, idx) => `
-          <button class="chibi-faq-item" data-idx="${idx}">
-            ${f.question}
-          </button>
-        `).join('')}
-      `;
-        chatBody.appendChild(nextFaqContainer);
-        bindFaqClicks();
-        scrollToBottom();
-      });
-    }
-
-    function showRatingWidget() {
-      const chatBody = document.getElementById('chibiChatBody');
-      const card = document.createElement('div');
-      card.className = 'chibi-rating-card';
-      card.id = 'chibiRatingCard';
-      card.innerHTML = `
-      <p>${dict[currentLang].limitReached}</p>
-      <div class="chibi-stars">
-        ${[1, 2, 3, 4, 5].map(s => `<button class="chibi-star-btn" data-star="${s}" title="${s} Stars">★</button>`).join('')}
-      </div>
-    `;
-      chatBody.appendChild(card);
-
-      card.querySelectorAll('.chibi-star-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const stars = parseInt(btn.dataset.star, 10);
-          card.remove();
-
-          const prof = ASSISTANTS[chatAssistant];
-          const botRow = document.createElement('div');
-          botRow.className = 'chibi-msg-row bot';
-          botRow.innerHTML = `
-          <div class="chibi-msg-avatar" title="${prof.name[currentLang]}">
-            <img src="${prof.avatar}" alt="${prof.name[currentLang]}" />
-          </div>
-          <div class="chibi-msg-box">
-            <div class="chibi-msg-bubble bot">
-              ${dict[currentLang].feedbackThanks(stars)}
-            </div>
-            <span class="chibi-msg-time">${formatTime()}</span>
-          </div>
-        `;
-          chatBody.appendChild(botRow);
-          scrollToBottom();
-        });
-      });
-    }
-
-    function scrollToBottom() {
-      const body = document.getElementById('chibiChatBody');
-      if (body) {
-        setTimeout(() => {
-          body.scrollTop = body.scrollHeight;
-        }, 30);
+      if (match) {
+        replyText = match.answer;
+        chips = match.followUps || [];
+      } else {
+        replyText = dict[currentLang].defaultUnmatched;
+        chips = dict[currentLang].defaultFollowUps;
       }
-    }
 
-    // --- Bootstrap on Ready ---
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initChibiChatbot);
-    } else {
-      initChibiChatbot();
+      const newBotId = 'bot-' + Date.now();
+      messages.push({
+        id: newBotId,
+        questionKey: cleanKey,
+        sender: 'bot',
+        text: replyText,
+        time: formatTime(),
+        avatar: prof.avatar,
+        name: prof.name[currentLang],
+        followUps: chips
+      });
+
+      showingMainTopics = false;
+      activeBotMsgId = newBotId;
+      renderChatBody(true);
+    }, 400);
+  }
+
+  function scrollToBottom() {
+    const body = document.getElementById('chibiChatBody');
+    if (body) {
+      setTimeout(() => {
+        body.scrollTop = body.scrollHeight;
+      }, 25);
     }
-  })();
+  }
+
+  // Bootstrap on Ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChibiChatbot);
+  } else {
+    initChibiChatbot();
+  }
+})();

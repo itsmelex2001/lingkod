@@ -39,6 +39,21 @@ $stmt->execute([
 ]);
 $patient = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
+// Check if patient is booking for the first time (first-time patients are restricted to Face-to-Face consultations)
+$stmtPriorAppts = $pdo->prepare("
+    SELECT COUNT(*) 
+    FROM patients 
+    WHERE (patient_id = :pid OR (email = :pemail AND email != ''))
+      AND appointment_date IS NOT NULL
+      AND LOWER(status) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient')
+");
+$stmtPriorAppts->execute([
+    ':pid'    => $sessionPatientId,
+    ':pemail' => $sessionEmail
+]);
+$priorBookingsCount = (int)$stmtPriorAppts->fetchColumn();
+$isFirstTimePatient = ($priorBookingsCount === 0);
+
 // Extract pre-fill variables
 $firstName     = $patient['first_name'] ?? '';
 $lastName      = $patient['last_name'] ?? '';
@@ -74,8 +89,9 @@ if ($selectedDept === 'General Management' || strtolower($selectedDept) === 'gen
     $selectedDept = 'OPU Psychiatry';
 }
 
-// Earliest bookable date (advance booking rule: at least 1 day in advance)
-$tomorrow = date('Y-m-d', strtotime('+1 day'));
+// Advance booking date bounds (earliest: +1 day, latest: +1 year)
+$tomorrow       = date('Y-m-d', strtotime('+1 day'));
+$maxAdvanceDate = date('Y-m-d', strtotime('+1 year'));
 ?>
 <!doctype html>
 <html lang="en">
@@ -96,8 +112,9 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
       }
 
       html, body {
-        height: 100vh;
-        overflow: hidden;
+        height: 100%;
+        max-height: 100%;
+        overflow: hidden !important;
       }
 
       body {
@@ -107,11 +124,13 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
         display: flex;
         flex-direction: column;
         height: 100vh;
+        max-height: 100vh;
       }
 
       /* ── Top Navigation Bar ── */
       .book-navbar {
         height: 72px;
+        min-height: 72px;
         background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
         box-shadow: 0 4px 14px rgba(4, 112, 35, 0.2);
         display: flex;
@@ -120,6 +139,7 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
         flex-shrink: 0;
         position: relative;
         z-index: 20;
+        overflow: hidden;
       }
 
       .nav-center-brand {
@@ -163,9 +183,9 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
         flex: 1;
         min-height: 0;
         display: flex;
-        align-items: center;
+        align-items: stretch;
         justify-content: center;
-        padding: 0.75rem 2rem;
+        padding: 1rem 2rem 1.1rem;
         overflow: hidden;
       }
 
@@ -177,7 +197,8 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
         justify-content: center;
         gap: 1.5rem;
         height: 100%;
-        max-height: 560px;
+        min-height: 0;
+        max-height: none;
       }
 
       /* ── Left Side: Stepper Indicator (Exact Match to Image) ── */
@@ -226,11 +247,55 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
       .step-row.active .step-circle {
         background: #14532d;
         color: #ffffff;
+        position: relative;
+      }
+
+      .step-row.active .step-circle::after {
+        content: "";
+        position: absolute;
+        inset: -7px;
+        border-radius: 50%;
+        border: 2px solid #14532d;
+        background: transparent;
+        pointer-events: none;
+        animation: phaseHeartbeat 1.35s ease-in-out infinite;
+      }
+
+      .step-row.completed {
+        cursor: pointer;
       }
 
       .step-row.completed .step-circle {
         background: #16a34a;
         color: #ffffff;
+      }
+
+      .step-row.completed:hover .step-circle,
+      .step-row.completed:focus-visible .step-circle {
+        transform: scale(1.08);
+      }
+
+      .step-row.completed:hover .step-name,
+      .step-row.completed:focus-visible .step-name {
+        color: #14532d;
+      }
+
+      .step-row:focus-visible {
+        outline: 2px solid #14532d;
+        outline-offset: 4px;
+        border-radius: 10px;
+      }
+
+      @keyframes phaseHeartbeat {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        14% { transform: scale(1.18); opacity: 1; }
+        28% { transform: scale(1); opacity: 0.75; }
+        42% { transform: scale(1.1); opacity: 1; }
+        56% { transform: scale(1); opacity: 0.55; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .step-row.active .step-circle::after { animation: none; }
       }
 
       .step-name {
@@ -267,19 +332,59 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
       .booking-card-panel {
         flex: 1;
         max-width: 680px;
+        height: 100%;
+        min-height: 0;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
+        justify-content: center;
       }
 
       .booking-main-card {
         background: #ffffff;
         border: 1.5px solid #d1d5db;
         border-radius: 18px;
-        padding: 1.35rem 1.65rem;
+        padding: 1.15rem 1.45rem 1rem;
         width: 100%;
         box-shadow: none;
         position: relative;
+        flex: 0 1 auto;
+        max-height: calc(100% - 4.25rem);
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+      }
+
+      .booking-main-card.is-scrolling {
+        scrollbar-color: rgba(100, 116, 139, 0.9) transparent;
+      }
+
+      .booking-main-card::-webkit-scrollbar {
+        display: block !important;
+        width: 8px !important;
+        height: 8px !important;
+        background: transparent !important;
+      }
+
+      .booking-main-card::-webkit-scrollbar-track {
+        display: block !important;
+        background: transparent !important;
+      }
+
+      .booking-main-card::-webkit-scrollbar-thumb {
+        display: block !important;
+        background: transparent !important;
+        border-radius: 999px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        transition: background-color 0.25s ease;
+      }
+
+      .booking-main-card.is-scrolling::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, 0.88) !important;
+        background-clip: padding-box;
       }
 
       /* Top Row: Department Dropdown + Inquiry Only Toggle */
@@ -603,12 +708,13 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
 
       /* ── Bottom Action Buttons ── */
       .bottom-action-bar {
-        margin-top: 1.15rem;
+        margin-top: 0.75rem;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.85rem;
         width: 100%;
+        flex-shrink: 0;
       }
 
       .btn-pill-back {
@@ -649,9 +755,11 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
       }
 
       .btn-pill-next:disabled {
-        opacity: 0.65;
+        opacity: 0.55;
+        background: #94a3b8;
         cursor: not-allowed;
         transform: none;
+        box-shadow: none;
       }
 
       /* Alert message box */
@@ -996,17 +1104,29 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
       /* Responsive adjustments if viewport shrinks */
       @media (max-width: 900px) {
         html, body {
-          overflow-y: auto;
-          height: auto;
+          overflow: hidden !important;
+          height: 100vh;
+          max-height: 100vh;
         }
         .booking-viewport {
           height: auto;
-          padding: 1.5rem 1rem;
+          flex: 1;
+          min-height: 0;
+          padding: 0.75rem 1rem;
+          overflow: hidden;
         }
         .booking-container {
           flex-direction: column;
-          height: auto;
+          align-items: stretch;
+          height: 100%;
           max-height: none;
+          overflow: hidden;
+        }
+        .booking-card-panel {
+          flex: 1;
+          width: 100%;
+          max-width: none;
+          min-height: 0;
         }
         .stepper-vertical-divider {
           display: none;
@@ -1015,11 +1135,125 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
           width: 100%;
         }
         .stepper-list {
+          position: relative;
           flex-direction: row;
           justify-content: space-between;
+          align-items: flex-start;
+          gap: 0.35rem;
+        }
+        .stepper-list::before {
+          content: "";
+          position: absolute;
+          top: 18px;
+          left: 10%;
+          right: 10%;
+          height: 4px;
+          border-radius: 999px;
+          background: #cbd5e1;
+          z-index: 0;
         }
         .step-line {
           display: none;
+        }
+        .booking-viewport {
+          overflow: hidden;
+          padding: 0.75rem 1rem;
+          width: 100%;
+          max-width: 100%;
+        }
+        .booking-stepper-panel {
+          flex-shrink: 0;
+        }
+        .booking-container,
+        .booking-card-panel,
+        .booking-main-card,
+        .booking-stepper-panel {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+        }
+        .booking-main-card,
+        .inner-form-box {
+          padding: 1rem;
+        }
+        .stepper-heading {
+          margin-bottom: 0.75rem;
+          font-size: 1.15rem;
+        }
+        .step-row {
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          flex: 1;
+          min-width: 0;
+          text-align: center;
+        }
+        .step-circle {
+          width: 40px;
+          height: 40px;
+          position: relative;
+          z-index: 1;
+        }
+        .step-name {
+          font-size: 0.68rem;
+          line-height: 1.2;
+          max-width: 76px;
+        }
+        .row-3-cols,
+        .row-2-cols,
+        .review-summary-grid {
+          grid-template-columns: 1fr;
+        }
+        .companion-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.65rem;
+        }
+        .radio-options-wrap {
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .text-field-box input[type="text"],
+        .text-field-box input[type="email"],
+        .text-field-box input[type="date"],
+        .text-field-box input[type="number"],
+        .text-field-box select,
+        .contact-split-group {
+          min-height: 44px;
+          height: 44px;
+          max-width: 100%;
+        }
+        .text-field-box textarea {
+          min-height: 88px;
+          height: auto;
+        }
+        .bottom-action-bar {
+          flex-direction: column-reverse;
+          align-items: stretch;
+        }
+        .btn-pill-back,
+        .btn-pill-next {
+          width: 100%;
+          min-height: 44px;
+        }
+        .book-navbar {
+          height: 60px;
+          padding: 0 12px;
+        }
+        .brand-title-top {
+          display: none;
+        }
+        .nav-logo-img {
+          height: 40px;
+        }
+        .review-val,
+        #revComplaint {
+          max-width: 100%;
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+        html, body {
+          overflow-x: hidden;
         }
       }
     </style>
@@ -1115,28 +1349,28 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
           <div class="stepper-list">
             
             <!-- Step 1 Indicator -->
-            <div class="step-row active" id="stepIndicator1">
+            <div class="step-row active" id="stepIndicator1" data-step="1" role="button" tabindex="0" aria-current="step">
               <div class="step-circle">1</div>
               <span class="step-name">Personal Information</span>
             </div>
             <div class="step-line" id="stepLine1"></div>
 
             <!-- Step 2 Indicator -->
-            <div class="step-row" id="stepIndicator2">
+            <div class="step-row" id="stepIndicator2" data-step="2" role="button" tabindex="0">
               <div class="step-circle">2</div>
               <span class="step-name">Medical Information</span>
             </div>
             <div class="step-line" id="stepLine2"></div>
 
             <!-- Step 3 Indicator -->
-            <div class="step-row" id="stepIndicator3">
+            <div class="step-row" id="stepIndicator3" data-step="3" role="button" tabindex="0">
               <div class="step-circle">3</div>
               <span class="step-name">Appointment Details</span>
             </div>
             <div class="step-line" id="stepLine3"></div>
 
             <!-- Step 4 Indicator -->
-            <div class="step-row" id="stepIndicator4">
+            <div class="step-row" id="stepIndicator4" data-step="4" role="button" tabindex="0">
               <div class="step-circle">4</div>
               <span class="step-name">Confirmation</span>
             </div>
@@ -1192,6 +1426,29 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
               <div class="phase-step active" id="phaseStep1">
                 <div class="inner-form-box">
                   <h2 class="inner-box-title">Personal Information</h2>
+
+                  <!-- Who is this appointment for? Radio Group -->
+                  <div class="booking-for-card" style="margin-bottom:1.15rem; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:12px; padding:0.95rem 1.1rem;">
+                    <label style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#14532d; display:block; margin-bottom:8px; letter-spacing:0.03em;">
+                      Who is this appointment for? <span class="req-mark">*</span>
+                    </label>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+                      <label id="pillBookingMyself" class="radio-pill-item booking-for-pill" style="display:flex; align-items:center; gap:8px; padding:9px 12px; background:#ffffff; border:1.5px solid #16a34a; box-shadow:0 0 0 1px #16a34a; border-radius:8px; cursor:pointer;">
+                        <input type="radio" name="booking_for" value="Myself" checked style="accent-color:#16a34a;" />
+                        <div>
+                          <strong style="font-size:0.86rem; color:#0f172a; display:block;">Myself</strong>
+                          <span style="font-size:0.72rem; color:#64748b;">I am the patient receiving care</span>
+                        </div>
+                      </label>
+                      <label id="pillBookingDependent" class="radio-pill-item booking-for-pill" style="display:flex; align-items:center; gap:8px; padding:9px 12px; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer;">
+                        <input type="radio" name="booking_for" value="Someone Else / Dependent" style="accent-color:#16a34a;" />
+                        <div>
+                          <strong style="font-size:0.86rem; color:#0f172a; display:block;">Someone Else / Dependent</strong>
+                          <span style="font-size:0.72rem; color:#64748b;">Booking for child, spouse, parent, etc.</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
 
                   <!-- Row 1: First Name, Last Name, M.I. -->
                   <div class="form-grid-row row-3-cols">
@@ -1262,15 +1519,42 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                   <div class="companion-row">
                     <span class="companion-label">Accompanying Companion? <span class="req-mark">*</span></span>
                     <div class="radio-options-wrap">
-                      <label class="radio-pill-item">
-                        <input type="radio" name="with_companion" value="yes" <?= $withCompanion === 1 ? 'checked' : 'checked' ?> />
+                      <label class="radio-pill-item" id="wrapCompanionYes">
+                        <input type="radio" name="with_companion" id="radioCompanionYes" value="yes" <?= $withCompanion === 1 ? 'checked' : 'checked' ?> />
                         <span>Yes</span>
                       </label>
-                      <label class="radio-pill-item">
-                        <input type="radio" name="with_companion" value="no" <?= $withCompanion === 0 && !empty($patient) ? 'checked' : '' ?> />
+                      <label class="radio-pill-item" id="wrapCompanionNo">
+                        <input type="radio" name="with_companion" id="radioCompanionNo" value="no" <?= $withCompanion === 0 && !empty($patient) ? 'checked' : '' ?> />
                         <span>No</span>
                       </label>
                     </div>
+                  </div>
+                  <div id="companionDependentNote" style="display:none; font-size:0.75rem; color:#15803d; font-weight:600; margin-top:-4px; margin-bottom:8px;">
+                    (Required: An accompanying companion/guardian is mandatory when booking for a dependent.)
+                  </div>
+
+                  <!-- Relationship to Patient (Conditional for Someone Else / Dependent) -->
+                  <div id="boxRelationshipToPatient" style="display:none; margin-top:1rem; background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:0.95rem 1rem;">
+                    <label for="selectRelationshipToPatient" style="font-size:0.76rem; font-weight:700; text-transform:uppercase; color:#166534; display:block; margin-bottom:6px;">
+                      Relationship to Patient <span class="req-mark">*</span>
+                    </label>
+                    <div class="select-container" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px;">
+                      <select id="selectRelationshipToPatient" style="width:100%; padding:8px 12px; border:none; outline:none; font-size:0.88rem; font-weight:600; color:#0f172a; background:transparent;">
+                        <option value="" disabled selected>Select Relationship</option>
+                        <option value="Parent">Parent</option>
+                        <option value="Child">Child</option>
+                        <option value="Spouse">Spouse</option>
+                        <option value="Sibling">Sibling</option>
+                        <option value="Guardian">Guardian</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      <svg class="chevron-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </div>
+                    <p style="font-size:0.74rem; color:#15803d; margin-top:6px; line-height:1.4;">
+                      As the primary account owner, you will accompany the patient as their registered guardian/companion.
+                    </p>
                   </div>
 
                 </div>
@@ -1342,29 +1626,31 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                           <input type="radio" name="consultation_mode" value="Face-to-Face" checked />
                           <span>Face-to-Face (At Hospital)</span>
                         </label>
-                        <label class="radio-pill-item">
-                          <input type="radio" name="consultation_mode" value="Online Teleconsultation" />
-                          <span>Online Teleconsultation</span>
+                        <label class="radio-pill-item <?= $isFirstTimePatient ? 'disabled-option' : '' ?>" <?= $isFirstTimePatient ? 'title="Online teleconsultation is available for returning follow-up patients only."' : '' ?>>
+                          <input type="radio" name="consultation_mode" value="Online Teleconsultation" <?= $isFirstTimePatient ? 'disabled' : '' ?> />
+                          <span style="<?= $isFirstTimePatient ? 'opacity: 0.65;' : '' ?>">Online Teleconsultation <?= $isFirstTimePatient ? '<span style="font-size: 0.72rem; color: #b45309; font-weight: 600; margin-left: 4px;">(Returning Patients Only)</span>' : '' ?></span>
                         </label>
                       </div>
+                      <?php if ($isFirstTimePatient): ?>
+                        <span style="font-size: 0.74rem; color: #b45309; font-weight: 500; margin-top: 5px; display: block; line-height: 1.4;">
+                          * Hospital Policy: First-time patients are required to attend an initial in-person Face-to-Face consultation before online teleconsultation is permitted.
+                        </span>
+                      <?php endif; ?>
                     </div>
                   </div>
 
                   <div class="form-grid-row row-2-cols">
                     <div class="text-field-box">
                       <label>Appointment Date <span class="req-mark">*</span></label>
-                      <input type="date" id="inputAppointmentDate" min="<?= $tomorrow ?>" value="<?= $tomorrow ?>" required />
+                      <input type="date" id="inputAppointmentDate" min="<?= $tomorrow ?>" max="<?= $maxAdvanceDate ?>" value="<?= $tomorrow ?>" required />
                       <span style="font-size: 0.72rem; color: #64748b; margin-top: 3px;">Advance booking required (Mon–Sat)</span>
                     </div>
 
                     <div class="text-field-box">
                       <label>Scheduled Time Block <span class="req-mark">*</span></label>
                       <div class="select-container">
-                        <select id="selectScheduledTime" required>
-                          <option value="08:00:00" selected>08:00 AM – 10:00 AM (Morning Session)</option>
-                          <option value="10:00:00">10:00 AM – 12:00 PM (Morning Session)</option>
-                          <option value="13:00:00">01:00 PM – 03:00 PM (Afternoon Session)</option>
-                          <option value="15:00:00">03:00 PM – 05:00 PM (Afternoon Session)</option>
+                        <select id="selectScheduledTime" required disabled>
+                          <option value="">Loading available time blocks...</option>
                         </select>
                         <svg class="chevron-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                           <polyline points="6 9 12 15 18 9"></polyline>
@@ -1394,6 +1680,10 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                       <span class="review-lbl">Patient Full Name</span>
                       <span class="review-val" id="revName">-</span>
                     </div>
+                    <div class="review-item" id="revRelationshipRow" style="display:none;">
+                      <span class="review-lbl">Relationship to Patient</span>
+                      <span class="review-val" id="revRelationship" style="color:#16a34a; font-weight:700;">-</span>
+                    </div>
                     <div class="review-item">
                       <span class="review-lbl">Contact & Email</span>
                       <span class="review-val" id="revContact">-</span>
@@ -1411,7 +1701,7 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
                   <!-- Outpatient Triage & Confirmation Notice -->
                   <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
                     <label class="consent-checkbox-wrap" id="consentLabelWrap" style="cursor: pointer; display: flex; align-items: flex-start; gap: 8px; font-size: 0.78rem; color: #1e293b; line-height: 1.4;">
-                      <input type="checkbox" id="checkConsent" checked style="accent-color: #15803d; width: 16px; height: 16px; margin-top: 1px; cursor: pointer;" />
+                      <input type="checkbox" id="checkConsent" style="accent-color: #15803d; width: 16px; height: 16px; margin-top: 1px; cursor: pointer;" />
                       <span>I confirm that all entered details and chief complaints are accurate, consented under R.A. 10173, and ready for outpatient triage review.</span>
                     </label>
                   </div>
@@ -1459,9 +1749,23 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
     <!-- Booking State & Step Controller -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
+        const bookingCard = document.querySelector('.booking-main-card');
+        if (bookingCard) {
+          let hideScrollTimer = null;
+          const showCardScrollbar = () => {
+            if (bookingCard.scrollHeight <= bookingCard.clientHeight + 4) return;
+            bookingCard.classList.add('is-scrolling');
+            clearTimeout(hideScrollTimer);
+            hideScrollTimer = setTimeout(() => bookingCard.classList.remove('is-scrolling'), 700);
+          };
+          bookingCard.addEventListener('scroll', showCardScrollbar, { passive: true });
+          bookingCard.addEventListener('wheel', showCardScrollbar, { passive: true });
+          bookingCard.addEventListener('touchmove', showCardScrollbar, { passive: true });
+        }
+
         let currentStep = 1;
         const totalSteps = 4;
-        let departmentLocked = <?= !empty($selectedDept) ? 'true' : 'false' ?>;
+        let departmentLocked = false;
 
         // Elements
         const alertBox        = document.getElementById('bookingAlert');
@@ -1488,6 +1792,104 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
         const inputContactNumber  = document.getElementById('inputContactNumber');
         const inputEmail          = document.getElementById('inputEmail');
         const inputAddress        = document.getElementById('inputAddress');
+
+        // Booking For & Relationship Elements
+        const bookingForRadios            = document.querySelectorAll('input[name="booking_for"]');
+        const pillBookingMyself           = document.getElementById('pillBookingMyself');
+        const pillBookingDependent        = document.getElementById('pillBookingDependent');
+        const boxRelationshipToPatient    = document.getElementById('boxRelationshipToPatient');
+        const selectRelationshipToPatient = document.getElementById('selectRelationshipToPatient');
+        const wrapCompanionNo             = document.getElementById('wrapCompanionNo');
+        const radioCompanionYes           = document.getElementById('radioCompanionYes');
+        const radioCompanionNo            = document.getElementById('radioCompanionNo');
+        const companionDependentNote      = document.getElementById('companionDependentNote');
+        const revRelationshipRow          = document.getElementById('revRelationshipRow');
+        const revRelationship             = document.getElementById('revRelationship');
+
+        // Cache logged-in user profile details for clean restoration
+        const savedAccountProfile = {
+          firstName: inputFirstName ? inputFirstName.value : '',
+          lastName: inputLastName ? inputLastName.value : '',
+          middleInitial: inputMiddleInitial ? inputMiddleInitial.value : '',
+          gender: selectGender ? selectGender.value : '',
+          birthdate: inputBirthdate ? inputBirthdate.value : '',
+          age: inputAge ? inputAge.value : '',
+          contactNumber: inputContactNumber ? inputContactNumber.value : '',
+          email: inputEmail ? inputEmail.value : '',
+          address: inputAddress ? inputAddress.value : ''
+        };
+
+        function updateBookingForState() {
+          const selected = document.querySelector('input[name="booking_for"]:checked')?.value || 'Myself';
+          const isDependent = (selected === 'Someone Else / Dependent');
+
+          if (isDependent) {
+            // Clear personal details so dependent information can be entered
+            // Contact number and email remain defaulted to account owner
+            inputFirstName.value = '';
+            inputLastName.value = '';
+            inputMiddleInitial.value = '';
+            selectGender.value = '';
+            inputBirthdate.value = '';
+            inputAge.value = '';
+            inputAddress.value = '';
+
+            // Force Accompanying Companion to "Yes" and hide/disable "No"
+            if (radioCompanionYes) radioCompanionYes.checked = true;
+            if (radioCompanionNo) radioCompanionNo.disabled = true;
+            if (wrapCompanionNo) wrapCompanionNo.style.display = 'none';
+            if (companionDependentNote) companionDependentNote.style.display = 'block';
+
+            // Show Relationship to Patient field
+            if (boxRelationshipToPatient) boxRelationshipToPatient.style.display = 'block';
+            if (selectRelationshipToPatient) selectRelationshipToPatient.required = true;
+
+            // Highlight active radio pill
+            if (pillBookingDependent) {
+              pillBookingDependent.style.borderColor = '#16a34a';
+              pillBookingDependent.style.boxShadow = '0 0 0 1px #16a34a';
+            }
+            if (pillBookingMyself) {
+              pillBookingMyself.style.borderColor = '#cbd5e1';
+              pillBookingMyself.style.boxShadow = 'none';
+            }
+          } else {
+            // Restore logged-in user's profile information
+            inputFirstName.value = savedAccountProfile.firstName;
+            inputLastName.value = savedAccountProfile.lastName;
+            inputMiddleInitial.value = savedAccountProfile.middleInitial;
+            selectGender.value = savedAccountProfile.gender;
+            inputBirthdate.value = savedAccountProfile.birthdate;
+            inputAge.value = savedAccountProfile.age;
+            inputContactNumber.value = savedAccountProfile.contactNumber;
+            inputEmail.value = savedAccountProfile.email;
+            inputAddress.value = savedAccountProfile.address;
+
+            // Restore companion options
+            if (radioCompanionNo) radioCompanionNo.disabled = false;
+            if (wrapCompanionNo) wrapCompanionNo.style.display = 'inline-flex';
+            if (companionDependentNote) companionDependentNote.style.display = 'none';
+
+            // Hide Relationship field and clear selection
+            if (boxRelationshipToPatient) boxRelationshipToPatient.style.display = 'none';
+            if (selectRelationshipToPatient) {
+              selectRelationshipToPatient.required = false;
+              selectRelationshipToPatient.value = '';
+            }
+
+            // Highlight active radio pill
+            if (pillBookingMyself) {
+              pillBookingMyself.style.borderColor = '#16a34a';
+              pillBookingMyself.style.boxShadow = '0 0 0 1px #16a34a';
+            }
+            if (pillBookingDependent) {
+              pillBookingDependent.style.borderColor = '#cbd5e1';
+              pillBookingDependent.style.boxShadow = 'none';
+            }
+          }
+        }
+
+        bookingForRadios.forEach(r => r.addEventListener('change', updateBookingForState));
 
         const inputChiefComplaints    = document.getElementById('inputChiefComplaints');
         const selectConsultationNature = document.getElementById('selectConsultationNature');
@@ -1536,16 +1938,9 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
           } else {
             if (cardTopRow) cardTopRow.style.display = 'flex';
             if (inquiryBadgeBtn) inquiryBadgeBtn.style.display = 'inline-flex';
-            if (departmentLocked) {
-              deptSelectWrap.style.display = 'none';
-              staticDeptBox.style.display = 'flex';
-              staticDeptText.textContent = departmentSelect.value || 'No preference (Staff will assign based on complaint)';
-              departmentSelect.disabled = true;
-            } else {
-              deptSelectWrap.style.display = 'block';
-              staticDeptBox.style.display = 'none';
-              departmentSelect.disabled = false;
-            }
+            if (deptSelectWrap) deptSelectWrap.style.display = 'block';
+            if (staticDeptBox) staticDeptBox.style.display = 'none';
+            if (departmentSelect) departmentSelect.disabled = false;
           }
 
           // Update active step page
@@ -1561,8 +1956,12 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
               indEl.classList.remove('active', 'completed');
               if (i === currentStep) {
                 indEl.classList.add('active');
+                indEl.setAttribute('aria-current', 'step');
               } else if (i < currentStep) {
                 indEl.classList.add('completed');
+                indEl.removeAttribute('aria-current');
+              } else {
+                indEl.removeAttribute('aria-current');
               }
             }
             if (lineEl) {
@@ -1577,10 +1976,33 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
           if (currentStep === totalSteps) {
             btnNext.textContent = 'Confirm & Book Appointment';
             btnNext.disabled = !checkConsent.checked;
+          } else if (currentStep === 3) {
+            btnNext.textContent = 'Next';
+            btnNext.disabled = !hasValidTimeBlock();
           } else {
             btnNext.textContent = 'Next';
             btnNext.disabled = false;
           }
+        }
+
+        let isLoadingSlots = false;
+
+        function hasValidTimeBlock() {
+          if (inquiryOnlyCheckbox && inquiryOnlyCheckbox.checked) return true;
+          if (isLoadingSlots) return false;
+          const selected = selectScheduledTime.selectedOptions[0];
+          return Boolean(selectScheduledTime.value && selected && !selected.disabled);
+        }
+
+        function setTimeBlockMessage(message, disableSelect = true) {
+          selectScheduledTime.innerHTML = '';
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = message;
+          opt.disabled = true;
+          selectScheduledTime.appendChild(opt);
+          selectScheduledTime.value = '';
+          selectScheduledTime.disabled = disableSelect;
         }
 
         // ── Data Privacy Act (R.A. 10173) Modal Overlay Logic ──
@@ -1637,7 +2059,10 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
           });
         }
 
-        departmentSelect.addEventListener('change', () => clearAlert());
+        departmentSelect.addEventListener('change', () => {
+          clearAlert();
+          loadTimeBlocks();
+        });
 
         function validateStep1() {
           if (!inputFirstName.value.trim()) {
@@ -1675,6 +2100,15 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
             inputAddress.focus();
             return false;
           }
+
+          const bookingForVal = document.querySelector('input[name="booking_for"]:checked')?.value || 'Myself';
+          if (bookingForVal === 'Someone Else / Dependent') {
+            if (!selectRelationshipToPatient || !selectRelationshipToPatient.value) {
+              showAlert('Please specify your relationship to the patient.');
+              if (selectRelationshipToPatient) selectRelationshipToPatient.focus();
+              return false;
+            }
+          }
           return true;
         }
 
@@ -1691,74 +2125,163 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
 
         function validateStep3() {
           if (!inquiryOnlyCheckbox.checked) {
-            if (!inputAppointmentDate.value) {
+            const isFirstTime = <?= $isFirstTimePatient ? 'true' : 'false' ?>;
+            const modeVal = document.querySelector('input[name="consultation_mode"]:checked')?.value || 'Face-to-Face';
+            if (isFirstTime && modeVal !== 'Face-to-Face') {
+              showAlert('First-time patients are required to have an initial Face-to-Face consultation at the hospital.');
+              const f2f = document.querySelector('input[name="consultation_mode"][value="Face-to-Face"]');
+              if (f2f) f2f.checked = true;
+              return false;
+            }
+
+            const dt = inputAppointmentDate.value;
+            if (!dt || !/^\d{4}-\d{2}-\d{2}$/.test(dt)) {
               showAlert('Please select an appointment date.');
               inputAppointmentDate.focus();
               return false;
             }
 
-            const chosenDate = new Date(inputAppointmentDate.value);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const minStr = inputAppointmentDate.min;
+            const maxStr = inputAppointmentDate.max;
 
-            if (chosenDate <= today) {
-              showAlert('Appointments must be scheduled at least 1 day in advance.');
+            if (minStr && dt < minStr) {
+              showAlert('Appointments must be scheduled at least 1 day in advance. Past dates are not allowed.');
+              inputAppointmentDate.focus();
               return false;
             }
 
+            if (maxStr && dt > maxStr) {
+              showAlert('Appointments cannot be scheduled more than 1 year in advance.');
+              inputAppointmentDate.focus();
+              return false;
+            }
+
+            const parts = dt.split('-');
+            const chosenDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
             if (chosenDate.getDay() === 0) {
               showAlert('The outpatient clinic is closed on Sundays. Please choose Monday to Saturday.');
+              inputAppointmentDate.focus();
+              return false;
+            }
+
+            if (!hasValidTimeBlock()) {
+              showAlert(selectScheduledTime.options.length && !selectScheduledTime.value
+                ? 'No available slots for this date. Please choose another date.'
+                : 'Please select an available time block.');
+              selectScheduledTime.focus();
               return false;
             }
           }
           return true;
         }
 
-        async function checkDateSlotsConflict() {
+        async function loadTimeBlocks() {
           const dt = inputAppointmentDate.value;
-          if (!dt) return;
+          if (!dt || !/^\d{4}-\d{2}-\d{2}$/.test(dt)) {
+            setTimeBlockMessage('Please select a valid appointment date');
+            if (currentStep === 3) updateStepUI();
+            return;
+          }
+
+          const minStr = inputAppointmentDate.min;
+          const maxStr = inputAppointmentDate.max;
+
+          if (minStr && dt < minStr) {
+            showAlert('Appointments must be scheduled at least 1 day in advance.');
+            setTimeBlockMessage('Selected date is in the past');
+            if (currentStep === 3) updateStepUI();
+            return;
+          }
+
+          if (maxStr && dt > maxStr) {
+            showAlert('Appointments cannot be scheduled more than 1 year in advance.');
+            setTimeBlockMessage('Date exceeds 1 year advance limit');
+            if (currentStep === 3) updateStepUI();
+            return;
+          }
+
+          const parts = dt.split('-');
+          const checkDay = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          if (checkDay.getDay() === 0) {
+            showAlert('The outpatient clinic is closed on Sundays. Please choose Monday to Saturday.');
+            setTimeBlockMessage('Outpatient clinic is closed on Sundays (Mon–Sat only)');
+            if (currentStep === 3) updateStepUI();
+            return;
+          }
+
+          clearAlert();
+          isLoadingSlots = true;
+          setTimeBlockMessage('Loading available time blocks...');
+          if (currentStep === 3) btnNext.disabled = true;
+
           try {
-            const res = await fetch(`/sdn/api/appointments/check_conflicts.php?date=${encodeURIComponent(dt)}`);
+            const dept = departmentSelect ? departmentSelect.value : '';
+            const res = await fetch(`/sdn/api/time-blocks.php?target_date=${encodeURIComponent(dt)}&department=${encodeURIComponent(dept)}`);
             const data = await res.json();
-            if (data.success) {
-              const disabledTimes = data.disabled_times || [];
-              let firstAvailable = null;
-              Array.from(selectScheduledTime.options).forEach(opt => {
-                const isConflict = disabledTimes.includes(opt.value);
-                opt.disabled = isConflict;
-                const baseText = opt.text.replace(' [Already Booked]', '');
-                if (isConflict) {
-                  opt.text = baseText + ' [Already Booked]';
-                } else {
-                  opt.text = baseText;
-                  if (!firstAvailable) firstAvailable = opt.value;
-                }
-              });
+            const blocks = Array.isArray(data)
+              ? data
+              : (data.time_blocks || data.slots || data.data || []);
 
-              if (selectScheduledTime.selectedOptions[0]?.disabled && firstAvailable) {
-                selectScheduledTime.value = firstAvailable;
-              }
+            if (!res.ok || data.error) {
+              setTimeBlockMessage(data.message || 'Could not load time blocks');
+              return;
+            }
 
-              if (data.disabled_periods && data.disabled_periods.length === 1) {
-                showAlert(data.notice);
-              } else if (data.disabled_periods && data.disabled_periods.length >= 2) {
-                showAlert('You have reached the maximum bookings for this date (both Morning and Afternoon). Please choose another date.');
-              }
+            if (!blocks.length) {
+              setTimeBlockMessage('No available slots for this date');
+              return;
+            }
+
+            selectScheduledTime.innerHTML = '';
+            let firstAvailable = '';
+            blocks.forEach((block) => {
+              const value = block.time_block_value || block.value || block.start_time || block.id || '';
+              if (!value) return;
+              const isUnavailable = (block.is_available === false) || Boolean(block.already_booked || block.alreadyBooked || block.booked || block.conflict);
+              const opt = document.createElement('option');
+              opt.value = value;
+              opt.textContent = block.label || value;
+              opt.disabled = isUnavailable;
+              selectScheduledTime.appendChild(opt);
+              if (!isUnavailable && !firstAvailable) firstAvailable = value;
+            });
+
+            selectScheduledTime.disabled = false;
+            if (firstAvailable) {
+              selectScheduledTime.value = firstAvailable;
+            } else if (selectScheduledTime.options.length) {
+              selectScheduledTime.selectedIndex = 0;
             }
           } catch (e) {
-            console.warn('Conflict check error:', e);
+            console.warn('Time block fetch error:', e);
+            setTimeBlockMessage('No available slots for this date');
+          } finally {
+            isLoadingSlots = false;
+            if (currentStep === 3) updateStepUI();
           }
         }
 
-        inputAppointmentDate.addEventListener('change', checkDateSlotsConflict);
+        inputAppointmentDate.addEventListener('change', loadTimeBlocks);
+        selectScheduledTime.addEventListener('change', () => {
+          if (currentStep === 3) updateStepUI();
+        });
 
         function populateReviewStep() {
           const companionVal = document.querySelector('input[name="with_companion"]:checked')?.value === 'yes' ? 'Yes' : 'No';
           const modeVal      = document.querySelector('input[name="consultation_mode"]:checked')?.value || 'Face-to-Face';
+          const bookingForVal = document.querySelector('input[name="booking_for"]:checked')?.value || 'Myself';
 
           document.getElementById('revDept').textContent = departmentSelect.value || 'No preference (Staff will assign based on complaint)';
           document.getElementById('revMode').textContent = modeVal;
           document.getElementById('revName').textContent = `${inputFirstName.value.trim()} ${inputMiddleInitial.value.trim()} ${inputLastName.value.trim()}`.replace(/\s+/g, ' ');
+          
+          if (bookingForVal === 'Someone Else / Dependent' && selectRelationshipToPatient?.value) {
+            if (revRelationshipRow) revRelationshipRow.style.display = 'flex';
+            if (revRelationship) revRelationship.textContent = `${selectRelationshipToPatient.value} (Account Holder as Companion)`;
+          } else {
+            if (revRelationshipRow) revRelationshipRow.style.display = 'none';
+          }
+
           document.getElementById('revContact').textContent = `+63 ${inputContactNumber.value.trim()} | ${inputEmail.value.trim()}`;
           
           const timeText = selectScheduledTime.options[selectScheduledTime.selectedIndex]?.text || '';
@@ -1773,14 +2296,13 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
 
           if (currentStep === 1) {
             if (!validateStep1()) return;
-            departmentLocked = true;
             currentStep = 2;
             updateStepUI();
           } else if (currentStep === 2) {
             if (!validateStep2()) return;
             currentStep = 3;
             updateStepUI();
-            checkDateSlotsConflict();
+            loadTimeBlocks();
           } else if (currentStep === 3) {
             if (!validateStep3()) return;
             populateReviewStep();
@@ -1797,6 +2319,8 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
             btnNext.textContent = 'Booking Appointment...';
 
             const payload = {
+              booking_for: document.querySelector('input[name="booking_for"]:checked')?.value || 'Myself',
+              relationship_to_patient: (document.getElementById('selectRelationshipToPatient')?.value || '').trim(),
               department: departmentSelect.value || (staticDeptText ? staticDeptText.textContent.trim() : ''),
               inquiry_only: inquiryOnlyCheckbox.checked ? 1 : 0,
               first_name: inputFirstName.value.trim(),
@@ -1859,6 +2383,24 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
           }
         });
 
+        function jumpToBookingStep(step) {
+          if (step >= 1 && step < currentStep) {
+            currentStep = step;
+            updateStepUI();
+          }
+        }
+
+        document.querySelectorAll('.step-row').forEach((row) => {
+          const step = Number(row.dataset.step);
+          row.addEventListener('click', () => jumpToBookingStep(step));
+          row.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              jumpToBookingStep(step);
+            }
+          });
+        });
+
         // Back button handler
         btnBack.addEventListener('click', () => {
           if (currentStep > 1) {
@@ -1878,6 +2420,7 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
 
         // Initialize UI
         updateStepUI();
+        loadTimeBlocks();
       });
     </script>
   </body>

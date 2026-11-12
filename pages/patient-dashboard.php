@@ -1516,8 +1516,25 @@ $initials  = count($nameParts) >= 2
         }
         .sidebar-brand-box { width: 44px; height: 44px; min-width: 44px; }
         .brand-text-block, .sidebar-section-lbl, .sidebar-footer { display: none; }
-        .sidebar-nav { flex-direction: row; gap: 4px; }
-        .dashboard-canvas { padding: 1.25rem; }
+        .sidebar-nav {
+          flex-direction: row;
+          gap: 4px;
+          min-width: 0;
+          overflow-x: auto;
+          overflow-y: hidden;
+        }
+        .nav-link {
+          min-height: 44px;
+          white-space: nowrap;
+        }
+        .topbar {
+          height: auto;
+          min-height: 60px;
+          padding: 0.75rem 1rem;
+          flex-wrap: wrap;
+        }
+        .dashboard-canvas { padding: 1rem; max-width: 100%; }
+        .detail-grid { grid-template-columns: 1fr; }
         .metrics-row, .med-specs-grid, .settings-grid { grid-template-columns: 1fr; }
       }
     </style>
@@ -2173,9 +2190,11 @@ $initials  = count($nameParts) >= 2
 
       function renderAppointmentViews() {
         const todayStr = new Date().toISOString().slice(0, 10);
+        const activeStatuses = ['approved', 'confirmed', 'ongoing', 'arrived', 'for_approval', 'for approval', 'pending', 'for_processing'];
         const upcoming = (portalData.upcoming || []).filter(item => {
           const d = item.date_raw || item.date_iso || '';
-          return !d || d >= todayStr;
+          const st = (item.status_raw || '').toLowerCase();
+          return !d || d >= todayStr || activeStatuses.includes(st);
         });
         const dash = document.getElementById('dashUpcomingList');
         if (dash) {

@@ -117,7 +117,7 @@
     font-weight: 500;
     font-style: italic;
     line-height: 1.6;
-    max-width: 800px;
+    max-width: 1050px;
     margin: 0 auto;
     text-shadow: 1px 2px 5px rgba(0,0,0,0.5);
   }

@@ -156,7 +156,7 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
 
     <!-- NAVIGATION -->
     <nav class="navbar" id="navbar">
-      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 2rem; margin: 0 auto;">
+      <div class="navbar-inner">
         <a class="logo" href="/sdn/index.php" title="Home">
           <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="Lingkod Logo" class="logo-ver2-img" />
           <span class="logo-text">
@@ -214,6 +214,7 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
     <?php include 'footer-inline.php'; ?>
     <?php include 'chatbot-inline.php'; ?>
     <?php include __DIR__ . '/pages/patient-booking-modal.php'; ?>
+    <link rel="stylesheet" href="/sdn/public/css/mobile-refine.css?v=<?= time() ?>">
 
     <!-- Svelte Component Mount Point -->
     <div id="app"></div>

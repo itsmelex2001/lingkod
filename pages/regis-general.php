@@ -18,11 +18,11 @@
     $selectedService = trim($_GET['service'] ?? $_GET['spec'] ?? '');
     $selectedDoctor = trim($_GET['doctor'] ?? '');
     if (isset($_GET['source']) && $_GET['source'] === 'dept') {
-        $backUrl = '/sdn/pages/department-select.php';
+        $backUrl = '/sdn/pages/register.php';
     } elseif (isset($_GET['source']) && $_GET['source'] === 'schedules') {
         $backUrl = '/sdn/pages/schedules.php';
     } else {
-        $backUrl = '/sdn/pages/department-select.php';
+        $backUrl = '/sdn/pages/register.php';
     }
 
     $generalSpecialties = [

@@ -82,9 +82,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const isOpen = navLinks.classList.toggle("active");
       hamburger.classList.toggle("open", isOpen);
       hamburger.setAttribute("aria-expanded", String(isOpen));
+      if (!isOpen) {
+        navLinks.querySelector(".nav-dropdown")?.classList.remove("open");
+      }
     });
     allNavLinks.forEach((link) => {
-      link.addEventListener("click", () => {
+      link.addEventListener("click", (e) => {
+        if (window.innerWidth > 768) return;
+        if (link.classList.contains("nav-dropdown-toggle")) {
+          e.preventDefault();
+          link.closest(".nav-dropdown")?.classList.toggle("open");
+          return;
+        }
         navLinks.classList.remove("active");
         hamburger.classList.remove("open");
         hamburger.setAttribute("aria-expanded", "false");

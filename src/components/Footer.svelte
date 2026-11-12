@@ -14,7 +14,7 @@
           <li><a href="#services">Services</a></li>
           <li><a href="#location">Location</a></li>
           <li><a href="/sdn/pages/schedules.php" target="_blank" rel="noopener noreferrer">Schedules</a></li>
-          <li><a href="/sdn/pages/department-select.php" class="highlight-link">Book Appointment</a></li>
+          <li><a href="/sdn/pages/register.php" class="highlight-link">Book Appointment</a></li>
         </ul>
       </div>
       

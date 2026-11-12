@@ -10,7 +10,7 @@
       <div class="hero-left-col">
         <span class="mmwgh-text-inline">MMWGH</span>
         <h2 class="hero-subtitle-inline">
-          Localized Integrated Network for Governance,<br>Knowledge, and Operation in Digital Healthcare
+          Localized Integrated Network for Governance,<br> Knowledge, and Operation in Digital Healthcare
         </h2>
       </div>
       
@@ -141,7 +141,7 @@
     font-weight: 500;
     font-style: italic;
     line-height: 1.6;
-    max-width: 800px;
+    max-width: 1050px;
     margin: 35px auto 0;
     text-shadow: 1px 2px 5px rgba(0,0,0,0.5);
     text-align: center;
@@ -171,10 +171,10 @@
     user-select: none;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
     transition:
-      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-      box-shadow 0.25s ease,
-      background-color 0.25s ease,
-      color 0.25s ease;
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      background-color 0.18s ease,
+      color 0.18s ease;
     will-change: transform, box-shadow;
   }
 
@@ -187,16 +187,18 @@
   }
 
   .hero-btn-book-inline:hover {
-    background-color: #00b31b;
+    background-color: #008814;
     color: #ffffff;
-    transform: translateY(-4px) scale(1.03);
-    box-shadow: 0 14px 28px rgba(0, 154, 23, 0.45), 0 6px 14px rgba(0, 0, 0, 0.28);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
   }
 
-  .hero-btn-book-inline:active {
-    transform: translateY(1px) scale(0.97);
-    background-color: #008013;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  .hero-btn-book-inline:active,
+  .hero-btn-book-inline:focus {
+    transform: translateY(0);
+    background-color: #007511;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+    outline: none;
   }
 
   .hero-btn-schedule-inline {
@@ -234,8 +236,11 @@
   @media (max-width: 768px) {
     .hero-container-inline {
       margin-bottom: 0;
-      min-height: auto;
-      padding: 90px 15px 50px 15px;
+      box-sizing: border-box;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 80px 15px 50px 15px;
+      background-position: center top;
     }
     .hero-brand-group {
       flex-direction: column;

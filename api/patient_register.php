@@ -68,7 +68,10 @@ $guardianName          = trim($input['guardian_name'] ?? '');
 $guardianContactNumber = trim($input['guardian_contact_number'] ?? '');
 $email         = trim(strtolower($input['email'] ?? ''));
 $address       = trim($input['address'] ?? '');
-$withCompanion = !empty($input['with_companion']) && in_array(strtolower((string)$input['with_companion']), ['1', 'true', 'yes'], true) ? 1 : 0;
+$bookingFor    = trim($input['booking_for'] ?? 'Myself');
+$isDependent   = ($bookingFor === 'Someone Else / Dependent' || $bookingFor === 'someone_else' || !empty($input['booking_for_someone_else']));
+$relationshipToPatient = trim($input['relationship_to_patient'] ?? '');
+$withCompanion = $isDependent ? 1 : (!empty($input['with_companion']) && in_array(strtolower((string)$input['with_companion']), ['1', 'true', 'yes'], true) ? 1 : 0);
 
 // ── 2. Extract & Sanitize Account Credentials (Phase 2) ───────────────────
 $username        = trim($input['username'] ?? '');
@@ -127,6 +130,10 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 if ($address === '') {
     $errors[] = 'Home address is required.';
+}
+
+if ($isDependent && $relationshipToPatient === '') {
+    $errors[] = 'Please select your relationship to the patient.';
 }
 
 if ($username === '') {
@@ -282,12 +289,12 @@ try {
             INSERT INTO patients (
                 patient_id, full_name, first_name, last_name, middle_initial,
                 gender, birthdate, age, contact_number, guardian_name, guardian_contact_number,
-                email, address, with_companion, username, password, is_verified,
+                email, address, with_companion, relationship_to_patient, username, password, is_verified,
                 verification_token, token_expires_at, status, created_at, updated_at
             ) VALUES (
                 :patient_id, :full_name, :first_name, :last_name, :middle_initial,
                 :gender, :birthdate, :age, :contact_number, :guardian_name, :guardian_contact_number,
-                :email, :address, :with_companion, :username, :password, 0,
+                :email, :address, :with_companion, :relationship_to_patient, :username, :password, 0,
                 :token, :token_expires_at, 'pending', NOW(), NOW()
             )
         ");
@@ -306,6 +313,7 @@ try {
             ':email'                   => $email,
             ':address'                 => $address,
             ':with_companion'          => $withCompanion,
+            ':relationship_to_patient' => $relationshipToPatient ?: null,
             ':username'                => $username,
             ':password'                => $passwordHash,
             ':token'                   => $token,

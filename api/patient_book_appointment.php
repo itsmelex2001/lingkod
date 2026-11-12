@@ -54,7 +54,10 @@ $birthdate      = trim($b['birthdate'] ?? '');
 $contactNumber  = trim($b['contact_number'] ?? '');
 $email          = trim(strtolower($b['email'] ?? $sessionEmail));
 $address        = trim($b['address'] ?? '');
-$withCompanion  = !empty($b['with_companion']) && in_array(strtolower((string)$b['with_companion']), ['1', 'true', 'yes'], true) ? 1 : 0;
+$bookingFor     = trim($b['booking_for'] ?? 'Myself');
+$isDependent    = ($bookingFor === 'Someone Else / Dependent' || $bookingFor === 'someone_else' || !empty($b['booking_for_someone_else']));
+$relationshipToPatient = trim($b['relationship_to_patient'] ?? '');
+$withCompanion  = $isDependent ? 1 : (!empty($b['with_companion']) && in_array(strtolower((string)$b['with_companion']), ['1', 'true', 'yes'], true) ? 1 : 0);
 
 $chiefComplaints    = trim($b['chief_complaints'] ?? '');
 $consultationNature = trim($b['consultation_nature'] ?? ($inquiryOnly ? 'General Inquiry' : 'Routine Consultation'));
@@ -64,6 +67,13 @@ $referralSource     = trim($b['referral_source'] ?? 'Self-Referral');
 $consultationMode = trim($b['consultation_mode'] ?? 'Face-to-Face');
 $appointmentDate  = trim($b['appointment_date'] ?? '');
 $scheduledTime    = trim($b['scheduled_time'] ?? '08:00:00');
+if (strpos($scheduledTime, '-') !== false) {
+    $timeStart = trim(explode('-', $scheduledTime)[0]);
+    $parsedTs = strtotime($timeStart);
+    if ($parsedTs !== false) {
+        $scheduledTime = date('H:i:s', $parsedTs);
+    }
+}
 
 // 4. Strict Validation
 if ($firstName === '' || $lastName === '') {
@@ -96,6 +106,12 @@ if ($address === '') {
     exit;
 }
 
+if ($isDependent && $relationshipToPatient === '') {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'message' => 'Please select your relationship to the patient.']);
+    exit;
+}
+
 // If not inquiry-only, require medical complaints and future appointment date
 if (!$inquiryOnly) {
     if ($chiefComplaints === '') {
@@ -111,9 +127,15 @@ if (!$inquiryOnly) {
     }
 
     $minDate = date('Y-m-d', strtotime('+1 day'));
+    $maxDate = date('Y-m-d', strtotime('+1 year'));
     if ($appointmentDate < $minDate) {
         http_response_code(422);
         echo json_encode(['success' => false, 'message' => "Appointments must be scheduled at least 1 day in advance (earliest available: $minDate)."]);
+        exit;
+    }
+    if ($appointmentDate > $maxDate) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => "Appointments cannot be scheduled more than 1 year in advance (latest available: $maxDate)."]);
         exit;
     }
 
@@ -121,6 +143,29 @@ if (!$inquiryOnly) {
     if ((int)date('w', strtotime($appointmentDate)) === 0) {
         http_response_code(422);
         echo json_encode(['success' => false, 'message' => 'The hospital outpatient clinics are closed on Sundays. Please select a Monday to Saturday date.']);
+        exit;
+    }
+
+    // First-time patient restriction: initial consultation MUST be Face-to-Face
+    $stmtPrior = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM patients 
+        WHERE (patient_id = :pid OR (email = :pemail AND email != ''))
+          AND appointment_date IS NOT NULL
+          AND LOWER(status) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient')
+    ");
+    $stmtPrior->execute([
+        ':pid'    => $sessionPatientId,
+        ':pemail' => $sessionEmail
+    ]);
+    $isFirstTimePatient = ((int)$stmtPrior->fetchColumn() === 0);
+
+    if ($isFirstTimePatient && strtolower($consultationMode) !== 'face-to-face') {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'First-time patients are required to attend an initial Face-to-Face consultation at the hospital. Online teleconsultation is available for returning follow-up patients only.'
+        ]);
         exit;
     }
 } else {
@@ -246,14 +291,14 @@ try {
     $sql = "INSERT INTO patients (
         patient_id, user_id, department, full_name, first_name, last_name, middle_initial,
         gender, birthdate, age, contact_number, email, username, password, is_verified,
-        address, with_companion, chief_complaints, consultation_nature, illness_description,
+        address, with_companion, relationship_to_patient, chief_complaints, consultation_nature, illness_description,
         patient_type, appointment_type, consultation_mode, appointment_date, scheduled_time,
         referral_source, status, unscheduled_walkin, inquiry_only, mode_of_inquiry,
         select_type, hrn, specialty
     ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?
@@ -278,10 +323,11 @@ try {
         $isVerified,
         $address,
         $withCompanion,
+        $relationshipToPatient ?: null,
         $chiefComplaints,
         $consultationNature,
         $illnessDescription ?: null,
-        'returning',
+        !empty($isFirstTimePatient) ? 'first-time' : 'returning',
         'online',
         $consultationMode,
         $appointmentDate,
@@ -299,7 +345,7 @@ try {
     // Initial Progress Note
     $noteText = $inquiryOnly
         ? "Online Department Inquiry submitted via Patient Portal. Status: For Approval."
-        : "Online Appointment Booked via Patient Portal ({$deptName} on {$appointmentDate} at " . date('h:i A', strtotime($scheduledTime)) . "). Status: For Approval.";
+        : "Online Appointment Booked via Patient Portal ({$deptName} on {$appointmentDate} at " . date('h:i A', strtotime($scheduledTime)) . "). Status: For Approval." . ($isDependent && $relationshipToPatient ? " [Booked for Dependent - Relationship: {$relationshipToPatient}]" : "");
 
     $stmtNote = $pdo->prepare("
         INSERT INTO progress_notes (patient_id, note, noted_by, created_at)
@@ -314,15 +360,16 @@ try {
             $start = date('H:i:s', strtotime($scheduledTime));
             $end = date('H:i:s', strtotime($scheduledTime . ' +30 minutes'));
             $pdo->prepare("
-                INSERT INTO appointments (patient_id, department, appointment_date, start_time, end_time, status, notes)
-                VALUES (?, ?, ?, ?, ?, 'scheduled', ?)
+                INSERT INTO appointments (patient_id, department, appointment_date, start_time, end_time, status, notes, relationship_to_patient)
+                VALUES (?, ?, ?, ?, ?, 'scheduled', ?, ?)
             ")->execute([
                 $newPatientId,
                 $deptName,
                 $appointmentDate,
                 $start,
                 $end,
-                'Booked from the patient portal. Waiting for department approval.'
+                'Booked from the patient portal. Waiting for department approval.',
+                $relationshipToPatient ?: null
             ]);
         } catch (Exception $e) {
             // The patients row is the queue source of truth if this table is absent.

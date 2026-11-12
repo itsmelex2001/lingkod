@@ -1,101 +1,103 @@
-<!-- Patient Booking Confirmation & Retrieval Modal -->
+<!-- Patient Booking Confirmation Modal -->
 <div id="patientBookingConfirmModal" class="pbc-modal-overlay" aria-hidden="true">
   <div class="pbc-modal-backdrop" onclick="closeBookingConfirmModal()"></div>
   <div class="pbc-modal-container" role="dialog" aria-modal="true" aria-labelledby="pbcModalTitle">
     
     <!-- Top Close Button -->
-    <button type="button" class="pbc-btn-close" onclick="closeBookingConfirmModal()" aria-label="Close modal" title="Close">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <button type="button" class="pbc-btn-close" onclick="closeBookingConfirmModal()" aria-label="Close dialog" title="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
 
-    <!-- VIEW 1: Patient Status Confirmation Options -->
-    <div id="pbcViewOptions" class="pbc-view active">
-      <div class="pbc-header">
-        <div class="pbc-badge-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
+    <!-- Header -->
+    <div class="pbc-header">
+      <div class="pbc-badge-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </div>
+      <h2 id="pbcModalTitle" class="pbc-title">Book an Appointment</h2>
+      <p class="pbc-subtitle">Choose how you'd like to continue.</p>
+    </div>
+
+    <!-- Option Cards -->
+    <div class="pbc-options-list">
+      
+      <!-- Option 1: Primary (Already Have an Account) -->
+      <a href="/sdn/pages/patient-login.php" class="pbc-option-card option-account" id="pbcBtnHaveAccount" onclick="closeBookingConfirmModal()">
+        <div class="pbc-card-icon-tile icon-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </div>
-        <h2 id="pbcModalTitle" class="pbc-title">Book an Appointment</h2>
-        <p class="pbc-subtitle">Welcome to MMWGH SDN. Please select your patient status to continue.</p>
-      </div>
+        <div class="pbc-card-text">
+          <span class="pbc-card-title">I have an account</span>
+          <span class="pbc-card-desc">Sign in to book faster and see your records.</span>
+        </div>
+        <svg class="pbc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </a>
 
-      <div class="pbc-options-grid">
-        
-        <!-- Option 1: Already Have an Account -->
-        <a href="/sdn/pages/patient-login.php" target="_blank" rel="noopener noreferrer" class="pbc-option-card option-account" id="pbcBtnHaveAccount" onclick="closeBookingConfirmModal()">
-          <div class="pbc-card-accent"></div>
-          <div class="pbc-card-left">
-            <div class="pbc-icon-pill icon-account">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </div>
-            <div class="pbc-card-info">
-              <h3 class="pbc-card-title">Already Have an Account</h3>
-              <p class="pbc-card-desc">Sign in to access your medical history and speed up appointment booking.</p>
-            </div>
-          </div>
-          <div class="pbc-card-action">
-            <span class="pbc-action-label">Sign In</span>
-            <div class="pbc-arrow-circle">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </div>
-          </div>
-        </a>
+      <!-- Option 2: Secondary (New Patient) -->
+      <a href="/sdn/pages/register.php" class="pbc-option-card option-new" id="pbcBtnNewPatient" onclick="closeBookingConfirmModal()">
+        <div class="pbc-card-icon-tile icon-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="23" y1="11" x2="17" y2="11"></line>
+          </svg>
+        </div>
+        <div class="pbc-card-text">
+          <span class="pbc-card-title">I'm a new patient</span>
+          <span class="pbc-card-desc">Choose a department and book your first visit.</span>
+        </div>
+        <svg class="pbc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </a>
 
-        <!-- Option 2: New Patient -->
-        <a href="/sdn/pages/register.php" target="_blank" rel="noopener noreferrer" class="pbc-option-card option-new" id="pbcBtnNewPatient" onclick="closeBookingConfirmModal()">
-          <div class="pbc-card-accent"></div>
-          <div class="pbc-card-left">
-            <div class="pbc-icon-pill icon-new">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="8.5" cy="7" r="4"></circle>
-                <line x1="20" y1="8" x2="20" y2="14"></line>
-                <line x1="23" y1="11" x2="17" y2="11"></line>
-              </svg>
-            </div>
-            <div class="pbc-card-info">
-              <h3 class="pbc-card-title">New Patient</h3>
-              <p class="pbc-card-desc">First-time consultation at MMWGH? Proceed directly to department registration.</p>
-            </div>
-          </div>
-          <div class="pbc-card-action">
-            <span class="pbc-action-label">Get Started</span>
-            <div class="pbc-arrow-circle">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </div>
-          </div>
-        </a>
+    </div>
 
-      </div>
-
-      <div class="pbc-footer-note">
-        <span>Need urgent medical attention? Please proceed immediately to the MMWGH Emergency Department.</span>
-      </div>
+    <!-- Emergency Note -->
+    <div class="pbc-emergency-note">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pbc-emergency-icon" aria-hidden="true">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+      </svg>
+      <span>In an emergency, go to the MMWGH Emergency Department or call (047) 935-4138.</span>
     </div>
 
   </div>
 </div>
 
 <style>
-/* ── Minimal, Animated, Glassmorphic Modal Styles ── */
+:root {
+  --pbc-primary: #0a7c29;
+  --pbc-primary-hover: #086321;
+  --pbc-primary-light: #e8f5ec;
+  --pbc-primary-tint: #f0fdf4;
+  --pbc-text-strong: #111827;
+  --pbc-text-body: #374151;
+  --pbc-text-muted: #6b7280;
+  --pbc-border: #e5e7eb;
+  --pbc-border-hover: #d1d5db;
+  --pbc-surface: #ffffff;
+  --pbc-radius: 16px;
+  --pbc-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Overlay */
 .pbc-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 99999;
+  z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,7 +105,8 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 180ms ease-out, visibility 180ms ease-out;
+  font-family: var(--pbc-font);
 }
 
 .pbc-modal-overlay.active {
@@ -115,303 +118,368 @@
 .pbc-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(10, 25, 18, 0.62);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(10, 25, 15, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
+/* Modal Card */
 .pbc-modal-container {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 580px;
-  background: #ffffff;
-  border: 1px solid rgba(16, 185, 129, 0.22);
-  border-radius: 20px;
-  box-shadow:
-    0 24px 60px -12px rgba(6, 78, 59, 0.28),
-    0 8px 24px -4px rgba(0, 0, 0, 0.08);
-  padding: 28px 26px 24px 26px;
+  max-width: 440px;
+  background: var(--pbc-surface);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: var(--pbc-radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  padding: clamp(24px, 4vw, 30px);
   box-sizing: border-box;
-  transform: scale(0.94) translateY(12px);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(8px);
+  transition: transform 180ms ease-out;
   overflow: hidden;
 }
 
 .pbc-modal-overlay.active .pbc-modal-container {
-  transform: scale(1) translateY(0);
+  transform: translateY(0);
 }
 
 /* Close button */
 .pbc-btn-close {
   position: absolute;
-  top: 18px;
-  right: 18px;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #64748b;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--pbc-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   z-index: 10;
 }
 
 .pbc-btn-close:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-  color: #dc2626;
-  transform: rotate(90deg);
+  background-color: #f3f4f6;
+  color: var(--pbc-text-strong);
+}
+
+.pbc-btn-close:focus-visible {
+  outline: 2px solid var(--pbc-primary);
+  outline-offset: 2px;
 }
 
 /* Header */
 .pbc-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 20px;
 }
 
 .pbc-badge-icon {
-  width: 44px;
-  height: 44px;
-  margin: 0 auto 10px auto;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  color: #ffffff;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--pbc-primary-light);
+  color: var(--pbc-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  margin-bottom: 12px;
 }
 
 .pbc-title {
   margin: 0;
-  font-size: 1.42rem;
-  font-weight: 800;
-  color: #064e3b;
-  letter-spacing: -0.3px;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-size: clamp(22px, 3vw, 24px);
+  font-weight: 600;
+  color: var(--pbc-text-strong);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
 }
 
 .pbc-subtitle {
-  margin: 5px auto 0 auto;
-  font-size: 0.85rem;
-  color: #64748b;
-  max-width: 420px;
-  line-height: 1.4;
+  margin: 6px 0 0 0;
+  font-size: 14px;
+  color: var(--pbc-text-muted);
+  line-height: 1.45;
 }
 
-/* Options Grid */
-.pbc-options-grid {
+/* Options List */
+.pbc-options-list {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
 }
 
 .pbc-option-card {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 14px 18px;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 64px;
   box-sizing: border-box;
-  text-align: left;
-  overflow: hidden;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+  outline: none;
 }
 
-.pbc-card-accent {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 4px;
-  background: transparent;
-  transition: background 0.2s ease;
+.pbc-option-card:active {
+  transform: scale(0.99);
 }
 
-.pbc-option-card:hover {
-  transform: translateY(-2px);
+.pbc-option-card:focus-visible {
+  outline: 2px solid var(--pbc-primary);
+  outline-offset: 2px;
+}
+
+/* Card 1: Primary ("Already have an account") */
+.pbc-option-card.option-account {
+  border: 1px solid var(--pbc-primary);
   background: #ffffff;
-  box-shadow: 0 8px 20px -4px rgba(16, 185, 129, 0.14);
 }
 
 .pbc-option-card.option-account:hover {
-  border-color: #10b981;
+  background: var(--pbc-primary-tint);
+  border-color: var(--pbc-primary-hover);
 }
-.pbc-option-card.option-account:hover .pbc-card-accent {
-  background: #059669;
+
+/* Card 2: Secondary ("New patient") */
+.pbc-option-card.option-new {
+  border: 1px solid var(--pbc-border);
+  background: #ffffff;
 }
 
 .pbc-option-card.option-new:hover {
-  border-color: #059669;
-}
-.pbc-option-card.option-new:hover .pbc-card-accent {
-  background: #10b981;
+  background: #f9fafb;
+  border-color: var(--pbc-border-hover);
 }
 
-.pbc-option-card.option-retrieve:hover {
-  border-color: #0d9488;
-}
-.pbc-option-card.option-retrieve:hover .pbc-card-accent {
-  background: #0d9488;
-}
-
-.pbc-card-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-}
-
-.pbc-icon-pill {
-  width: 42px;
-  height: 42px;
-  border-radius: 11px;
+/* Icon tiles */
+.pbc-card-icon-tile {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
 }
 
-.pbc-option-card:hover .pbc-icon-pill {
-  transform: scale(1.08);
+.pbc-card-icon-tile.icon-primary {
+  background: var(--pbc-primary-light);
+  color: var(--pbc-primary);
 }
 
-.icon-account {
-  background: #dcfce7;
-  color: #15803d;
+.pbc-card-icon-tile.icon-secondary {
+  background: #f3f4f6;
+  color: #4b5563;
 }
 
-.icon-new {
-  background: #ecfdf5;
-  color: #059669;
-}
-
-.pbc-card-info {
+/* Card text */
+.pbc-card-text {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .pbc-card-title {
-  margin: 0;
-  font-size: 0.96rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--pbc-text-strong);
+  line-height: 1.25;
 }
 
 .pbc-card-desc {
-  margin: 2px 0 0 0;
-  font-size: 0.77rem;
-  color: #64748b;
+  font-size: 13px;
+  color: var(--pbc-text-muted);
   line-height: 1.35;
+  margin-top: 3px;
 }
 
-.pbc-card-action {
+.pbc-chevron {
+  color: #9ca3af;
+  flex-shrink: 0;
+  margin-left: 8px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.pbc-option-card:hover .pbc-chevron {
+  color: var(--pbc-primary);
+  transform: translateX(2px);
+}
+
+/* Emergency Note */
+.pbc-emergency-note {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #f3f4f6;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-}
-
-.pbc-action-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #059669;
-  white-space: nowrap;
-}
-
-.pbc-arrow-circle {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #f1f5f9;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.pbc-option-card:hover .pbc-arrow-circle {
-  background: #059669;
-  color: #ffffff;
-  transform: translateX(3px);
-}
-
-.pbc-footer-note {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
-  text-align: center;
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-size: 13px;
+  color: #4b5563;
   line-height: 1.4;
 }
 
+.pbc-emergency-icon {
+  flex-shrink: 0;
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+/* Hide Chatbot Mascot when Modal is Open */
+body.pbc-modal-open .chibi-widget-container,
+body.pbc-modal-open #chibiChatbotContainer,
+body.pbc-modal-open .chibi-ask-me-bubble {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(20px) scale(0.9) !important;
+}
+
+/* Responsive: Bottom sheet on mobile (<600px) */
 @media (max-width: 600px) {
+  .pbc-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
   .pbc-modal-container {
-    padding: 22px 18px 18px 18px;
+    max-width: 100%;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 28px 20px;
+    transform: translateY(100%);
   }
+
+  .pbc-modal-overlay.active .pbc-modal-container {
+    transform: translateY(0);
+  }
+
   .pbc-title {
-    font-size: 1.25rem;
+    font-size: 20px;
   }
+
   .pbc-option-card {
-    padding: 12px 14px;
-    gap: 10px;
+    min-height: 64px;
+    padding: 14px 16px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .pbc-modal-overlay,
+  .pbc-modal-container,
+  .pbc-option-card,
+  .pbc-chevron {
+    transition: none !important;
+    transform: none !important;
   }
 }
 </style>
 
 <script>
-// Patient Booking Modal Controller
 (function() {
+  let lastActiveTrigger = null;
+
   window.openBookingConfirmModal = function(e) {
-    if (e && e.preventDefault) e.preventDefault();
+    if (e) {
+      if (e.preventDefault) e.preventDefault();
+      lastActiveTrigger = e.currentTarget || document.activeElement;
+    } else {
+      lastActiveTrigger = document.activeElement;
+    }
+
     const modal = document.getElementById('patientBookingConfirmModal');
     if (!modal) return;
+
     modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('pbc-modal-open');
     document.body.style.overflow = 'hidden';
+
+    // Hide chatbot mascot
+    document.querySelectorAll('.chibi-widget-container, #chibiChatbotContainer, .chibi-ask-me-bubble').forEach(el => {
+      el.classList.add('chatbot-hidden');
+    });
+
+    // Focus primary option card
+    setTimeout(() => {
+      const primaryCard = document.getElementById('pbcBtnHaveAccount');
+      if (primaryCard) primaryCard.focus();
+    }, 60);
   };
 
   window.closeBookingConfirmModal = function() {
     const modal = document.getElementById('patientBookingConfirmModal');
     if (!modal) return;
+
     modal.classList.remove('active');
     modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('pbc-modal-open');
     document.body.style.overflow = '';
+
+    // Restore chatbot mascot
+    document.querySelectorAll('.chibi-widget-container, #chibiChatbotContainer, .chibi-ask-me-bubble').forEach(el => {
+      el.classList.remove('chatbot-hidden');
+    });
+
+    // Restore focus
+    if (lastActiveTrigger && typeof lastActiveTrigger.focus === 'function') {
+      lastActiveTrigger.focus();
+    }
   };
 
-  // Keyboard escape listener
-  document.addEventListener('keydown', (e) => {
+  // Keyboard navigation: Escape key & focus trapping
+  document.addEventListener('keydown', function(e) {
+    const modal = document.getElementById('patientBookingConfirmModal');
+    if (!modal || !modal.classList.contains('active')) return;
+
     if (e.key === 'Escape') {
-      const modal = document.getElementById('patientBookingConfirmModal');
-      if (modal && modal.classList.contains('active')) {
-        closeBookingConfirmModal();
+      e.preventDefault();
+      closeBookingConfirmModal();
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const focusableArr = Array.prototype.filter.call(focusables, el => !el.disabled && el.offsetParent !== null);
+      if (focusableArr.length === 0) return;
+
+      const firstEl = focusableArr[0];
+      const lastEl = focusableArr[focusableArr.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
       }
     }
   });
 
-  // Auto-hook elements with .hero-btn-book-inline or similar links
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.hero-btn-book-inline, a[href*="department-select.php"]').forEach(btn => {
-      // Don't intercept back buttons or direct links if marked
-      if (btn.classList.contains('no-pbc-intercept') || btn.closest('nav') && btn.classList.contains('btn-back')) return;
-      btn.addEventListener('click', (e) => {
+  // Auto-hook elements that open the modal
+  document.addEventListener('DOMContentLoaded', function() {
+    const selector = '.hero-btn-book-inline, a[href*="department-select.php"], [data-open-booking-modal]';
+    document.querySelectorAll(selector).forEach(btn => {
+      if (btn.classList.contains('no-pbc-intercept') || (btn.closest('nav') && btn.classList.contains('btn-back'))) return;
+      btn.addEventListener('click', function(e) {
         openBookingConfirmModal(e);
       });
     });
   });
 })();
 </script>
-

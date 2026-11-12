@@ -83,4 +83,33 @@
     align-items: center;
     gap: 12px;
   }
+
+  @media (max-width: 767px) {
+    .top-nav {
+      padding: 12px 16px;
+      gap: 8px;
+    }
+
+    .nav-brand,
+    .brand-text,
+    .nav-actions {
+      min-width: 0;
+    }
+
+    .brand-text {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+
+    .brand-text h1 {
+      font-size: 1.05rem;
+    }
+
+    .btn-back {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+    }
+  }
 </style>

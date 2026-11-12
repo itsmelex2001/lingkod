@@ -6,181 +6,424 @@ session_start();
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Patient Portal | LINGKOD</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
+    <title>Patient Portal | MMWGH LINGKOD</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
 
     <style>
-      /* ── Reset & Root ── */
+      :root {
+        --color-primary: #0a7c29;
+        --color-primary-hover: #086321;
+        --color-primary-active: #064e1a;
+        --color-primary-focus: rgba(10, 124, 41, 0.22);
+        --color-surface-left: #04200e;
+        --color-surface-right: #ffffff;
+        --color-bg: #f8faf8;
+        --color-text-strong: #111827;
+        --color-text-body: #374151;
+        --color-text-muted: #6b7280;
+        --color-border: #d1d5db;
+        --color-border-hover: #9ca3af;
+        --color-border-focus: #0a7c29;
+        --color-error: #dc2626;
+        --color-error-bg: #fef2f2;
+        --color-warning: #b45309;
+        --color-warning-bg: #fffbeb;
+        --color-success: #15803d;
+        --color-success-bg: #f0fdf4;
+        --radius: 8px;
+        --control-height: clamp(38px, 4.4vh, 42px);
+        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-serif: 'Playfair Display', Georgia, serif;
+      }
+
       *, *::before, *::after {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
       }
 
-      /* Fixed, non-scrollable viewport */
       html, body {
         width: 100%;
         height: 100%;
-        overflow: hidden !important;
-        scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
-      }
-      html::-webkit-scrollbar, body::-webkit-scrollbar {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-      }
-
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        background-color: #071a10;
-        color: #ffffff;
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem;
+        margin: 0;
+        overflow: hidden;
+        overflow-x: hidden;
+        font-family: var(--font-sans);
+        background-color: var(--color-bg);
+        color: var(--color-text-body);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
       }
 
-      /* ── Background Image (Cropped to exclude right-side scaffolding, perfectly framing MMWGH pillars) ── */
-      .portal-bg-canvas {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        background-image: url('/sdn/public/assets/mmwghicon_bg.jpg');
+      ::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* ── Layout Grid ── */
+      .portal-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100dvh;
+        overflow: hidden;
+      }
+
+      /* ── Left Panel (Hospital Photo & Layered Green Shadow) ── */
+      .portal-left {
+        position: relative;
+        background-color: var(--color-surface-left);
+        background-image: url('/sdn/public/assets/mmwgh_front.jpeg');
         background-size: cover;
-        background-position: left center;
-        background-repeat: no-repeat;
-        transform-origin: 8% 44%;
-        transform: scale(1.30);
-        pointer-events: none;
+        background-position: center;
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: clamp(1.5rem, 2.8vw, 3rem);
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
       }
 
-      /* ── Background Shading Overlay (layered green depth, photo still readable) ── */
-      .portal-bg-overlay {
-        position: fixed;
+      .portal-left::before {
+        content: '';
+        position: absolute;
         inset: 0;
         z-index: 1;
         background:
-          /* Even dark-green wash so the pale sky and concrete sit a step darker */
-          linear-gradient(180deg, rgba(5, 16, 10, 0.34) 0%, rgba(5, 20, 12, 0.22) 46%, rgba(4, 28, 14, 0.28) 100%),
-          /* Soft center veil so the card sits on even contrast */
-          radial-gradient(ellipse 46% 58% at 50% 46%, rgba(4, 16, 10, 0.52) 0%, rgba(4, 16, 10, 0.22) 48%, transparent 74%),
-          /* Top sky shade */
-          linear-gradient(to bottom, rgba(6, 16, 10, 0.62) 0%, rgba(6, 18, 12, 0.28) 28%, transparent 52%),
-          /* Bottom green floor — translucent so the building still shows */
-          linear-gradient(to top, rgba(6, 72, 28, 0.86) 0%, rgba(8, 88, 34, 0.54) 26%, rgba(8, 88, 34, 0.18) 52%, transparent 70%),
-          /* Bottom-left green flare */
-          radial-gradient(ellipse 68% 62% at 0% 100%, rgba(8, 96, 36, 0.8) 0%, rgba(8, 86, 32, 0.46) 42%, transparent 72%),
-          /* Bottom-right green flare */
-          radial-gradient(ellipse 68% 62% at 100% 100%, rgba(8, 96, 36, 0.8) 0%, rgba(8, 86, 32, 0.46) 42%, transparent 72%),
-          /* Edge vignette */
-          radial-gradient(ellipse 130% 100% at 50% 42%, transparent 42%, rgba(3, 10, 6, 0.5) 100%);
+          linear-gradient(to top, rgba(4,32,14,0.95) 0%, rgba(4,32,14,0.70) 30%, rgba(4,32,14,0.30) 65%, rgba(4,32,14,0.45) 100%),
+          linear-gradient(to right, rgba(4,32,14,0.65) 0%, rgba(4,32,14,0) 70%),
+          rgba(10,70,30,0.30);
+        box-shadow: inset 0 0 160px rgba(0, 0, 0, 0.35);
         pointer-events: none;
       }
 
-      /* ── Main Login Container (dark-green glass so white logo and labels stay clear) ── */
-      .login-container {
+      .portal-left-content {
         position: relative;
-        z-index: 5;
-        width: 100%;
-        max-width: 440px;
-        border-radius: 28px;
-        border: 1.5px solid rgba(255, 255, 255, 0.46);
-        background: linear-gradient(
-          165deg,
-          rgba(10, 48, 26, 0.62) 0%,
-          rgba(8, 36, 20, 0.48) 48%,
-          rgba(6, 32, 18, 0.66) 100%
-        );
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
-        box-shadow:
-          0 24px 56px rgba(0, 0, 0, 0.38),
-          inset 0 1px 0 rgba(255, 255, 255, 0.38),
-          inset 0 -1px 0 rgba(0, 0, 0, 0.18);
-        padding: 2.15rem 2.35rem 1.9rem;
-        box-sizing: border-box;
-      }
-      .login-container::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, transparent 32%);
-        pointer-events: none;
-        z-index: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        justify-content: space-between;
       }
 
-      .login-card {
-        position: relative;
-        z-index: 1;
-        width: 100%;
-      }
-
-      /* ── Card Header ── */
-      .card-header {
-        text-align: center;
-        margin-bottom: 1.5rem;
-      }
-
-      .logo-emblem {
-        width: 100%;
+      .portal-left-brand {
         display: flex;
         align-items: center;
-        justify-content: center;
-        margin: 0 auto 0.65rem;
+        gap: 0.875rem;
+        flex-shrink: 0;
       }
-      .logo-emblem img {
-        width: 168px;
-        height: auto;
-        max-height: 118px;
+
+      .hospital-logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
         object-fit: contain;
-        display: block;
-        filter:
-          brightness(1.35)
-          drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55))
-          drop-shadow(0 0 12px rgba(0, 0, 0, 0.28));
+        background: #ffffff;
+        padding: 2px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
       }
 
-      .portal-title {
-        font-family: 'Outfit', sans-serif;
-        font-size: 1.58rem;
-        font-weight: 800;
-        letter-spacing: 0.045em;
+      .hospital-meta {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .hospital-acronym {
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
         color: #ffffff;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.35);
-        margin: 0 0 6px;
         line-height: 1.15;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
       }
 
-      .portal-subtitle {
-        font-size: 0.86rem;
-        color: #f4fff8;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
-        font-weight: 600;
+      .hospital-fullname {
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.35;
+        max-width: 320px;
+        margin-top: 2px;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+      }
+
+      .portal-left-body {
+        margin-top: auto;
+        margin-bottom: 0;
+        padding: 0 0 clamp(0.5rem, 1vh, 1rem) 0;
+        min-height: 0;
+      }
+
+      .portal-left-tagline {
+        font-family: var(--font-serif);
+        font-size: clamp(1.45rem, 2.1vw, 2rem);
+        font-weight: 700;
+        line-height: 1.25;
+        color: #ffffff;
+        letter-spacing: -0.01em;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+      }
+
+      .portal-left-translation {
+        display: block;
+        font-family: var(--font-sans);
+        font-size: 0.9rem;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.92);
+        margin-top: 0.35rem;
         letter-spacing: 0.01em;
-        margin-bottom: 0.85rem;
-        line-height: 1.4;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
       }
 
-      /* ── Form Styles ── */
+      .portal-left-divider {
+        width: 40px;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.5);
+        margin: clamp(0.85rem, 1.4vh, 1.25rem) 0;
+      }
+
+      .portal-bullet-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: clamp(0.55rem, 1vh, 0.85rem);
+      }
+
+      .portal-bullet-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        line-height: 1.4;
+        color: #ffffff;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+      }
+
+      .portal-bullet-icon {
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        margin-top: 2px;
+        color: #86efac;
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+      }
+
+      .portal-bullet-icon svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* ── Right Panel (Form) ── */
+      .portal-right {
+        position: relative;
+        background-color: var(--color-surface-right);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        min-height: 0;
+        padding: clamp(0.85rem, 1.8vh, 1.5rem) clamp(1.25rem, 3vw, 2.5rem);
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .portal-right::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Top navigation row: Home link & Language switch */
+      .portal-right-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        flex-shrink: 0;
+      }
+
+      .icon-btn-home {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius);
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text-body);
+        text-decoration: none;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      }
+
+      .icon-btn-home:hover {
+        background-color: #f3f4f6;
+        border-color: var(--color-border-hover);
+        color: var(--color-text-strong);
+      }
+
+      .icon-btn-home:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      .icon-btn-home svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      /* Language Toggle */
+      .lang-toggle {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: #f9fafb;
+        padding: 2px;
+        gap: 2px;
+      }
+
+      .lang-btn {
+        background: transparent;
+        border: none;
+        font-family: var(--font-sans);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        padding: 4px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .lang-btn.active {
+        background: #ffffff;
+        color: var(--color-primary);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      .lang-btn:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 1px;
+      }
+
+      /* Form Container */
+      .portal-form-container {
+        width: 100%;
+        max-width: 400px;
+        margin: auto auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .brand-header {
+        margin-bottom: clamp(20px, 3vh, 28px);
+        text-align: left;
+      }
+
+      .brand-logo-img {
+        width: clamp(140px, 15vw, 180px);
+        height: auto;
+        display: block;
+        object-fit: contain;
+        margin: 0 0 clamp(16px, 2.2vh, 22px) 0;
+        padding: 0;
+      }
+
+      .portal-heading {
+        font-family: var(--font-serif);
+        font-size: clamp(1.3rem, 2vh, 1.55rem);
+        font-weight: 700;
+        color: var(--color-text-strong);
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        margin: 0 0 7px 0;
+      }
+
+      .portal-subheading {
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      /* Banner Messages */
+      .auth-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: clamp(0.4rem, 0.8vh, 0.6rem) 0.75rem;
+        border-radius: var(--radius);
+        font-size: 0.78rem;
+        line-height: 1.35;
+        margin-bottom: 14px;
+      }
+
+      .auth-alert-icon {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+        margin-top: 1px;
+      }
+
+      .auth-alert-icon svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .auth-alert-error {
+        background: var(--color-error-bg);
+        border: 1px solid #fecaca;
+        color: var(--color-error);
+      }
+
+      .auth-alert-success {
+        background: var(--color-success-bg);
+        border: 1px solid #bbf7d0;
+        color: var(--color-success);
+      }
+
+      .auth-alert-warning {
+        background: var(--color-warning-bg);
+        border: 1px solid #fde68a;
+        color: var(--color-warning);
+      }
+
+      /* Form Elements */
+      #patientSignInForm {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
       .form-group {
-        margin-bottom: 1.15rem;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 0;
       }
 
       .form-label {
         display: block;
-        font-size: 0.84rem;
-        font-weight: 700;
-        color: #ffffff;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-        margin-bottom: 0.42rem;
-        letter-spacing: 0.01em;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--color-text-body);
+        margin-bottom: 0;
+        line-height: 1.2;
       }
 
       .input-wrapper {
@@ -189,471 +432,1076 @@ session_start();
         align-items: center;
       }
 
-      .input-icon {
+      .input-icon-lead {
         position: absolute;
-        left: 14px;
-        width: 18px;
-        height: 18px;
-        color: #1f2937;
+        left: 13px;
+        width: 16px;
+        height: 16px;
+        color: #9ca3af;
         pointer-events: none;
-        transition: color 0.2s ease;
-        z-index: 1;
+        transition: color 0.15s ease;
       }
 
-      .form-control {
+      .input-icon-lead svg {
         width: 100%;
-        height: 48px;
-        padding: 0 2.7rem 0 2.75rem;
-        background: rgba(255, 255, 255, 0.94);
-        border: 1px solid rgba(255, 255, 255, 0.85);
-        border-radius: 12px;
-        color: #0f172a;
-        font-family: inherit;
-        font-size: 0.94rem;
-        font-weight: 500;
-        outline: none;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-        transition: all 0.2s ease;
-      }
-      .form-control::placeholder {
-        color: #4b5563;
-        font-size: 0.9rem;
-        font-weight: 500;
-      }
-      .form-control:focus {
-        background: #ffffff;
-        border-color: #16a34a;
-        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.28);
-      }
-      .input-wrapper:focus-within .input-icon {
-        color: #047857;
+        height: 100%;
       }
 
-      .btn-toggle-eye {
+      .form-input {
+        width: 100%;
+        height: var(--control-height);
+        padding: 0 40px 0 40px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: #ffffff;
+        font-family: var(--font-sans);
+        font-size: 0.85rem;
+        color: var(--color-text-strong);
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .form-input::placeholder {
+        color: #9ca3af;
+        font-weight: 400;
+      }
+
+      .form-input:hover {
+        border-color: var(--color-border-hover);
+      }
+
+      .form-input:focus {
+        border-color: var(--color-border-focus);
+        box-shadow: 0 0 0 3px var(--color-primary-focus);
+      }
+
+      .input-wrapper:focus-within .input-icon-lead {
+        color: var(--color-primary);
+      }
+
+      .form-input.is-invalid {
+        border-color: var(--color-error);
+        background-color: #fffbfb;
+      }
+
+      .form-input.is-invalid:focus {
+        border-color: var(--color-error);
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+      }
+
+      .toggle-pass-btn {
         position: absolute;
-        right: 12px;
-        background: transparent;
-        border: none;
-        color: #1f2937;
-        cursor: pointer;
-        padding: 4px;
-        display: flex;
+        right: 11px;
+        width: 26px;
+        height: 26px;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        transition: color 0.2s ease;
-        z-index: 1;
-      }
-      .btn-toggle-eye:hover {
-        color: #047857;
+        background: transparent;
+        border: none;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0;
+        border-radius: 4px;
+        transition: color 0.15s ease;
       }
 
-      /* ── Forgot Password Row ── */
-      .options-row {
-        display: flex;
-        justify-content: flex-end;
+      .toggle-pass-btn:hover {
+        color: var(--color-text-strong);
+      }
+
+      .toggle-pass-btn:focus-visible {
+        outline: 2px solid var(--color-primary);
+      }
+
+      .toggle-pass-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* Helper & Validation Messages */
+      .field-error-msg {
+        display: none;
+        font-size: 0.74rem;
+        color: var(--color-error);
+        margin: 0;
+        line-height: 1.25;
+        min-height: 0;
+        transition: opacity 0.15s ease;
+      }
+
+      .field-error-msg.visible {
+        display: block;
+      }
+
+      .caps-lock-warning {
+        display: none;
         align-items: center;
-        margin-top: 0.45rem;
-        margin-bottom: 1.4rem;
+        gap: 0.35rem;
+        font-size: 0.74rem;
+        color: var(--color-warning);
+        margin: 0;
+        font-weight: 500;
+      }
+
+      .caps-lock-warning.visible {
+        display: flex;
+      }
+
+      .caps-lock-warning svg {
+        width: 13px;
+        height: 13px;
+        flex-shrink: 0;
+      }
+
+      /* Options Row (Remember Me & Forgot Password) */
+      .form-options-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0;
+        font-size: 0.78rem;
+      }
+
+      .remember-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        cursor: pointer;
+        user-select: none;
+        color: var(--color-text-body);
+      }
+
+      .remember-checkbox {
+        width: 15px;
+        height: 15px;
+        accent-color: var(--color-primary);
+        cursor: pointer;
+        border-radius: 3px;
       }
 
       .forgot-link {
-        color: #ffffff;
+        color: var(--color-primary);
+        font-weight: 600;
         text-decoration: none;
-        font-size: 0.82rem;
-        font-weight: 700;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
-        transition: opacity 0.2s ease;
+        transition: color 0.15s ease, text-decoration 0.15s ease;
       }
+
       .forgot-link:hover {
-        opacity: 0.88;
+        color: var(--color-primary-hover);
         text-decoration: underline;
       }
 
-      /* ── Submit Button (Vibrant Green matching reference) ── */
-      .btn-portal-submit {
+      .forgot-link:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      /* Primary Sign In Button */
+      .btn-submit {
         width: 100%;
-        height: 48px;
-        border-radius: 14px;
+        height: var(--control-height);
         border: none;
-        background: #0ea43f;
+        border-radius: var(--radius);
+        background-color: var(--color-primary);
         color: #ffffff;
-        font-family: inherit;
-        font-size: 1.05rem;
-        font-weight: 700;
+        font-family: var(--font-sans);
+        font-size: 0.875rem;
+        font-weight: 600;
         letter-spacing: 0.01em;
         cursor: pointer;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
-        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.05s ease;
+        margin-top: 0;
+      }
+
+      .btn-submit:hover:not(:disabled) {
+        background-color: var(--color-primary-hover);
+      }
+
+      .btn-submit:active:not(:disabled) {
+        background-color: var(--color-primary-active);
+        transform: scale(0.99);
+      }
+
+      .btn-submit:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      .btn-submit:disabled {
+        background-color: #e5e7eb;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      /* Secondary Registration Prompt */
+      .new-patient-prompt {
+        text-align: center;
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+        margin-top: 0;
+      }
+
+      .create-account-link {
+        color: var(--color-primary);
+        font-weight: 600;
+        text-decoration: none;
+        margin-left: 0.25rem;
+      }
+
+      .create-account-link:hover {
+        text-decoration: underline;
+        color: var(--color-primary-hover);
+      }
+
+      .create-account-link:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      /* Right Footer */
+      .portal-right-footer {
+        width: 100%;
+        max-width: 440px;
+        margin: auto auto 0;
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--color-text-muted);
+        line-height: 1.4;
+        border-top: 1px solid #f3f4f6;
+        padding-top: clamp(0.5rem, 1vh, 0.85rem);
+        flex-shrink: 0;
+      }
+
+      .footer-compliance {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 0.15rem;
+      }
+
+      .footer-compliance svg {
+        width: 12px;
+        height: 12px;
+        color: var(--color-primary);
+      }
+
+      .footer-links {
+        margin: 0.15rem 0;
+      }
+
+      .footer-links a {
+        color: var(--color-text-body);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .footer-links a:hover {
+        color: var(--color-primary);
+      }
+
+      .footer-help {
+        margin-top: 0.2rem;
+        font-size: 0.68rem;
+        color: #9ca3af;
+      }
+
+      /* ── Functional Animation (Error Shake) ── */
+      @keyframes inputShake {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-6px); }
+        40%, 80% { transform: translateX(6px); }
+      }
+
+      .shake {
+        animation: inputShake 0.35s ease-in-out;
+      }
+
+      /* ── Spinner ── */
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* ── Forgot Password Modal (matches Book Appointment style) ── */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 25, 15, 0.55);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         display: flex;
         align-items: center;
         justify-content: center;
+        z-index: 1000;
+        padding: 1.25rem;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 180ms ease-out, visibility 180ms ease-out;
       }
-      .btn-portal-submit:hover {
-        background: #0d9639;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-        transform: translateY(-1px);
+
+      .modal-backdrop.is-active {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
       }
-      .btn-portal-submit:active {
+
+      .modal-card {
+        position: relative;
+        background: #ffffff;
+        width: 100%;
+        max-width: 420px;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        padding: 28px;
+        transform: translateY(8px);
+        transition: transform 180ms ease-out;
+        overflow: hidden;
+      }
+
+      .modal-backdrop.is-active .modal-card {
         transform: translateY(0);
       }
 
-      /* ── Modal ── */
-      .demo-modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 100;
-        padding: 1.25rem;
-      }
-      .demo-modal-overlay.active {
-        display: flex;
-      }
-
-      .demo-modal {
-        background: rgba(15, 40, 24, 0.88);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        border-radius: 20px;
-        padding: 2.2rem 2rem;
-        max-width: 400px;
-        width: 100%;
-        color: white;
-        text-align: center;
-        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
-        animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
-
-      @keyframes modalPop {
-        from { opacity: 0; transform: scale(0.94) translateY(10px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
-      }
-
-      .demo-modal-icon {
-        width: 54px;
-        height: 54px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
-        color: #86efac;
+      .modal-close-btn {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--color-text-muted);
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 1rem;
-      }
-
-      .demo-modal h3 {
-        font-family: 'Outfit', sans-serif;
-        font-size: 1.35rem;
-        font-weight: 700;
-        margin-bottom: 0.4rem;
-        color: #ffffff;
-      }
-
-      .demo-modal p {
-        font-size: 0.88rem;
-        color: rgba(255, 255, 255, 0.78);
-        line-height: 1.5;
-        margin-bottom: 1.5rem;
-      }
-
-      .btn-close-modal {
-        width: 100%;
-        padding: 0.82rem;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        background: #14532d;
-        color: white;
-        font-weight: 600;
-        font-size: 0.9rem;
         cursor: pointer;
-        transition: background 0.2s ease;
-      }
-      .btn-close-modal:hover {
-        background: #166534;
+        transition: background-color 0.15s ease, color 0.15s ease;
       }
 
-      /* ── In-card Status Notification Banner ── */
-      .portal-status-banner {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        margin-bottom: 1.25rem;
-        font-size: 0.84rem;
-        line-height: 1.45;
-        text-align: left;
-        animation: bannerSlideDown 0.3s ease-out;
+      .modal-close-btn:hover {
+        background-color: #f3f4f6;
+        color: var(--color-text-strong);
       }
 
-      @keyframes bannerSlideDown {
-        from { opacity: 0; transform: translateY(-8px); }
-        to { opacity: 1; transform: translateY(0); }
+      .modal-close-btn:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
       }
 
-      .portal-status-banner.banner-success {
-        background: rgba(236, 253, 245, 0.96);
-        border: 1.5px solid #10b981;
-        color: #064e3b;
-      }
-
-      .portal-status-banner.banner-info {
-        background: rgba(240, 253, 244, 0.96);
-        border: 1.5px solid #22c55e;
-        color: #14532d;
-      }
-
-      .portal-status-banner.banner-warning {
-        background: rgba(254, 252, 232, 0.96);
-        border: 1.5px solid #eab308;
-        color: #713f12;
-      }
-
-      .banner-icon-col {
-        flex-shrink: 0;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
+      .modal-icon-tile {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #e8f5ec;
+        color: var(--color-primary);
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-top: 1px;
+        margin-bottom: 12px;
       }
 
-      .banner-success .banner-icon-col {
-        background: #10b981;
-        color: #ffffff;
-      }
-
-      .banner-info .banner-icon-col {
-        background: #16a34a;
-        color: #ffffff;
-      }
-
-      .banner-warning .banner-icon-col {
-        background: #ca8a04;
-        color: #ffffff;
-      }
-
-      .banner-text-col h4 {
-        font-size: 0.88rem;
-        font-weight: 700;
-        margin-bottom: 2px;
-        line-height: 1.2;
-      }
-
-      .banner-text-col p {
-        font-size: 0.8rem;
-        opacity: 0.92;
+      .modal-title {
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: var(--color-text-strong);
+        letter-spacing: -0.01em;
+        line-height: 1.25;
         margin: 0;
       }
 
-      /* ── Status Box inside modals ── */
-      .status-box {
-        padding: 10px 14px;
-        border-radius: 10px;
-        margin-bottom: 1rem;
+      .modal-desc {
         font-size: 0.84rem;
+        color: var(--color-text-muted);
         line-height: 1.45;
-        text-align: left;
+        margin-top: 6px;
+        margin-bottom: 1.25rem;
       }
-      .status-box.error {
-        background: rgba(239, 68, 68, 0.22);
-        border: 1px solid rgba(248, 113, 113, 0.45);
-        color: #fecaca;
-      }
-      .status-box.success {
-        background: rgba(16, 185, 129, 0.22);
-        border: 1px solid rgba(52, 211, 153, 0.45);
-        color: #a7f3d0;
-      }
-      .btn-secondary-link {
-        display: block;
+
+      .modal-resend-row {
+        margin-top: 1.25rem;
         text-align: center;
-        color: #ffffff;
-        text-decoration: none;
-        font-size: 0.84rem;
-        font-weight: 600;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        align-items: center;
       }
-      .btn-secondary-link:hover {
+
+      .btn-resend-link {
+        background: transparent;
+        border: none;
+        color: var(--color-primary);
+        font-family: var(--font-sans);
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        padding: 4px;
+      }
+
+      .btn-resend-link:hover:not(:disabled) {
+        color: var(--color-primary-hover);
+      }
+
+      .btn-resend-link:disabled {
+        color: var(--color-text-muted);
+        text-decoration: none;
+        cursor: not-allowed;
+      }
+
+      .btn-modal-back {
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .btn-modal-back:hover {
+        color: var(--color-text-strong);
         text-decoration: underline;
       }
 
-      @media (max-width: 640px) {
-        .portal-top-bar { padding: 1.1rem 1.25rem; }
-        .login-container { border-radius: 22px; padding: 1.8rem 1.4rem; }
-        .portal-title { font-size: 1.45rem; }
+      @media (max-width: 600px) {
+        .modal-backdrop {
+          align-items: flex-end;
+          padding: 0;
+        }
+
+        .modal-card {
+          max-width: 100%;
+          width: 100%;
+          border-radius: 20px 20px 0 0;
+          padding: 24px 20px 28px 20px;
+          transform: translateY(100%);
+        }
+
+        .modal-backdrop.is-active .modal-card {
+          transform: translateY(0);
+        }
+      }
+
+      /* ── Responsive: Mobile / Tablet (< 820px) or Very Short Screens ── */
+      @media (max-width: 820px) {
+        html, body {
+          overflow-y: auto;
+          overflow-x: hidden;
+          height: auto;
+          min-height: 100%;
+        }
+
+        .portal-layout {
+          grid-template-columns: 1fr;
+          height: auto;
+          min-height: 100dvh;
+          overflow: visible;
+        }
+
+        .portal-left {
+          padding: 1.25rem 1.5rem;
+          min-height: auto;
+          height: auto;
+        }
+
+        .portal-bullet-list,
+        .portal-left-divider {
+          display: none;
+        }
+
+        .portal-left-body {
+          margin: 0.5rem 0 0;
+          padding: 0;
+        }
+
+        .portal-left-tagline {
+          font-size: 1.15rem;
+        }
+
+        .portal-left-translation {
+          font-size: 0.8rem;
+          margin-top: 0.2rem;
+        }
+
+        .portal-right {
+          padding: 1.5rem 1.25rem;
+          height: auto;
+          min-height: calc(100dvh - 120px);
+          overflow: visible;
+        }
+
+        .portal-form-container {
+          margin: 1.25rem auto;
+        }
+
+        .brand-header {
+          margin-bottom: 1.25rem;
+        }
+
+        .brand-logo-img {
+          width: clamp(130px, 35vw, 150px);
+          height: auto;
+          margin: 0 0 20px 0;
+        }
+
+        .portal-heading {
+          font-size: 1.4rem;
+          margin-bottom: 7px;
+        }
+      }
+
+      @media (max-height: 700px) and (min-width: 821px) {
+        .portal-right {
+          overflow-y: auto;
+        }
       }
     </style>
   </head>
   <body>
-    <!-- Background Image & Subtle Tint Overlay -->
-    <div class="portal-bg-canvas"></div>
-    <div class="portal-bg-overlay"></div>
-
-    <!-- Main Login Card -->
-    <main class="login-container">
-      <div class="login-card">
-
-        <!-- Header -->
-        <div class="card-header">
-          <div class="logo-emblem">
-            <img src="/sdn/public/assets/v3_lingkod_logo_clean.png" alt="LINGKOD Logo" />
-          </div>
-          <h1 class="portal-title">PATIENT PORTAL</h1>
-          <p class="portal-subtitle">Mariveles Mental Wellness and General Hospital</p>
-        </div>
-
-        <!-- Status Notification Banner -->
-        <div id="loginStatusBanner" class="portal-status-banner" style="display: none;">
-          <div class="banner-icon-col" id="bannerIcon"></div>
-          <div class="banner-text-col">
-            <h4 id="bannerTitle"></h4>
-            <p id="bannerMsg"></p>
-          </div>
-        </div>
-
-        <!-- Login Form -->
-        <form id="patientLoginForm" onsubmit="handleSampleLogin(event)">
-
-          <!-- Email Field -->
-          <div class="form-group">
-            <label class="form-label" for="patientEmailInput">Email</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-              </svg>
-              <input
-                type="email"
-                id="patientEmailInput"
-                class="form-control"
-                placeholder="Enter your email"
-                required
-                autocomplete="email"
-              />
+    <div class="portal-layout">
+      <!-- ── Left Panel ── -->
+      <aside class="portal-left" aria-label="Hospital Overview">
+        <div class="portal-left-content">
+          <header class="portal-left-brand">
+            <img
+              src="/sdn/public/assets/mmwgh_logo.png"
+              alt="MMWGH Official Seal"
+              class="hospital-logo"
+            />
+            <div class="hospital-meta">
+              <span class="hospital-acronym">MMWGH</span>
+              <span class="hospital-fullname">Mariveles Mental Wellness and General Hospital</span>
             </div>
+          </header>
+
+          <div class="portal-left-body">
+            <h1 class="portal-left-tagline" id="leftTagline">
+              Maaasahang Lingkod
+              <span class="portal-left-translation" id="leftTranslation">Reliable Service</span>
+            </h1>
+
+            <div class="portal-left-divider" aria-hidden="true"></div>
+
+            <ul class="portal-bullet-list" id="leftBullets">
+              <li class="portal-bullet-item">
+                <span class="portal-bullet-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </span>
+                <span class="bullet-text" data-en="Accessible digital consultations and healthcare guidance" data-fil="Madaling maabot na digital na konsultasyon at gabay pangkalusugan">
+                  Accessible digital consultations and healthcare guidance
+                </span>
+              </li>
+              <li class="portal-bullet-item">
+                <span class="portal-bullet-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </span>
+                <span class="bullet-text" data-en="Streamlined appointment scheduling and queue status" data-fil="Mabilis na pag-iskedyul ng konsultasyon at pagsubaybay sa pila">
+                  Streamlined appointment scheduling and queue status
+                </span>
+              </li>
+              <li class="portal-bullet-item">
+                <span class="portal-bullet-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </span>
+                <span class="bullet-text" data-en="Secure and confidential electronic health records" data-fil="Ligtas at kumpidensyal na rekord ng kalusugan">
+                  Secure and confidential electronic health records
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ── Right Panel (Form) ── -->
+      <main class="portal-right" aria-label="Patient Sign In">
+        <div class="portal-right-header">
+          <a href="/sdn/index.php" class="icon-btn-home" aria-label="Return to hospital homepage" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </a>
+
+          <div class="lang-toggle" role="group" aria-label="Language Selector">
+            <button type="button" class="lang-btn active" id="btnLangEN" onclick="setLanguage('en')">EN</button>
+            <button type="button" class="lang-btn" id="btnLangFIL" onclick="setLanguage('fil')">FIL</button>
+          </div>
+        </div>
+
+        <div class="portal-form-container">
+          <header class="brand-header">
+            <img
+              src="/sdn/public/assets/v2_lingkod_logo_cropped.png"
+              alt="Lingkod"
+              class="brand-logo-img"
+            />
+            <h2 class="portal-heading" id="uiPortalHeading">Patient Portal</h2>
+            <p class="portal-subheading" id="uiPortalSubheading">
+              Sign in to manage your appointments and clinical records.
+            </p>
+          </header>
+
+          <!-- System Notification Banner (URL alerts) -->
+          <div id="systemAlertBanner" class="auth-alert" style="display: none;" role="status" aria-live="polite">
+            <span class="auth-alert-icon" id="systemAlertIcon"></span>
+            <span id="systemAlertText"></span>
           </div>
 
-          <!-- Password Field -->
-          <div class="form-group">
-            <label class="form-label" for="patientPassInput">Password</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          <!-- Wrong Login / Generic Error Message -->
+          <div id="formErrorMessage" class="auth-alert auth-alert-error" style="display: none;" role="alert" aria-live="assertive">
+            <span class="auth-alert-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
               </svg>
-              <input
-                type="password"
-                id="patientPassInput"
-                class="form-control"
-                placeholder="Enter your password"
-                required
-                autocomplete="current-password"
-              />
-              <button type="button" class="btn-toggle-eye" onclick="togglePassVisibility()" title="Show/Hide Password">
-                <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
+            </span>
+            <span id="formErrorText">Incorrect email or password.</span>
+          </div>
+
+          <!-- Sign In Form -->
+          <form id="patientSignInForm" novalidate onsubmit="handlePatientLogin(event)">
+            <!-- Email Field -->
+            <div class="form-group" id="groupEmail">
+              <label for="patientEmail" class="form-label" id="labelEmail">Email Address</label>
+              <div class="input-wrapper">
+                <span class="input-icon-lead" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                  </svg>
+                </span>
+                <input
+                  type="email"
+                  id="patientEmail"
+                  name="email"
+                  class="form-input"
+                  placeholder="Enter your email"
+                  autocomplete="email"
+                  inputmode="email"
+                  autocapitalize="none"
+                  autocorrect="off"
+                  spellcheck="false"
+                  required
+                  aria-required="true"
+                  aria-describedby="emailError"
+                  onblur="validateEmailField(true)"
+                  oninput="handleFieldInput()"
+                />
+              </div>
+              <p class="field-error-msg" id="emailError" role="alert" aria-live="polite">
+                Enter a valid email address.
+              </p>
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group" id="groupPassword">
+              <label for="patientPassword" class="form-label" id="labelPassword">Password</label>
+              <div class="input-wrapper">
+                <span class="input-icon-lead" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </span>
+                <input
+                  type="password"
+                  id="patientPassword"
+                  name="password"
+                  class="form-input"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  required
+                  aria-required="true"
+                  aria-describedby="passwordError capsWarning"
+                  onblur="validatePasswordField(true)"
+                  oninput="handleFieldInput()"
+                  onkeyup="checkCapsLock(event)"
+                  onkeydown="checkCapsLock(event)"
+                />
+                <button
+                  type="button"
+                  id="togglePasswordBtn"
+                  class="toggle-pass-btn"
+                  onclick="togglePasswordVisibility()"
+                  aria-label="Show password"
+                  title="Show password"
+                >
+                  <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Caps Lock warning -->
+              <p class="caps-lock-warning" id="capsWarning" role="status" aria-live="polite">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 9v4"></path>
+                  <path d="M12 17h.01"></path>
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                 </svg>
-              </button>
+                <span id="capsWarningText">Caps Lock is ON</span>
+              </p>
+
+              <!-- Inline validation error -->
+              <p class="field-error-msg" id="passwordError" role="alert" aria-live="polite">
+                Please enter your password.
+              </p>
             </div>
-          </div>
 
-          <!-- Forgot Password -->
-          <div class="options-row">
-            <a href="javascript:void(0)" class="forgot-link" onclick="openForgotPasswordModal()">Forgot password?</a>
-          </div>
+            <!-- Options Row (Remember Me & Forgot Password) -->
+            <div class="form-options-row">
+              <label class="remember-label">
+                <input type="checkbox" id="rememberMe" name="remember" class="remember-checkbox" />
+                <span id="labelRemember">Remember me</span>
+              </label>
 
-          <!-- Submit Button -->
-          <button type="submit" class="btn-portal-submit">Sign In</button>
+              <a href="javascript:void(0)" class="forgot-link" id="linkForgot" onclick="openForgotModal()">
+                Forgot password?
+              </a>
+            </div>
 
-        </form>
+            <!-- Sign In Button -->
+            <button type="submit" id="btnSubmitLogin" class="btn-submit" disabled>
+              <span id="btnSubmitText">Sign In</span>
+            </button>
 
-      </div>
-    </main>
-
-    <!-- Forgot Password Modal -->
-    <div id="forgotPasswordModal" class="demo-modal-overlay">
-      <div class="demo-modal" style="max-width: 410px; text-align: left;">
-        <div class="demo-modal-icon" style="background: rgba(14, 164, 63, 0.2); color: #4ade80;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-          </svg>
+            <!-- New Patient Link -->
+            <div class="new-patient-prompt">
+              <span id="textNewPatient">New patient?</span>
+              <a href="/sdn/pages/register.php" class="create-account-link" id="linkCreateAccount">
+                Create an account
+              </a>
+            </div>
+          </form>
         </div>
-        <h3 style="text-align: center; margin-bottom: 0.35rem; font-size: 1.35rem;">Reset Password</h3>
-        <p style="text-align: center; font-size: 0.86rem; color: rgba(255, 255, 255, 0.82); line-height: 1.45; margin-bottom: 1.25rem;">
-          Enter your registered Gmail or patient email address. We'll send you instructions to reset your password.
-        </p>
 
-        <div id="forgotStatusBox" style="display: none;" class="status-box"></div>
-
-        <form id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
-          <div class="form-group" style="margin-bottom: 1.15rem;">
-            <label class="form-label" for="forgotEmailInput">Registered Email</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-              </svg>
-              <input
-                type="email"
-                id="forgotEmailInput"
-                class="form-control"
-                placeholder="e.g. yourname@gmail.com"
-                required
-                autocomplete="email"
-              />
-            </div>
+        <!-- Footer -->
+        <footer class="portal-right-footer">
+          <div class="footer-compliance">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span id="footerDPA">Protected under the Data Privacy Act of 2012 (RA 10173)</span>
           </div>
 
-          <button type="submit" id="btnForgotSubmit" class="btn-portal-submit" style="height: 44px; font-size: 0.98rem; margin-top: 0.5rem;">
-            Send Reset Instructions
-          </button>
+          <div class="footer-links">
+            <a href="javascript:void(0)" onclick="alert('All patient data is encrypted and handled in strict accordance with Republic Act 10173.')">Privacy Policy</a>
+            &middot;
+            <a href="javascript:void(0)" onclick="alert('By accessing this portal, you agree to official MMWGH telehealth and patient consultation terms.')">Terms of Use</a>
+          </div>
 
-          <button type="button" class="btn-secondary-link" style="background: none; border: none; width: 100%; cursor: pointer; margin-top: 0.9rem;" onclick="closeForgotPasswordModal()">
-            Cancel & Return to Sign In
-          </button>
-        </form>
-      </div>
+          <p class="footer-help" id="footerHelp">
+            Need help? Call (047) 935-4138 &middot; Mon&ndash;Fri, 8:00 AM &ndash; 5:00 PM
+          </p>
+        </footer>
+      </main>
     </div>
 
-    <!-- Authenticated Modal -->
-    <div id="demoModal" class="demo-modal-overlay">
-      <div class="demo-modal">
-        <div class="demo-modal-icon">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    <!-- ── Minimal Password Reset Modal ── -->
+    <div id="forgotModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalForgotTitle">
+      <div class="modal-card">
+        <button type="button" class="modal-close-btn" onclick="closeForgotModal()" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
-        </div>
-        <h3>Welcome Back</h3>
-        <p>You have successfully signed in to the MMWGH Patient Portal.</p>
-        <button type="button" class="btn-close-modal" onclick="proceedToBooking()">
-          Continue
         </button>
+
+        <!-- View 1: Email Form -->
+        <div id="forgotFormView">
+          <div class="modal-icon-tile" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3 class="modal-title" id="modalForgotTitle">Reset Password</h3>
+          <p class="modal-desc" id="modalForgotDesc">
+            Enter your registered email and we'll send you a link to reset your password.
+          </p>
+
+          <form id="forgotPasswordForm" novalidate onsubmit="handleForgotSubmit(event)">
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label for="forgotEmailInput" class="form-label" id="labelForgotEmail">Registered Email</label>
+              <div class="input-wrapper">
+                <span class="input-icon-lead" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                  </svg>
+                </span>
+                <input
+                  type="email"
+                  id="forgotEmailInput"
+                  class="form-input"
+                  placeholder="juan.delacruz@gmail.com"
+                  autocomplete="email"
+                  inputmode="email"
+                  autocapitalize="none"
+                  autocorrect="off"
+                  spellcheck="false"
+                  required
+                  oninput="handleForgotInput()"
+                />
+              </div>
+              <p class="field-error" id="forgotEmailError">Please enter a valid email address.</p>
+            </div>
+
+            <button type="submit" id="btnForgotSubmit" class="btn-submit">
+              <span id="btnForgotSubmitText">Send reset link</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- View 2: Success Confirmation with Resend Countdown -->
+        <div id="forgotSuccessView" style="display: none;">
+          <div class="modal-icon-tile" style="background: #e8f5ec; color: var(--color-primary);" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <h3 class="modal-title" id="forgotSuccessTitle">Check your email</h3>
+          <p class="modal-desc" id="forgotSuccessDesc" style="margin-bottom: 1.5rem;">
+            We sent a reset link to <strong id="sentEmailDisplay" style="color: var(--color-text-strong); font-weight: 600;"></strong>. If you don't see it, check your spam folder.
+          </p>
+
+          <div class="modal-resend-row">
+            <button type="button" id="btnResendReset" class="btn-resend-link" disabled onclick="handleResendForgot()">
+              Resend link in <span id="resendTimerCountdown">30</span>s
+            </button>
+            <a href="javascript:void(0)" class="btn-modal-back" onclick="closeForgotModal()" id="linkForgotBackToSign">
+              Back to Sign In
+            </a>
+          </div>
+        </div>
       </div>
     </div>
 
     <script>
-      function togglePassVisibility() {
-        const passInput = document.getElementById('patientPassInput');
+      /* ── Localization Dictionary ── */
+      let currentLang = 'en';
+
+      const i18n = {
+        en: {
+          tagline: 'Maaasahang Lingkod',
+          translation: 'Reliable Service',
+          portalHeading: 'Patient Portal',
+          portalSubheading: 'Sign in to manage your appointments and clinical records.',
+          emailLabel: 'Email Address',
+          emailPlaceholder: 'Enter your email',
+          emailError: 'Enter a valid email address.',
+          passLabel: 'Password',
+          passPlaceholder: 'Enter your password',
+          passError: 'Please enter your password.',
+          capsWarning: 'Caps Lock is ON',
+          remember: 'Remember me',
+          forgot: 'Forgot password?',
+          signIn: 'Sign In',
+          signingIn: 'Signing in…',
+          newPatient: 'New patient?',
+          createAccount: 'Create an account',
+          incorrectAuth: 'Incorrect email or password.',
+          serverError: 'Unable to connect to the authentication server. Please try again.',
+          unverified: 'Account not yet verified. Please check your email inbox.',
+          dpaText: 'Protected under the Data Privacy Act of 2012 (RA 10173)',
+          helpText: 'Need help? Call (047) 935-4138 · Mon–Fri, 8:00 AM – 5:00 PM',
+          modalTitle: 'Reset Password',
+          modalDesc: "Enter your registered email and we'll send you a link to reset your password.",
+          modalSend: 'Send reset link',
+          modalSending: 'Sending…',
+          modalEmailError: 'Please enter a valid registered email.',
+          modalSuccessTitle: 'Check your email',
+          modalSuccessDescPrefix: 'We sent a reset link to ',
+          modalSuccessDescSuffix: ". If you don't see it, check your spam folder.",
+          modalResendPrefix: 'Resend link in ',
+          modalResendReady: 'Resend link',
+          modalBackToSign: 'Back to Sign In'
+        },
+        fil: {
+          tagline: 'Maaasahang Lingkod',
+          translation: 'Serbisyong Maaasahan',
+          portalHeading: 'Patient Portal',
+          portalSubheading: 'Mag-sign in upang pamahalaan ang iyong appointment at talaan sa ospital.',
+          emailLabel: 'Email Address',
+          emailPlaceholder: 'Ilagay ang iyong email',
+          emailError: 'Maglagay ng wastong email address.',
+          passLabel: 'Password',
+          passPlaceholder: 'Ilagay ang iyong password',
+          passError: 'Pakilagay ang iyong password.',
+          capsWarning: 'Naka-ON ang Caps Lock',
+          remember: 'Tandaan ako',
+          forgot: 'Nakalimutan ang password?',
+          signIn: 'Mag-sign In',
+          signingIn: 'Nagla-log in…',
+          newPatient: 'Bagong pasyente?',
+          createAccount: 'Gumawa ng account',
+          incorrectAuth: 'Maling email o password.',
+          serverError: 'Hindi makakonekta sa authentication server. Pakisubukan muli.',
+          unverified: 'Hindi pa beripikado ang account. Pakitingnan ang iyong email.',
+          dpaText: 'Protektado sa ilalim ng Data Privacy Act ng 2012 (RA 10173)',
+          helpText: 'Kailangan ng tulong? Tumawag sa (047) 935-4138 · Lunes–Biyernes, 8:00 AM – 5:00 PM',
+          modalTitle: 'I-reset ang Password',
+          modalDesc: 'Ilagay ang iyong rehistradong email at magpapadala kami ng link para ma-reset ang password.',
+          modalSend: 'Ipadala ang reset link',
+          modalSending: 'Ipinapadala…',
+          modalEmailError: 'Maglagay ng wastong rehistradong email.',
+          modalSuccessTitle: 'Suriin ang iyong email',
+          modalSuccessDescPrefix: 'Nagpadala kami ng reset link sa ',
+          modalSuccessDescSuffix: '. Kung hindi mo ito makita, suriin ang spam folder.',
+          modalResendPrefix: 'Muling ipadala sa ',
+          modalResendReady: 'Muling ipadala ang link',
+          modalBackToSign: 'Bumalik sa Sign In'
+        }
+      };
+
+      function setLanguage(lang) {
+        currentLang = lang;
+        const dict = i18n[lang];
+
+        document.getElementById('btnLangEN').classList.toggle('active', lang === 'en');
+        document.getElementById('btnLangFIL').classList.toggle('active', lang === 'fil');
+
+        document.getElementById('leftTranslation').textContent = dict.translation;
+        document.getElementById('uiPortalHeading').textContent = dict.portalHeading;
+        document.getElementById('uiPortalSubheading').textContent = dict.portalSubheading;
+        document.getElementById('labelEmail').textContent = dict.emailLabel;
+        document.getElementById('patientEmail').placeholder = dict.emailPlaceholder;
+        document.getElementById('emailError').textContent = dict.emailError;
+        document.getElementById('labelPassword').textContent = dict.passLabel;
+        document.getElementById('patientPassword').placeholder = dict.passPlaceholder;
+        document.getElementById('passwordError').textContent = dict.passError;
+        document.getElementById('capsWarningText').textContent = dict.capsWarning;
+        document.getElementById('labelRemember').textContent = dict.remember;
+        document.getElementById('linkForgot').textContent = dict.forgot;
+        document.getElementById('btnSubmitText').textContent = dict.signIn;
+        document.getElementById('textNewPatient').textContent = dict.newPatient;
+        document.getElementById('linkCreateAccount').textContent = dict.createAccount;
+        document.getElementById('formErrorText').textContent = dict.incorrectAuth;
+        document.getElementById('footerDPA').textContent = dict.dpaText;
+        document.getElementById('footerHelp').textContent = dict.helpText;
+        document.getElementById('modalForgotTitle').textContent = dict.modalTitle;
+        document.getElementById('modalForgotDesc').textContent = dict.modalDesc;
+        document.getElementById('btnForgotSubmitText').textContent = dict.modalSend;
+        const succTitle = document.getElementById('forgotSuccessTitle');
+        if (succTitle) succTitle.textContent = dict.modalSuccessTitle;
+        const backSign = document.getElementById('linkForgotBackToSign');
+        if (backSign) backSign.textContent = dict.modalBackToSign;
+        updateModalSuccessDesc();
+        updateResendButtonText();
+
+        document.querySelectorAll('.bullet-text').forEach((el) => {
+          el.textContent = el.getAttribute('data-' + lang) || el.textContent;
+        });
+      }
+
+      /* ── Input Validation & Button Readiness ── */
+      const emailInput = document.getElementById('patientEmail');
+      const passwordInput = document.getElementById('patientPassword');
+      const submitBtn = document.getElementById('btnSubmitLogin');
+      const emailError = document.getElementById('emailError');
+      const passwordError = document.getElementById('passwordError');
+      const formError = document.getElementById('formErrorMessage');
+
+      function isValidEmail(val) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+      }
+
+      function validateEmailField(showError) {
+        const val = emailInput.value.trim();
+        const valid = isValidEmail(val);
+
+        if (!valid && (showError || val.length > 0)) {
+          emailInput.classList.add('is-invalid');
+          emailError.classList.add('visible');
+        } else {
+          emailInput.classList.remove('is-invalid');
+          emailError.classList.remove('visible');
+        }
+        updateSubmitState();
+        return valid;
+      }
+
+      function validatePasswordField(showError) {
+        const val = passwordInput.value;
+        const valid = val.length > 0;
+
+        if (!valid && showError) {
+          passwordInput.classList.add('is-invalid');
+          passwordError.classList.add('visible');
+        } else {
+          passwordInput.classList.remove('is-invalid');
+          passwordError.classList.remove('visible');
+        }
+        updateSubmitState();
+        return valid;
+      }
+
+      function handleFieldInput() {
+        if (formError.style.display !== 'none') {
+          formError.style.display = 'none';
+        }
+        if (emailInput.classList.contains('is-invalid') && isValidEmail(emailInput.value)) {
+          emailInput.classList.remove('is-invalid');
+          emailError.classList.remove('visible');
+        }
+        if (passwordInput.classList.contains('is-invalid') && passwordInput.value.length > 0) {
+          passwordInput.classList.remove('is-invalid');
+          passwordError.classList.remove('visible');
+        }
+        updateSubmitState();
+      }
+
+      function updateSubmitState() {
+        const isReady = isValidEmail(emailInput.value) && passwordInput.value.trim().length > 0;
+        submitBtn.disabled = !isReady;
+      }
+
+      function checkCapsLock(e) {
+        const capsOn = e.getModifierState && e.getModifierState('CapsLock');
+        document.getElementById('capsWarning').classList.toggle('visible', !!capsOn);
+      }
+
+      function togglePasswordVisibility() {
+        const btn = document.getElementById('togglePasswordBtn');
         const eyeIcon = document.getElementById('eyeIcon');
-        if (passInput.type === 'password') {
-          passInput.type = 'text';
+        const isPassword = passwordInput.type === 'password';
+
+        passwordInput.type = isPassword ? 'text' : 'password';
+        btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        btn.setAttribute('title', isPassword ? 'Hide password' : 'Show password');
+
+        if (isPassword) {
           eyeIcon.innerHTML = `
             <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
             <line x1="1" y1="1" x2="23" y2="23"></line>
           `;
         } else {
-          passInput.type = 'password';
           eyeIcon.innerHTML = `
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
@@ -661,139 +1509,281 @@ session_start();
         }
       }
 
-      async function handleSampleLogin(e) {
+      /* ── Form Submission ── */
+      async function handlePatientLogin(e) {
         e.preventDefault();
-        const email = document.getElementById('patientEmailInput').value.trim();
-        const password = document.getElementById('patientPassInput').value;
-        const submitBtn = document.querySelector('.btn-portal-submit');
 
+        const emailValid = validateEmailField(true);
+        const passValid = validatePasswordField(true);
+        if (!emailValid || !passValid) return;
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        const remember = document.getElementById('rememberMe').checked;
+
+        // Loading state
         submitBtn.disabled = true;
-        submitBtn.innerText = 'Signing In...';
+        const originalText = document.getElementById('btnSubmitText').textContent;
+        submitBtn.innerHTML = `
+          <span class="spinner" aria-hidden="true"></span>
+          <span>${i18n[currentLang].signingIn}</span>
+        `;
 
         try {
           const res = await fetch('/sdn/api/patient_auth.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, remember })
           });
           const data = await res.json();
 
           if (data.success) {
-            document.querySelector('#demoModal h3').innerText = 'Welcome Back, ' + (data.name || 'Patient');
-            document.querySelector('#demoModal p').innerText = 'You have successfully signed in to the MMWGH Patient Portal.';
-            document.getElementById('demoModal').classList.add('active');
-          } else if (data.unverified) {
-            alert('Account Not Verified: ' + data.message + '\n\nPlease check your email for the verification link.');
+            window.location.href = '/sdn/pages/patient-dashboard.php';
           } else {
-            alert(data.message || 'Invalid credentials. Please verify your email and password.');
+            // Trigger failure shake & inline feedback
+            triggerLoginError(data.message || (data.unverified ? i18n[currentLang].unverified : i18n[currentLang].incorrectAuth));
           }
         } catch (err) {
-          alert('Login server connection failed. Please try again.');
+          triggerLoginError(i18n[currentLang].serverError);
         } finally {
-          submitBtn.disabled = false;
-          submitBtn.innerText = 'Sign In';
+          submitBtn.innerHTML = `<span id="btnSubmitText">${originalText}</span>`;
+          updateSubmitState();
         }
       }
 
-      function proceedToBooking() {
-        window.location.href = '/sdn/pages/patient-dashboard.php';
+      function triggerLoginError(message) {
+        const formBox = document.querySelector('.portal-form-container');
+        document.getElementById('formErrorText').textContent = message;
+        formError.style.display = 'flex';
+
+        emailInput.classList.add('is-invalid');
+        passwordInput.classList.add('is-invalid');
+
+        formBox.classList.remove('shake');
+        void formBox.offsetWidth; // re-trigger animation
+        formBox.classList.add('shake');
+        passwordInput.focus();
       }
 
-      /* ── Forgot Password Modal Handlers ── */
-      function openForgotPasswordModal() {
-        const loginEmail = document.getElementById('patientEmailInput').value.trim();
-        const forgotInput = document.getElementById('forgotEmailInput');
-        if (loginEmail && !forgotInput.value) {
-          forgotInput.value = loginEmail;
+      /* ── Minimal Forgot Password Modal with Accessible Trap & Timer ── */
+      let lastFocusedElement = null;
+      let resendTimer = null;
+      let resendCountdown = 30;
+      let lastSentEmail = '';
+
+      function openForgotModal() {
+        lastFocusedElement = document.activeElement;
+        const modal = document.getElementById('forgotModal');
+        const input = document.getElementById('forgotEmailInput');
+
+        // Reset to form view
+        document.getElementById('forgotFormView').style.display = 'block';
+        document.getElementById('forgotSuccessView').style.display = 'none';
+        input.classList.remove('is-invalid');
+        document.getElementById('forgotEmailError').classList.remove('visible');
+
+        if (emailInput.value && !input.value) {
+          input.value = emailInput.value.trim();
         }
-        const statusBox = document.getElementById('forgotStatusBox');
-        statusBox.style.display = 'none';
-        document.getElementById('forgotPasswordModal').classList.add('active');
-        setTimeout(() => forgotInput.focus(), 120);
+
+        modal.classList.add('is-active');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => input.focus(), 80);
       }
 
-      function closeForgotPasswordModal() {
-        document.getElementById('forgotPasswordModal').classList.remove('active');
+      function closeForgotModal() {
+        const modal = document.getElementById('forgotModal');
+        modal.classList.remove('is-active');
+        document.body.style.overflow = '';
+        if (resendTimer) {
+          clearInterval(resendTimer);
+          resendTimer = null;
+        }
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+          lastFocusedElement.focus();
+        }
       }
 
-      async function handleForgotPassword(e) {
-        e.preventDefault();
-        const email = document.getElementById('forgotEmailInput').value.trim();
-        const btn = document.getElementById('btnForgotSubmit');
-        const statusBox = document.getElementById('forgotStatusBox');
+      function handleForgotInput() {
+        const input = document.getElementById('forgotEmailInput');
+        const err = document.getElementById('forgotEmailError');
+        if (input.classList.contains('is-invalid') && isValidEmail(input.value)) {
+          input.classList.remove('is-invalid');
+          err.classList.remove('visible');
+        }
+      }
 
-        statusBox.style.display = 'none';
+      function updateModalSuccessDesc() {
+        const descEl = document.getElementById('forgotSuccessDesc');
+        if (!descEl) return;
+        const dict = i18n[currentLang];
+        descEl.innerHTML = `${dict.modalSuccessDescPrefix}<strong id="sentEmailDisplay" style="color: var(--color-text-strong); font-weight: 600;">${escapeHtml(lastSentEmail)}</strong>${dict.modalSuccessDescSuffix}`;
+      }
+
+      function updateResendButtonText() {
+        const btn = document.getElementById('btnResendReset');
+        if (!btn) return;
+        const dict = i18n[currentLang];
+        if (btn.disabled) {
+          btn.textContent = `${dict.modalResendPrefix}${resendCountdown}s`;
+        } else {
+          btn.textContent = dict.modalResendReady;
+        }
+      }
+
+      function startResendCountdown() {
+        if (resendTimer) clearInterval(resendTimer);
+        resendCountdown = 30;
+        const btn = document.getElementById('btnResendReset');
         btn.disabled = true;
-        btn.textContent = 'Sending Instructions...';
+        updateResendButtonText();
+
+        resendTimer = setInterval(() => {
+          resendCountdown--;
+          if (resendCountdown <= 0) {
+            clearInterval(resendTimer);
+            resendTimer = null;
+            btn.disabled = false;
+            updateResendButtonText();
+          } else {
+            updateResendButtonText();
+          }
+        }, 1000);
+      }
+
+      function escapeHtml(str) {
+        return (str || '').replace(/[&<>"']/g, (m) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        })[m]);
+      }
+
+      async function executeForgotRequest(email) {
+        const btn = document.getElementById('btnForgotSubmit');
+        const input = document.getElementById('forgotEmailInput');
+        const err = document.getElementById('forgotEmailError');
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner" aria-hidden="true"></span> <span>${i18n[currentLang].modalSending}</span>`;
 
         try {
           const res = await fetch('/sdn/api/patient_forgot_password.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email })
+            body: JSON.stringify({ email })
           });
           const data = await res.json();
 
           if (data.success) {
-            statusBox.className = 'status-box success';
-            let msg = '<strong>Success!</strong> ' + data.message;
-            if (data.dev_link) {
-              msg += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2);"><small>Testing Direct Link:</small><br><a href="${data.dev_link}" style="color: #6ee7b7; font-weight: 600; text-decoration: underline;">Open Password Reset Form</a></div>`;
-            }
-            statusBox.innerHTML = msg;
-            statusBox.style.display = 'block';
-            document.getElementById('forgotPasswordForm').reset();
+            lastSentEmail = email;
+            document.getElementById('forgotFormView').style.display = 'none';
+            document.getElementById('forgotSuccessView').style.display = 'block';
+            updateModalSuccessDesc();
+            startResendCountdown();
           } else {
-            statusBox.className = 'status-box error';
-            statusBox.innerHTML = data.message || 'Unable to send reset instructions. Please check your email.';
-            statusBox.style.display = 'block';
+            input.classList.add('is-invalid');
+            err.textContent = data.message || i18n[currentLang].modalEmailError;
+            err.classList.add('visible');
+            input.focus();
           }
-        } catch (err) {
-          statusBox.className = 'status-box error';
-          statusBox.innerHTML = 'A network connection error occurred. Please try again.';
-          statusBox.style.display = 'block';
+        } catch (error) {
+          input.classList.add('is-invalid');
+          err.textContent = i18n[currentLang].serverError;
+          err.classList.add('visible');
         } finally {
           btn.disabled = false;
-          btn.textContent = 'Send Reset Instructions';
+          btn.innerHTML = `<span id="btnForgotSubmitText">${i18n[currentLang].modalSend}</span>`;
         }
       }
 
-      window.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const banner = document.getElementById('loginStatusBanner');
-        const icon = document.getElementById('bannerIcon');
-        const title = document.getElementById('bannerTitle');
-        const msg = document.getElementById('bannerMsg');
+      function handleForgotSubmit(e) {
+        e.preventDefault();
+        const input = document.getElementById('forgotEmailInput');
+        const err = document.getElementById('forgotEmailError');
+        const val = input.value.trim();
 
-        if (urlParams.get('registered') === '1') {
-          banner.className = 'portal-status-banner banner-info';
-          icon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>`;
-          title.innerText = 'Registration Submitted!';
-          msg.innerText = 'Please check your email inbox to verify your account before signing in.';
+        if (!isValidEmail(val)) {
+          input.classList.add('is-invalid');
+          err.textContent = i18n[currentLang].emailError;
+          err.classList.add('visible');
+          input.focus();
+          return;
+        }
+
+        executeForgotRequest(val);
+      }
+
+      function handleResendForgot() {
+        if (!lastSentEmail) return;
+        executeForgotRequest(lastSentEmail);
+      }
+
+      // Keyboard Trap & Escape Handling
+      document.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('forgotModal');
+        if (!modal.classList.contains('is-active')) return;
+
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          closeForgotModal();
+          return;
+        }
+
+        if (e.key === 'Tab') {
+          const focusables = modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+
+          if (e.shiftKey) {
+            if (document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      });
+
+      /* ── URL Parameter State Handlers ── */
+      window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const banner = document.getElementById('systemAlertBanner');
+        const text = document.getElementById('systemAlertText');
+        const icon = document.getElementById('systemAlertIcon');
+
+        if (params.get('registered') === '1') {
+          banner.className = 'auth-alert auth-alert-success';
+          icon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+          text.textContent = 'Registration submitted! Please verify your email before signing in.';
           banner.style.display = 'flex';
-        } else if (urlParams.get('verify_error')) {
-          banner.className = 'portal-status-banner banner-warning';
-          icon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
-          title.innerText = 'Verification Notice';
-          msg.innerText = 'This verification link is invalid or has expired. If your account is already active, please sign in.';
+        } else if (params.get('verify_error')) {
+          banner.className = 'auth-alert auth-alert-warning';
+          icon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+          text.textContent = 'This verification link is invalid or has expired.';
           banner.style.display = 'flex';
-        } else if (urlParams.get('reset_success') === '1') {
-          banner.className = 'portal-status-banner banner-success';
-          icon.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-          title.innerText = 'Password Updated!';
-          msg.innerText = 'Your password has been reset successfully. Please sign in with your new password.';
+        } else if (params.get('reset_success') === '1') {
+          banner.className = 'auth-alert auth-alert-success';
+          icon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          text.textContent = 'Your password has been updated. Please sign in with your new password.';
           banner.style.display = 'flex';
         }
 
-        if (urlParams.get('action') === 'forgot') {
-          openForgotPasswordModal();
+        if (params.get('action') === 'forgot') {
+          openForgotModal();
         }
       });
 
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-          document.getElementById('demoModal').classList.remove('active');
-          document.getElementById('forgotPasswordModal').classList.remove('active');
+          closeForgotModal();
         }
       });
     </script>

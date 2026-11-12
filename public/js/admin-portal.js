@@ -264,19 +264,19 @@ async function loadDashboardTable() {
 
                 const isInquiry = p.inquiry_only == 1 || p.inquiry_only === true || p.inquiry_only === '1';
                 const inquiryTag = isInquiry
-                    ? `<span style="display:inline-block; margin-left:6px; padding:2px 7px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:999px; font-size:0.68rem; font-weight:700; text-transform:uppercase; vertical-align:middle;">Inquiry</span>`
+                    ? `<span class="badge badge-yellow" style="margin-left:6px;">Inquiry</span>`
                     : '';
 
                 let safeId = escapeHtml(p.patient_id || p.id || '');
                 let safeName = escapeHtml(p.full_name);
                 let safeDept = escapeHtml(p.department || 'N/A');
                 let prevLine = p.previous_appointment_date
-                    ? `<div style="margin-top:3px; font-size:0.72rem; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; display:inline-block; padding:1px 7px; border-radius:999px;">Prev: ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
+                    ? `<div class="date-stack-sub">Previous ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' · ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
                     : '';
                 let safeAppDate = isInquiry 
-                    ? `<span style="color:#d97706; font-weight:600;">Inquiry (${escapeHtml(p.mode_of_inquiry || 'Online')})</span>`
-                    : (`<div>${escapeHtml(p.appointment_date || 'N/A')}${p.scheduled_time ? ` <small>(${escapeHtml(p.scheduled_time)})</small>` : ''}</div>${prevLine}`);
-                let safeStatus = escapeHtml(p.status ? p.status.toUpperCase() : '');
+                    ? `<span class="badge badge-yellow">Inquiry · ${escapeHtml(p.mode_of_inquiry || 'Online')}</span>`
+                    : (`<div class="date-stack">${formatStackedDate(p.appointment_date, p.scheduled_time)}${prevLine}</div>`);
+                let safeStatus = escapeHtml(titleStatus(p.status));
 
                 return `
                 <tr class="clickable-row" onclick="openPatientDetailsModal('${safeId}')" title="Click to view full patient profile">
@@ -444,10 +444,19 @@ function renderRBACTable(list) {
             <td><strong>${safeName}</strong></td>
             <td>${safeUser}</td>
             <td><span class="dept-badge" style="font-size:0.75rem; padding:4px 8px;">${safeDept}</span></td>
-            <td><span class="badge ${safeStatus === 'active' ? 'badge-green' : 'badge-red'}">${escapeHtml(safeStatus.toUpperCase())}</span></td>
-            <td style="text-align:center;">
-                <button class="btn btn-outline" style="padding: 5px 12px; margin-right: 6px; font-size: 0.82rem;" onclick="openEditStaffModal(${rawId}, decodeURIComponent('${rawNameAttr}'), decodeURIComponent('${rawUserAttr}'), decodeURIComponent('${rawDeptAttr}'), '${safeStatus}')">Edit</button>
-                <button class="btn btn-danger" style="padding: 5px 12px; font-size: 0.82rem;" onclick="deleteStaff(${rawId})">Delete</button>
+            <td><span class="badge ${safeStatus === 'active' ? 'badge-green' : 'badge-red'}">${escapeHtml(safeStatus === 'active' ? 'Active' : 'Inactive')}</span></td>
+            <td>
+                <div class="row-actions">
+                    <button type="button" class="btn btn-outline" style="padding: 5px 12px; font-size: 0.82rem;" onclick="openEditStaffModal(${rawId}, decodeURIComponent('${rawNameAttr}'), decodeURIComponent('${rawUserAttr}'), decodeURIComponent('${rawDeptAttr}'), '${safeStatus}')">Edit</button>
+                    <div class="row-menu">
+                        <button type="button" class="row-menu-btn" aria-label="More actions" onclick="toggleRowMenu(event, this)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
+                        </button>
+                        <div class="row-menu-pop">
+                            <button type="button" class="row-menu-item danger" onclick="deleteStaff(${rawId})">Delete</button>
+                        </div>
+                    </div>
+                </div>
             </td>
         </tr>
     `}).join('');
@@ -972,7 +981,7 @@ function filterPMITable() {
 
     tbody.innerHTML = list.map(p => {
         let b = 'badge-yellow';
-        let statusLabel = (p.status || '').replace(/_/g, ' ').toUpperCase();
+        let statusLabel = titleStatus(p.status);
         if (p.status === 'approved') b = 'badge-green';
         else if (p.status === 'arrived') b = 'badge-teal';
         else if (p.status === 'ongoing') b = 'badge-pink';
@@ -981,12 +990,12 @@ function filterPMITable() {
         else if (p.status === 'transferred') b = 'badge-purple';
         else if (p.status === 'for_approval' || p.status === 'for_processing' || p.status === 'pending') {
             b = 'badge-yellow';
-            statusLabel = 'FOR APPROVAL';
+            statusLabel = 'For approval';
         }
 
         const isInquiry = p.inquiry_only == 1 || p.inquiry_only === true || p.inquiry_only === '1';
         const inquiryTag = isInquiry
-            ? `<span style="display:inline-block; margin-left:6px; padding:2px 7px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:999px; font-size:0.68rem; font-weight:700; text-transform:uppercase; vertical-align:middle;">Inquiry</span>`
+            ? `<span class="badge badge-yellow" style="margin-left:6px;">Inquiry</span>`
             : '';
 
         let safeId = escapeHtml(p.patient_id || p.id || '');
@@ -2008,7 +2017,7 @@ function filterAndSortAuditTable() {
 
     tbody.innerHTML = list.map(l => `
         <tr>
-            <td><small style="color:var(--muted); font-size: 0.85rem;">${escapeHtml(l.timestamp)}</small></td>
+            <td>${formatStackedTimestamp(l.timestamp)}</td>
             <td><span class="badge ${l._catBadge}" style="font-size:0.75rem;">${escapeHtml(l._catLabel)}</span></td>
             <td><strong style="color: #0f172a;">${escapeHtml(l.action)}</strong></td>
             <td style="color: #334155;">${escapeHtml(l.user)}</td>
@@ -2305,7 +2314,7 @@ function renderDailyReportsTable(dailyList) {
 
         return `
             <tr>
-                <td><strong>${escapeHtml(item.formatted_date || item.date)}</strong></td>
+                <td>${formatStackedDate(item.date || item.formatted_date)}</td>
                 <td><span class="dept-card-tag ${tagClass}">${escapeHtml(dName)}</span></td>
                 <td><strong style="color:#0f172a;">${item.total}</strong></td>
                 <td><span class="badge" style="background:#f1f5f9; color:#475569;">${item.walkin}</span></td>
@@ -2372,26 +2381,24 @@ function renderRosterReportsTable(roster) {
         const isInquiry = p.inquiry_only == 1 || p.inquiry_only === true || p.inquiry_only === '1';
         let typeBadge = '';
         if (isInquiry) {
-            typeBadge = '<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">Inquiry</span>';
+            typeBadge = '<span class="badge badge-yellow">Inquiry</span>';
         } else if (p.is_walkin) {
-            typeBadge = '<span class="badge" style="background:#fef3c7; color:#92400e;">Walk-in</span>';
+            typeBadge = '<span class="badge badge-yellow">Walk-in</span>';
         } else {
-            typeBadge = '<span class="badge" style="background:#eff6ff; color:#1d4ed8;">Online</span>';
+            typeBadge = '<span class="badge badge-blue">Online</span>';
         }
 
         const inquiryTag = isInquiry
-            ? `<span style="display:inline-block; margin-left:6px; padding:2px 7px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:999px; font-size:0.68rem; font-weight:700; text-transform:uppercase; vertical-align:middle;">Inquiry</span>`
+            ? `<span class="badge badge-yellow" style="margin-left:6px;">Inquiry</span>`
             : '';
 
         const st = (p.status || 'pending').toLowerCase();
-        let statusBadge = `<span class="badge status-badge-${st}">${escapeHtml(st.toUpperCase())}</span>`;
-        if (st === 'completed') {
-            statusBadge = '<span class="badge" style="background:#ecfdf5; color:#047857; font-weight:700;">COMPLETED</span>';
-        } else if (st === 'no-show') {
-            statusBadge = '<span class="badge" style="background:#fef2f2; color:#b91c1c;">NO-SHOW</span>';
-        } else if (st === 'ongoing') {
-            statusBadge = '<span class="badge" style="background:#ede9fe; color:#6d28d9;">ONGOING</span>';
-        }
+        const statusClass = (st === 'completed' || st === 'approved') ? 'badge-green'
+            : (st === 'no-show' || st === 'rejected' || st === 'cancelled') ? 'badge-red'
+            : (st === 'ongoing' || st === 'arrived') ? 'badge-blue'
+            : (st === 'transferred') ? 'badge-purple'
+            : 'badge-yellow';
+        const statusBadge = `<span class="badge ${statusClass} status-badge-${st}">${escapeHtml(titleStatus(st))}</span>`;
 
         const docDiag = isInquiry
             ? `<span style="color:#d97706; font-weight:500;">${escapeHtml(p.mode_of_inquiry || 'Inquiry Only')}</span>`
@@ -2412,4 +2419,65 @@ function renderRosterReportsTable(roster) {
         `;
     }).join('');
 }
+
+function titleStatus(value) {
+    const raw = String(value || '').replace(/[_-]+/g, ' ').trim().toLowerCase();
+    if (!raw) return '';
+    return raw.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatStackedDate(dateStr, timeStr) {
+    if (!dateStr) return '<div class="date-stack-sub">—</div>';
+    const raw = String(dateStr).trim();
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const d = iso ? new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00`) : new Date(raw);
+    if (isNaN(d.getTime())) {
+        return `<div class="date-stack-main">${escapeHtml(raw)}</div>`;
+    }
+    const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    let timeLabel = '';
+    if (timeStr) {
+        const parts = String(timeStr).split(':');
+        const hour = parseInt(parts[0], 10);
+        if (parts.length >= 2 && !isNaN(hour)) {
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const h12 = hour % 12 || 12;
+            timeLabel = `${h12}:${parts[1]} ${ampm}`;
+        } else {
+            timeLabel = String(timeStr);
+        }
+    }
+    return `<div class="date-stack-main">${escapeHtml(monthDay)}</div><div class="date-stack-sub">${d.getFullYear()}${timeLabel ? ' · ' + escapeHtml(timeLabel) : ''}</div>`;
+}
+
+function formatStackedTimestamp(ts) {
+    if (!ts) return '<div class="date-stack-sub">—</div>';
+    const d = new Date(String(ts).replace(' ', 'T'));
+    if (isNaN(d.getTime())) return `<div class="date-stack-main">${escapeHtml(String(ts))}</div>`;
+    const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return `<div class="date-stack-main">${monthDay}</div><div class="date-stack-sub">${d.getFullYear()} · ${time}</div>`;
+}
+
+window.toggleRowMenu = function(event, btn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const pop = btn.parentElement.querySelector('.row-menu-pop');
+    if (!pop) return;
+    const willOpen = !pop.classList.contains('open');
+    document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
+    if (!willOpen) return;
+    const rect = btn.getBoundingClientRect();
+    pop.style.position = 'fixed';
+    pop.style.top = (rect.bottom + 6) + 'px';
+    pop.style.left = Math.max(8, rect.right - 176) + 'px';
+    pop.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+};
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
+});
 

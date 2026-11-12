@@ -17,71 +17,119 @@
   let routeMeters = 0;
   let routeMinutes = 0;
 
-  // Walkway graph
+  // Walkway graph strictly on outdoor pathways & roads
   const nodes = {
-    'gate':          { y: 102, x: 238 },
-    'road_entry':    { y: 170, x: 220 },
-    'you_are_here':  { y: 320, x: 200 },
-    'spine_south':   { y: 350, x: 315 },
-    'spine_mid':     { y: 460, x: 315 },
-    'crossroads':    { y: 535, x: 315 },
-    'spine_north':   { y: 620, x: 315 },
-    'wards_entry':   { y: 720, x: 315 },
-    'north_curve_1': { y: 775, x: 300 },
-    'north_curve_2': { y: 840, x: 260 },
-    'north_curve_3': { y: 900, x: 230 },
-    'north_end':     { y: 952, x: 185 },
-    'east_entry':    { y: 200, x: 380 },
-    'east_1':        { y: 250, x: 380 },
-    'east_2':        { y: 277, x: 450 },
-    'east_3':        { y: 331, x: 450 },
-    'east_4':        { y: 378, x: 450 },
-    'east_5':        { y: 416, x: 450 },
-    'east_6':        { y: 446, x: 450 },
-    'east_crossway': { y: 535, x: 450 },
-    'east_stp':      { y: 583, x: 470 },
-    'pav_lower':     { y: 620, x: 390 },
-    'pav_mid':       { y: 662, x: 370 },
-    'pav_upper':     { y: 715, x: 380 },
-    'pav_far_east':  { y: 775, x: 412 },
-    'west_opu':      { y: 245, x: 150 },
-    'west_1':        { y: 390, x: 140 },
-    'west_2':        { y: 422, x: 140 },
-    'west_3':        { y: 476, x: 140 },
-    'west_crossway': { y: 535, x: 140 },
-    'west_4':        { y: 591, x: 140 },
-    'west_5':        { y: 658, x: 170 },
-    'west_6':        { y: 702, x: 170 },
-    'west_7':        { y: 723, x: 140 },
-    'west_north':    { y: 840, x: 140 }
+    // Entrance / South Main Road
+    'gate':           { y: 102, x: 205 },
+    'road_entry':     { y: 155, x: 205 },
+    'canteen_spur':   { y: 160, x: 220 },
+    'main_road_east': { y: 140, x: 370 },
+    'main_road_west': { y: 155, x: 155 },
+
+    // South Plaza / You Are Here Hub
+    'plaza_south':    { y: 240, x: 205 },
+    'plaza_east':     { y: 240, x: 280 },
+    'you_are_here':   { y: 320, x: 200 },
+    'yah_east':       { y: 320, x: 240 },
+    'yah_west':       { y: 320, x: 140 },
+
+    // Central Walkway Promenade
+    'corridor_s1':    { y: 380, x: 240 },
+    'corridor_s2':    { y: 450, x: 250 },
+    'corridor_cross': { y: 495, x: 275 },
+    'corridor_mid':   { y: 570, x: 275 },
+    'corridor_ot':    { y: 660, x: 275 },
+    'corridor_n1':    { y: 735, x: 275 },
+
+    // East Breezeway
+    'breeze_mid':     { y: 495, x: 375 },
+    'breeze_east':    { y: 495, x: 475 },
+
+    // West Road System
+    'west_opu':       { y: 235, x: 155 },
+    'west_1':         { y: 320, x: 140 },
+    'west_2':         { y: 422, x: 140 },
+    'west_3':         { y: 476, x: 140 },
+    'west_cross':     { y: 495, x: 155 },
+    'west_4':         { y: 580, x: 155 },
+    'west_5':         { y: 660, x: 155 },
+    'west_6':         { y: 702, x: 175 },
+    'west_7':         { y: 735, x: 175 },
+    'west_north':     { y: 830, x: 180 },
+    'west_top':       { y: 900, x: 180 },
+
+    // East Road System
+    'east_entry':     { y: 200, x: 425 },
+    'east_1':         { y: 240, x: 445 },
+    'east_2':         { y: 280, x: 475 },
+    'east_3':         { y: 335, x: 460 },
+    'east_4':         { y: 375, x: 460 },
+    'east_5':         { y: 415, x: 455 },
+    'east_6':         { y: 450, x: 455 },
+    'east_crossway':  { y: 535, x: 475 },
+    'east_stp':       { y: 585, x: 475 },
+    'east_pav_entry': { y: 620, x: 475 },
+    'east_pav_mid':   { y: 685, x: 475 },
+    'east_pav_upper': { y: 735, x: 475 },
+    'east_pav_top':   { y: 780, x: 475 },
+
+    // Northern Campus Loop & Facilities
+    'north_junc_1':   { y: 765, x: 260 },
+    'north_junc_2':   { y: 815, x: 260 },
+    'north_tb_dots':  { y: 870, x: 235 },
+    'north_waste':    { y: 910, x: 255 },
+    'north_top_road': { y: 930, x: 255 },
+    'north_end':      { y: 952, x: 215 }
   };
 
   const bldgAttach = {
-    1: 'gate', 2: 'east_1', 3: 'spine_south', 4: 'spine_south', 5: 'spine_mid',
-    6: 'pav_lower', 7: 'pav_lower', 8: 'pav_mid', 9: 'pav_mid', 10: 'pav_upper',
-    11: 'north_curve_1', 12: 'pav_far_east', 13: 'north_curve_1', 14: 'north_curve_2',
-    15: 'north_end', 16: 'east_entry', 17: 'north_curve_1', 18: 'east_2', 19: 'east_3',
-    20: 'east_3', 21: 'east_4', 22: 'east_5', 23: 'east_5', 24: 'east_6',
+    1: 'gate', 2: 'east_1', 3: 'yah_east', 4: 'corridor_s1', 5: 'corridor_s2',
+    6: 'corridor_mid', 7: 'east_pav_entry', 8: 'east_pav_mid', 9: 'east_pav_mid', 10: 'east_pav_upper',
+    11: 'north_junc_1', 12: 'east_pav_top', 13: 'north_junc_2', 14: 'north_tb_dots',
+    15: 'north_end', 16: 'east_entry', 17: 'west_north', 18: 'east_2', 19: 'east_3',
+    20: 'east_3', 21: 'east_4', 22: 'east_5', 23: 'east_5', 24: 'breeze_mid',
     25: 'east_6', 26: 'east_crossway', 27: 'east_stp', 28: 'west_opu', 30: 'west_2',
-    31: 'west_3', 32: 'crossroads', 33: 'west_6', 34: 'west_5', 35: 'west_7',
-    36: 'west_4', 37: 'road_entry', 38: 'north_curve_3', 39: 'pav_mid', 40: 'west_1',
+    31: 'west_3', 32: 'corridor_mid', 33: 'west_6', 34: 'corridor_ot', 35: 'west_7',
+    36: 'west_4', 37: 'canteen_spur', 38: 'north_waste', 39: 'corridor_ot', 40: 'corridor_s1',
     41: 'west_2'
   };
 
   const edges = [
-    ['gate', 'road_entry'], ['road_entry', 'you_are_here'], ['road_entry', 'west_opu'],
-    ['road_entry', 'east_entry'], ['you_are_here', 'spine_south'], ['you_are_here', 'west_1'],
-    ['spine_south', 'spine_mid'], ['spine_mid', 'crossroads'], ['crossroads', 'spine_north'],
-    ['spine_north', 'wards_entry'], ['wards_entry', 'north_curve_1'], ['north_curve_1', 'north_curve_2'],
-    ['north_curve_2', 'north_curve_3'], ['north_curve_3', 'north_end'], ['crossroads', 'east_crossway'],
-    ['east_crossway', 'east_stp'], ['east_crossway', 'east_6'], ['east_6', 'east_5'],
-    ['east_5', 'east_4'], ['east_4', 'east_3'], ['east_3', 'east_2'], ['east_2', 'east_1'],
-    ['east_1', 'east_entry'], ['spine_south', 'east_1'], ['spine_north', 'pav_lower'],
-    ['pav_lower', 'pav_mid'], ['pav_mid', 'pav_upper'], ['wards_entry', 'pav_upper'],
-    ['pav_upper', 'pav_far_east'], ['west_opu', 'west_1'], ['west_1', 'west_2'],
-    ['west_2', 'west_3'], ['west_3', 'west_crossway'], ['crossroads', 'west_crossway'],
-    ['west_crossway', 'west_4'], ['west_4', 'west_5'], ['west_5', 'west_6'],
-    ['west_6', 'west_7'], ['west_7', 'west_north'], ['west_north', 'north_end']
+    // South / Entrance
+    ['gate', 'road_entry'], ['road_entry', 'main_road_east'], ['road_entry', 'main_road_west'],
+    ['road_entry', 'plaza_south'], ['road_entry', 'canteen_spur'],
+
+    // South Plaza
+    ['plaza_south', 'road_entry'], ['plaza_south', 'you_are_here'], ['plaza_south', 'yah_east'],
+
+    // East Road
+    ['main_road_east', 'east_entry'], ['east_entry', 'east_1'], ['east_1', 'east_2'],
+    ['east_2', 'east_3'], ['east_3', 'east_4'], ['east_4', 'east_5'], ['east_5', 'east_6'],
+    ['east_6', 'breeze_east'], ['breeze_east', 'east_crossway'], ['east_crossway', 'east_stp'],
+    ['east_crossway', 'east_pav_entry'], ['east_pav_entry', 'east_pav_mid'],
+    ['east_pav_mid', 'east_pav_upper'], ['east_pav_upper', 'east_pav_top'],
+
+    // East Breezeway
+    ['breeze_east', 'breeze_mid'], ['breeze_mid', 'corridor_cross'],
+
+    // West Road
+    ['main_road_west', 'west_opu'], ['west_opu', 'west_1'], ['west_1', 'west_2'],
+    ['west_2', 'west_3'], ['west_3', 'west_cross'], ['west_cross', 'west_4'],
+    ['west_4', 'west_5'], ['west_5', 'west_6'], ['west_6', 'west_7'],
+    ['west_7', 'west_north'], ['west_north', 'west_top'], ['west_top', 'north_end'],
+
+    // Cross Links
+    ['west_1', 'you_are_here'], ['west_cross', 'corridor_s2'], ['west_7', 'corridor_n1'],
+
+    // Central Walkway Corridor
+    ['you_are_here', 'yah_east'], ['yah_east', 'corridor_s1'], ['corridor_s1', 'corridor_s2'],
+    ['corridor_s2', 'corridor_cross'], ['corridor_cross', 'corridor_mid'],
+    ['corridor_mid', 'corridor_ot'], ['corridor_ot', 'corridor_n1'],
+
+    // North Campus Network
+    ['corridor_n1', 'north_junc_1'], ['north_junc_1', 'north_junc_2'],
+    ['north_junc_2', 'north_tb_dots'], ['north_tb_dots', 'north_waste'],
+    ['north_waste', 'north_top_road'], ['north_top_road', 'north_end']
   ];
 
   const adj = {};
@@ -216,7 +264,7 @@
     clearRouteLayers();
 
     const startKey = currentStartPoint;
-    const targetNode = bldgAttach[loc.id] || 'crossroads';
+    const targetNode = bldgAttach[loc.id] || 'corridor_cross';
     const pathKeys = dijkstra(startKey, targetNode);
 
     const latLngs = [];

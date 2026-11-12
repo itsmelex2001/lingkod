@@ -393,12 +393,17 @@ try {
             'can_reschedule'            => $isWaiting && !$isCancelled && $apptDate >= $today
         ];
 
+        $isActiveStatus = in_array($statusLower, ['approved', 'confirmed', 'ongoing', 'arrived', 'for_approval', 'for approval', 'pending', 'for_processing'], true);
+        $isRecentActive = $isActiveStatus && ($apptDate >= date('Y-m-d', strtotime('-3 days')));
+
         if ($isCancelled) {
             $cancelled[] = $item;
-        } elseif ($statusLower === 'completed' || $apptDate < $today) {
+        } elseif ($statusLower === 'completed') {
             $past[] = $item;
-        } else {
+        } elseif ($isRecentActive || $apptDate >= $today) {
             $upcoming[] = $item;
+        } else {
+            $past[] = $item;
         }
 
         // Build notifications from real events

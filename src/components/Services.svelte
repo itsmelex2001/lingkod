@@ -28,8 +28,8 @@
     },
     {
       id: 'psychiatry',
-      name: 'OPU<br>Psychiatry',
-      subname: 'Outpatient Psychiatry unit',
+      name: 'Psychiatry',
+      subname: '',
       image: '/sdn/public/assets/6214996979771708507.jpg',
       link: '/sdn/pages/regis-psychiatry.php',
       services: ['Adult Psychiatry', 'Child & Adolescent Psychiatry', 'Substance Abuse Treatment', 'Anxiety & Depression Management']
@@ -132,10 +132,11 @@
 
   .services-section {
     position: relative;
+    width: 100%;
     padding: 6rem 2rem 8rem;
-    background: linear-gradient(to bottom, #f0fdf4 0%, #dcfce7 100%);
-    clip-path: polygon(0 40px, 50% 0, 100% 40px, 100% calc(100% - 40px), 50% 100%, 0 calc(100% - 40px));
-    margin-top: -20px;
+    background: #e6fce2;
+    margin-top: 0;
+    box-sizing: border-box;
     z-index: 2;
   }
   .container {

@@ -7,6 +7,13 @@
   let activeTab = 'dashboard';
   let apptFilter = 'upcoming';
   let showNotifs = false;
+  let mobileNavOpen = false;
+
+  function selectTab(tab) {
+    activeTab = tab;
+    mobileNavOpen = false;
+    showNotifs = false;
+  }
 
   // Settings State
   let userPhone = '0917 123 4567';
@@ -184,10 +191,10 @@
           if (json.profile?.full_name) data.profile = json.profile;
           if (json.stats) data.stats = json.stats;
           if (json.departments?.length) data.departments = json.departments;
-          if (json.upcoming?.length) data.upcoming = json.upcoming;
-          if (json.past?.length) data.past = json.past;
-          if (json.cancelled?.length) data.cancelled = json.cancelled;
-          if (json.medications?.length) data.medications = json.medications;
+          if (json.upcoming !== undefined) data.upcoming = json.upcoming;
+          if (json.past !== undefined) data.past = json.past;
+          if (json.cancelled !== undefined) data.cancelled = json.cancelled;
+          if (json.medications !== undefined) data.medications = json.medications;
         }
       }
     } catch (e) {
@@ -205,9 +212,18 @@
   $: filteredAppointments = apptFilter === 'upcoming' ? data.upcoming : (apptFilter === 'past' ? data.past : data.cancelled);
 </script>
 
-<div class="flex min-h-screen bg-[#f1f5f9] text-[#1e293b] font-['Inter',sans-serif]">
+<div class="flex min-h-screen max-w-full overflow-x-hidden bg-[#f1f5f9] text-[#1e293b] font-['Inter',sans-serif]">
+  {#if mobileNavOpen}
+    <button
+      type="button"
+      class="fixed inset-0 z-40 bg-slate-900/40 md:hidden"
+      aria-label="Close menu"
+      on:click={() => mobileNavOpen = false}
+    ></button>
+  {/if}
+
   <!-- Fixed Viewport Left Sidebar -->
-  <aside class="w-[260px] h-screen sticky top-0 bg-white border-r border-[#cbd5e1] shadow-[2px_0_8px_-2px_rgba(15,23,42,0.05)] flex flex-col justify-between p-6 shrink-0 z-50 overflow-hidden">
+  <aside class="w-[260px] h-screen fixed md:sticky top-0 left-0 bg-white border-r border-[#cbd5e1] shadow-[2px_0_8px_-2px_rgba(15,23,42,0.05)] flex flex-col justify-between p-6 shrink-0 z-50 overflow-hidden transition-transform duration-200 {mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
     <div>
       <!-- Hospital Brand with Logo -->
       <div class="flex items-center gap-3 pb-6 border-b border-[#eaedf1]">
@@ -224,7 +240,7 @@
       <nav class="flex flex-col gap-1.5 mt-6">
         <button
           class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left {activeTab === 'dashboard' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-          on:click={() => activeTab = 'dashboard'}
+          on:click={() => selectTab('dashboard')}
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
           <span>{t.dashboard}</span>
@@ -232,7 +248,7 @@
 
         <button
           class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left {activeTab === 'appointments' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-          on:click={() => activeTab = 'appointments'}
+          on:click={() => selectTab('appointments')}
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           <span>{t.appointments}</span>
@@ -240,7 +256,7 @@
 
         <button
           class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left {activeTab === 'medications' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-          on:click={() => activeTab = 'medications'}
+          on:click={() => selectTab('medications')}
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>
           <span>{t.medications}</span>
@@ -252,7 +268,7 @@
     <div class="pt-4 border-t border-[#eaedf1]">
       <button
         class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left w-full {activeTab === 'settings' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-        on:click={() => activeTab = 'settings'}
+        on:click={() => selectTab('settings')}
       >
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         <span>{t.settings}</span>
@@ -263,7 +279,18 @@
   <!-- Right Main Area -->
   <main class="flex-1 flex flex-col min-w-0 min-h-screen">
     <!-- Top Header -->
-    <header class="h-[70px] bg-white border-b border-[#cbd5e1] shadow-sm flex items-center justify-between px-10 shrink-0 sticky top-0 z-40">
+    <header class="h-[70px] bg-white border-b border-[#cbd5e1] shadow-sm flex items-center justify-between px-4 md:px-10 shrink-0 sticky top-0 z-40">
+      <div class="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          class="md:hidden w-10 h-10 rounded-lg border border-[#e2e8f0] flex flex-col items-center justify-center gap-1 text-[#1e293b]"
+          aria-label="Open menu"
+          on:click={() => mobileNavOpen = true}
+        >
+          <span class="block w-4 h-0.5 bg-current"></span>
+          <span class="block w-4 h-0.5 bg-current"></span>
+          <span class="block w-4 h-0.5 bg-current"></span>
+        </button>
       <div class="relative">
         <button
           type="button"
@@ -277,7 +304,7 @@
         </button>
 
         {#if showNotifs}
-          <div class="absolute left-0 mt-2 w-80 bg-white border border-[#cbd5e1] rounded-xl shadow-lg z-50 overflow-hidden">
+          <div class="absolute left-0 mt-2 w-[min(20rem,calc(100vw-2rem))] md:w-80 bg-white border border-[#cbd5e1] rounded-xl shadow-lg z-50 overflow-hidden">
             <div class="p-3.5 border-b border-[#eaedf1] flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <span class="font-bold text-sm text-[#1e293b]">Notifications</span>
@@ -318,13 +345,14 @@
           </div>
         {/if}
       </div>
+      </div>
 
       <div class="w-9 h-9 rounded-full bg-[#e8f5e9] border border-[#c8e6c9] flex items-center justify-center font-bold text-xs text-[#15803d]">
         {initials}
       </div>
     </header>
 
-    <div class="p-10 max-w-[1200px] w-full mx-auto flex flex-col gap-6">
+    <div class="p-4 md:p-10 max-w-[1200px] w-full mx-auto flex flex-col gap-6">
 
       <!-- ═════════ 1. DASHBOARD VIEW ═════════ -->
       {#if activeTab === 'dashboard'}
@@ -335,10 +363,10 @@
               <h1 class="text-[26px] font-bold text-[#1e293b]">{t.greeting}, {firstName}</h1>
               <p class="text-sm text-[#64748b] mt-0.5">{t.greetingSub}</p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
               <a
                 href="/sdn/pages/schedules.php"
-                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-[#1e293b] bg-white border border-[#cbd5e1] hover:bg-[#f8fafc] transition shadow-sm"
+                class="inline-flex items-center justify-center gap-2 min-h-10 w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-semibold text-[#1e293b] bg-white border border-[#cbd5e1] hover:bg-[#f8fafc] transition shadow-sm"
               >
                 <span>{t.viewSchedule}</span>
               </a>
@@ -373,7 +401,7 @@
             </div>
             <a
               href="/sdn/pages/patient-book-appointment.php"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#15803d] hover:bg-[#166534] transition shrink-0 shadow-sm"
+              class="inline-flex items-center justify-center gap-2 min-h-10 w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#15803d] hover:bg-[#166534] transition shrink-0 shadow-sm"
             >
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               <span>{t.bookAppointment}</span>
@@ -384,11 +412,11 @@
           <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between mb-3">
               <span class="font-bold text-[15px] text-[#1e293b]">{t.upcomingAppts}</span>
-              <button class="text-xs font-semibold text-[#15803d] hover:underline" on:click={() => activeTab = 'appointments'}>{t.viewAll}</button>
+              <button class="text-xs font-semibold text-[#15803d] hover:underline" on:click={() => selectTab('appointments')}>{t.viewAll}</button>
             </div>
             <div class="flex flex-col divide-y divide-[#eaedf1]">
               {#each data.upcoming as appt}
-                <div class="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between cursor-pointer" on:click={() => activeTab = 'appointments'}>
+                <div class="py-3.5 first:pt-0 last:pb-0 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between cursor-pointer" on:click={() => selectTab('appointments')}>
                   <div class="flex items-center gap-4">
                     <div class="text-center w-10">
                       <div class="text-[10px] uppercase font-bold text-[#64748b]">{appt.date.split(' ')[0]}</div>
@@ -436,7 +464,7 @@
       <!-- ═════════ 2. APPOINTMENTS VIEW ═════════ -->
       {:else if activeTab === 'appointments'}
         <div class="flex flex-col gap-6">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 class="text-[26px] font-bold text-[#1e293b]">Appointments</h1>
               <p class="text-sm text-[#64748b] mt-0.5">Book and manage visits in General Medical, Neurology, and Psychiatry</p>
@@ -448,7 +476,7 @@
           </div>
 
           <!-- Filter Pills with Dynamic Counts -->
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               class="px-4 py-1.5 rounded-full text-xs font-semibold border transition {apptFilter === 'upcoming' ? 'bg-[#e8f5e9] border-[#c8e6c9] text-[#15803d]' : 'bg-white border-[#e2e8f0] text-[#64748b]'}"
               on:click={() => apptFilter = 'upcoming'}
@@ -472,7 +500,7 @@
           <!-- Appointments List -->
           <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col divide-y divide-[#eaedf1]">
             {#each filteredAppointments as item}
-              <div class="py-4 first:pt-0 last:pb-0 flex items-center justify-between">
+              <div class="py-4 first:pt-0 last:pb-0 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center gap-5">
                   <div class="text-center w-10">
                     <div class="text-[11px] uppercase font-bold text-[#64748b]">{item.date.split(' ')[0]}</div>
@@ -518,7 +546,7 @@
 
             <div class="divide-y divide-[#eaedf1]">
               {#each data.medications as med}
-                <div class="py-4 first:pt-0 last:pb-0 flex items-start justify-between gap-4">
+                <div class="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row items-start sm:justify-between gap-4">
                   <div class="flex items-start gap-4 flex-1">
                     <div class="w-10 h-10 rounded-lg bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] flex items-center justify-center shrink-0 mt-0.5">
                       <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>
@@ -634,7 +662,7 @@
           <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col gap-4">
             <span class="font-bold text-[15px] text-[#1e293b]">{t.security}</span>
             <div class="divide-y divide-[#eaedf1]">
-              <div class="py-3 first:pt-0 flex items-center justify-between">
+              <div class="py-3 first:pt-0 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div class="text-sm font-semibold text-[#1e293b]">{t.password}</div>
                   <div class="text-xs text-[#64748b] mt-0.5">{t.passwordSub}</div>
@@ -644,7 +672,7 @@
                 </button>
               </div>
 
-              <div class="py-3 flex items-center justify-between">
+              <div class="py-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div class="text-sm font-semibold text-[#1e293b]">{t.twoFactor}</div>
                   <div class="text-xs text-[#64748b] mt-0.5">{t.twoFactorSub}</div>
@@ -654,7 +682,7 @@
                 </button>
               </div>
 
-              <div class="pt-3 flex items-center justify-between">
+              <div class="pt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div class="text-sm font-semibold text-[#dc2626]">{t.signOut}</div>
                   <div class="text-xs text-[#64748b] mt-0.5">{t.signOutSub}</div>

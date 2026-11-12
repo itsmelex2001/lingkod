@@ -15,7 +15,7 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_PORTALS = {
-  [ROLES.PATIENT]: '/sdn/pages/department-select.php',
+  [ROLES.PATIENT]: '/sdn/pages/patient-dashboard.php',
   [ROLES.STAFF]: '/sdn/pages/staff-dashboard.php',
   [ROLES.ADMIN]: '/sdn/pages/admin-dashboard.php'
 };

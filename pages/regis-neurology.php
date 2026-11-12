@@ -15,11 +15,11 @@
     <?php require_once __DIR__ . '/privacy-consent-modal.php'; ?>
     <?php
     if (isset($_GET['source']) && $_GET['source'] === 'dept') {
-        $backUrl = '/sdn/pages/department-select.php';
+        $backUrl = '/sdn/pages/register.php';
     } elseif (isset($_GET['source']) && $_GET['source'] === 'schedules') {
         $backUrl = '/sdn/pages/schedules.php';
     } else {
-        $backUrl = '/sdn/pages/department-select.php';
+        $backUrl = '/sdn/pages/register.php';
     }
     ?>
     <div class="registration-container">

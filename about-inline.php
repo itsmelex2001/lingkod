@@ -3,7 +3,7 @@
 <section class="about-section-inline">
   <div class="container-inline-about">
     <h2 class="about-heading-inline" data-aos="fade-up">
-      <img src="/sdn/public/assets/about_us_brush.png?v=<?= time() ?>" alt="About Us" class="about-brush-inline" />
+      <img src="/sdn/public/assets/about_us_brush.png?v=<?= time() ?>" alt="About Us" class="about-brush-inline max-md:h-[38px] max-md:max-w-[168px] max-md:object-contain" />
     </h2>
   </div>
   
@@ -49,33 +49,33 @@
 </section>
 
 <!-- Vision & Mission & Quality Policy Section -->
-<section class="vision-mission-section">
-  <div class="vm-container">
-    <div class="vm-card" data-aos="fade-up">
+<section class="vision-mission-section max-md:grid max-md:grid-cols-2 max-md:items-stretch max-md:gap-3">
+  <div class="vm-container max-md:contents">
+    <div class="vm-card max-md:min-w-0 max-md:p-2" data-aos="fade-up">
       <h3 class="vm-title">
-        <img src="/sdn/public/assets/vision_brush.png?v=<?= time() ?>" alt="Vision" class="vm-brush-inline" />
+        <img src="/sdn/public/assets/vision_brush.png?v=<?= time() ?>" alt="Vision" class="vm-brush-inline max-md:h-auto max-md:max-h-[26px] max-md:w-auto max-md:max-w-full max-md:object-contain" />
       </h3>
-      <p class="vm-text" data-i18n="vision_body">Mariveles Mental Wellness and General Hospital is the premier client-oriented DOH hospital, providing safe. efficient, and quality services.</p>
+      <p class="vm-text max-md:text-left max-md:text-xs max-md:leading-snug max-md:break-words" data-i18n="vision_body">Mariveles Mental Wellness and General Hospital is the premier client-oriented DOH hospital, providing safe. efficient, and quality services.</p>
       <div class="vm-line"></div>
     </div>
-    <div class="vm-card" data-aos="fade-up" data-aos-delay="100">
+    <div class="vm-card max-md:min-w-0 max-md:p-2" data-aos="fade-up" data-aos-delay="100">
       <h3 class="vm-title">
-        <img src="/sdn/public/assets/mission_brush.png?v=<?= time() ?>" alt="Mission" class="vm-brush-inline" />
+        <img src="/sdn/public/assets/mission_brush.png?v=<?= time() ?>" alt="Mission" class="vm-brush-inline max-md:h-auto max-md:max-h-[26px] max-md:w-auto max-md:max-w-full max-md:object-contain" />
       </h3>
-      <p class="vm-text" data-i18n="mission_body">We are committed to delivering compassionate, safe, and high-quality healthcare in every encounter by preserving dignity, strengthening hope, and promoting holistic well-being for a healthier and more resilient community.</p>
+      <p class="vm-text max-md:text-left max-md:text-xs max-md:leading-snug max-md:break-words" data-i18n="mission_body">We are committed to delivering compassionate, safe, and high-quality healthcare in every encounter by preserving dignity, strengthening hope, and promoting holistic well-being for a healthier and more resilient community.</p>
       <div class="vm-line"></div>
     </div>
   </div>
 
-  <div class="qp-container">
-    <div class="vm-card qp-card" data-aos="fade-up" data-aos-delay="150">
+  <div class="qp-container max-md:contents">
+    <div class="vm-card qp-card max-md:col-span-2 max-md:min-w-0 max-md:p-3" data-aos="fade-up" data-aos-delay="150">
       <h3 class="vm-title">
-        <img src="/sdn/public/assets/quality_policy_brush.png?v=<?= time() ?>" alt="Quality Policy" class="vm-brush-inline" />
+        <img src="/sdn/public/assets/quality_policy_brush.png?v=<?= time() ?>" alt="Quality Policy" class="vm-brush-inline max-md:h-auto max-md:max-h-[30px] max-md:w-auto max-md:max-w-full max-md:object-contain" />
       </h3>
       <div class="qp-text-group">
-        <p class="vm-text" data-i18n="quality_1">The Mariveles Mental Wellness and General Hospital is committed to provide affordable quality mental and medical health care with Fairness, Accountability, and Continuous improvement. We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
-        <p class="vm-text" data-i18n="quality_2">We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
-        <p class="vm-text" data-i18n="quality_3">We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
+        <p class="vm-text max-md:text-left max-md:text-[13px] max-md:leading-snug max-md:break-words" data-i18n="quality_1">The Mariveles Mental Wellness and General Hospital is committed to provide affordable quality mental and medical health care with Fairness, Accountability, and Continuous improvement. We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
+        <p class="vm-text max-md:text-left max-md:text-[13px] max-md:leading-snug max-md:break-words" data-i18n="quality_2">We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
+        <p class="vm-text max-md:text-left max-md:text-[13px] max-md:leading-snug max-md:break-words" data-i18n="quality_3">We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
       </div>
       <div class="vm-line"></div>
     </div>
@@ -341,19 +341,35 @@
   }
 
   @media (max-width: 768px) {
-    .about-heading-inline { font-size: 3rem; margin-bottom: 1.5rem; }
-    .carousel-item-inline { width: 220px; height: 220px; }
-    .about-description-inline p { font-size: 0.85rem; padding: 0 1rem; }
+    .about-heading-inline { margin-bottom: 0.35rem !important; }
+    .about-brush-inline { height: 38px; max-width: 168px; }
+    .carousel-item-inline { width: 104px; height: 104px; }
+    .about-description-inline p { font-size: 0.8125rem; line-height: 1.45; padding: 0; }
     
-    .vm-container {
-      flex-direction: column;
-      align-items: center;
+    .vision-mission-section {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    .vm-container,
+    .qp-container {
+      display: contents;
+    }
+    .vm-card.qp-card {
+      grid-column: span 2;
     }
     .vm-card,
     .vm-card.qp-card {
-      width: 100%;
-      max-width: 100%;
-      padding: 2rem 1.75rem 0;
+      width: auto;
+      max-width: none;
+      min-width: 0;
+      padding: 0.75rem 0.6rem 0;
+    }
+    .vm-text,
+    .qp-text-group .vm-text {
+      overflow-wrap: break-word;
+      word-break: break-word;
+      text-align: left;
     }
   }
 </style>

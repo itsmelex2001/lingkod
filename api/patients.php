@@ -269,7 +269,7 @@ if ($method === 'POST') {
     if ($patientId === '') respondErr('patient_id is required.');
 
     // Verify patient exists
-    $check = $pdo->prepare("SELECT id, patient_id, full_name, email, contact_number, appointment_date, scheduled_time, department, status, inquiry_only, consultation_nature FROM patients WHERE patient_id = ?");
+    $check = $pdo->prepare("SELECT * FROM patients WHERE patient_id = ?");
     $check->execute([$patientId]);
     $patient = $check->fetch();
     if (!$patient) respondErr("Patient $patientId not found.", 404);
@@ -297,8 +297,8 @@ function isDeptMatch($d1, $d2): bool {
     return false;
 }
 
-// Allow staff to assign or correct departments for triage routing regardless of initial registration mismatch
-if ($action !== 'assign_department' && $action !== 'update_department') {
+// Allow staff full access to triage, check-in, start consult, and cancel regardless of initial registration department
+if ($action !== 'assign_department' && $action !== 'update_department' && $action !== 'ongoing' && $action !== 'start_consultation' && $action !== 'arrived' && $action !== 'check_in' && $action !== 'cancel' && $action !== 'reject') {
     if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department'], $staffDept)) {
         respondErr("Unauthorized: This patient is registered to another department.", 403);
     }
@@ -309,6 +309,14 @@ if ($action !== 'assign_department' && $action !== 'update_department') {
 
     // ── 0. Assign or Correct Department (Triage-led Routing) ─────────────
     if ($action === 'assign_department' || $action === 'update_department') {
+        $pStatus = strtolower(trim($patient['status'] ?? ''));
+        if ($pStatus === 'completed') {
+            respondErr('Cannot modify department for completed appointments. The consultation record is finalized.', 422);
+        }
+        if (in_array($pStatus, ['cancelled', 'rejected'])) {
+            respondErr('Cannot modify department for cancelled appointments.', 422);
+        }
+
         $rawNew = trim($body['department'] ?? '');
         if ($rawNew === '') {
             respondErr('Department is required.');
@@ -332,10 +340,6 @@ if ($action !== 'assign_department' && $action !== 'update_department') {
             WHERE patient_id = ?
         ");
         $upd->execute([$cleanDept, $cleanDept . ' Consultation', $patientId]);
-
-        try {
-            $pdo->prepare("UPDATE appointments SET department = ? WHERE patient_id = ?")->execute([$cleanDept, $patientId]);
-        } catch (\Throwable $e) {}
 
         addLog($pdo, 'info', 'Department Assigned/Corrected', $actor,
                "Staff assigned/corrected department from '{$oldDept}' to '{$cleanDept}' for patient $patientId ($name) based on chief complaint.");
@@ -372,10 +376,6 @@ if ($action !== 'assign_department' && $action !== 'update_department') {
                 WHERE patient_id = ?
             ");
             $upd->execute([$cleanDept, $cleanDept . ' Consultation', $patientId]);
-
-            try {
-                $pdo->prepare("UPDATE appointments SET department = ? WHERE patient_id = ?")->execute([$cleanDept, $patientId]);
-            } catch (\Throwable $e) {}
         } else {
             $upd = $pdo->prepare(
                 "UPDATE patients SET status = 'approved', updated_at = NOW() WHERE patient_id = ?"
@@ -426,48 +426,51 @@ if ($action !== 'assign_department' && $action !== 'update_department') {
         respondOk(['message' => "$name has been approved and scheduled."]);
     }
 
-    // ── 2. Arrived / Check-in (Step 1 of Facility Arrival) ───────────────
+    // ── 2. Arrived / Check-in (Facility Arrival) ─────────────────────────
     if ($action === 'arrived' || $action === 'check_in') {
-        if (!in_array($patient['status'], ['approved', 'for_approval', 'for_processing', 'pending'])) {
-            respondErr("Cannot check in patient in '{$patient['status']}' status.");
+        $currSt = strtolower(trim($patient['status'] ?? ''));
+        if (!in_array($currSt, ['approved', 'confirmed'], true)) {
+            respondErr('Check-in is available after the appointment is confirmed.');
         }
         $upd = $pdo->prepare(
             "UPDATE patients SET status = 'arrived', updated_at = NOW() WHERE patient_id = ?"
         );
         $upd->execute([$patientId]);
         addLog($pdo, 'info', 'Patient Arrived', $actor,
-               "Patient $patientId ($name) arrived at facility (Checked-In at Reception/Triage).");
-        respondOk(['message' => "$name has arrived at the facility and is checked in for triage."]);
+               "Patient $patientId ($name) checked in at facility/triage desk.");
+        respondOk(['message' => "$name is checked in and marked as Arrived."]);
     }
 
-    // ── 3. Ongoing / In Consultation (Step 3 of Clinical Workflow) ──────
+    // ── 3. Ongoing / Start Consultation ──────────────────────────────────
     if ($action === 'ongoing' || $action === 'start_consultation') {
-        if (!in_array($patient['status'], ['arrived', 'approved'])) {
-            respondErr("Patient must be checked in (Arrived) before starting consultation.");
+        $currSt = strtolower(trim($patient['status'] ?? ''));
+        if ($currSt !== 'arrived') {
+            respondErr('Start the consultation after the patient is checked in. Requests still waiting for approval cannot be started.');
         }
         $upd = $pdo->prepare(
             "UPDATE patients SET status = 'ongoing', updated_at = NOW() WHERE patient_id = ?"
         );
         $upd->execute([$patientId]);
-        $doc = $patient['assigned_doctor'] ?: 'Attending Physician';
+        $doc = !empty($patient['assigned_doctor']) ? $patient['assigned_doctor'] : 'Attending Physician';
         addLog($pdo, 'info', 'Consultation Ongoing', $actor,
                "Patient $patientId ($name) consultation in progress with $doc.");
         respondOk(['message' => "Consultation for $name is now Ongoing."]);
     }
 
-    // ── 4. Reject ─────────────────────────────────────────────────────────
-    if ($action === 'reject') {
-        if (in_array($patient['status'], ['completed', 'rejected', 'transferred'])) {
-            respondErr("Cannot reject patient in '{$patient['status']}' status.");
+    // ── 4. Reject / Cancel / Decline ──────────────────────────────────────
+    if ($action === 'reject' || $action === 'cancel') {
+        $currSt = strtolower(trim($patient['status'] ?? ''));
+        if (in_array($currSt, ['completed', 'rejected', 'cancelled', 'transferred'])) {
+            respondErr("Cannot decline or cancel patient in '{$patient['status']}' status.");
         }
         $upd = $pdo->prepare(
-            "UPDATE patients SET status = 'rejected', updated_at = NOW() WHERE patient_id = ?"
+            "UPDATE patients SET status = 'cancelled', updated_at = NOW() WHERE patient_id = ?"
         );
         $upd->execute([$patientId]);
 
-        addLog($pdo, 'info', 'Patient Rejected', $actor,
-               "Patient $patientId ($name) registration was rejected.");
-        respondOk(['message' => "{$name}'s registration was rejected."]);
+        addLog($pdo, 'info', 'Patient Cancelled/Declined', $actor,
+               "Patient $patientId ($name) appointment was declined/cancelled by staff.");
+        respondOk(['message' => "Appointment for $name has been cancelled/declined."]);
     }
 
     // ── 5. Assign Doctor ──────────────────────────────────────────────────
@@ -512,8 +515,9 @@ if ($action !== 'assign_department' && $action !== 'update_department') {
     // ── 7. Completed (Final Step: Officially signed off by Doctor OR Inquiry Resolved) ────────
     if ($action === 'completed') {
         $isInquiry = !empty($patient['inquiry_only']) || ($patient['consultation_nature'] ?? '') === 'General Inquiry';
-        if (!$isInquiry && !in_array($patient['status'], ['ongoing', 'arrived', 'approved'])) {
-            respondErr("Cannot complete patient visit in current status '{$patient['status']}'. Patient must be actively ongoing in consultation.");
+        $completeStatus = strtolower(trim($patient['status'] ?? ''));
+        if (!$isInquiry && $completeStatus !== 'ongoing') {
+            respondErr('Complete the visit only while the consultation is in progress.');
         }
 
         $diag         = trim($body['diagnosis'] ?? '');

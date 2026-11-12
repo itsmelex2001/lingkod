@@ -43,6 +43,17 @@ try {
 }
 
 $_SESSION['last_activity'] = time();
+
+$nameParts = preg_split('/\s+/', trim($userFullName)) ?: [];
+$staffInitials = '';
+foreach (array_slice($nameParts, 0, 2) as $part) {
+    if ($part !== '') {
+        $staffInitials .= strtoupper(substr($part, 0, 1));
+    }
+}
+if ($staffInitials === '') {
+    $staffInitials = 'MS';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -52,8 +63,9 @@ $_SESSION['last_activity'] = time();
     <title>Staff Portal | LINGKOD</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/sdn/public/css/staff-dashboard-clean.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=<?= time() ?>">
 </head>
 <body>
     <div class="staff-app-container">
@@ -87,26 +99,33 @@ $_SESSION['last_activity'] = time();
                 </nav>
             </div>
 
-            <div class="sidebar-footer">
-                <a href="/sdn/pages/logout.php" class="sidebar-logout-btn">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 5 12 10 7"></polyline><line x1="15" y1="12" x2="5" y2="12"></line></svg>
-                    <span>Logout</span>
-                </a>
-            </div>
         </aside>
 
         <!-- ── Main Content Workspace ── -->
         <main class="staff-main-wrap">
-            <!-- Top Header Bar (Clean Minimal, No Profile Image) -->
             <header class="staff-header">
-                <div class="header-breadcrumb">
-                    <span class="crumb-title">Clinical Staff Portal</span>
-                </div>
                 <div class="header-right-meta">
-                    <div class="staff-identity-badge" onclick="switchView('settings')" title="Account Settings">
-                        <span class="status-dot-online"></span>
-                        <span class="identity-name" id="headerStaffName"><?= htmlspecialchars($userFullName) ?></span>
-                        <span class="identity-role-tag">Medical Staff</span>
+                    <div class="profile-container" id="staffProfileContainer">
+                        <button type="button" class="user-avatar-btn" id="staffProfileBtn" aria-haspopup="true" aria-expanded="false">
+                            <div class="user-avatar-circle"><?= htmlspecialchars($staffInitials) ?></div>
+                            <span class="user-avatar-name" id="headerStaffName"><?= htmlspecialchars($userFullName) ?></span>
+                            <span class="identity-role-tag">Medical Staff</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="profile-dropdown" id="staffProfileDropdown">
+                            <div class="profile-dd-head">
+                                <div class="profile-dd-name"><?= htmlspecialchars($userFullName) ?></div>
+                                <div class="profile-dd-sub">Medical Staff</div>
+                            </div>
+                            <button type="button" class="profile-dd-item" id="staffProfileSettings">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                <span>Account Settings</span>
+                            </button>
+                            <a href="/sdn/pages/logout.php" class="profile-dd-item profile-dd-logout">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                <span>Sign out</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -121,11 +140,11 @@ $_SESSION['last_activity'] = time();
                         </div>
                         <div class="view-header-actions">
                             <button type="button" class="btn-clean outline" onclick="openDoctorStatusModal()">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
                                 <span>Doctors Status</span>
                             </button>
                             <button type="button" class="btn-clean primary" onclick="openWalkinModal()">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 <span>Add Walk-in</span>
                             </button>
                         </div>
@@ -191,11 +210,11 @@ $_SESSION['last_activity'] = time();
                             </div>
                             <div class="toolbar-right">
                                 <div class="search-input-box">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                     <input type="text" id="consultSearchInput" placeholder="Search patient name or ID...">
                                 </div>
                                 <button type="button" class="btn-clean outline btn-icon-only" id="btnRefreshConsult" title="Refresh queue">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                                 </button>
                             </div>
                         </div>
@@ -229,7 +248,7 @@ $_SESSION['last_activity'] = time();
                         </div>
                         <div class="view-header-actions">
                             <button type="button" class="btn-clean outline" onclick="exportRecordsCSV()">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 <span>Export CSV</span>
                             </button>
                         </div>
@@ -239,7 +258,7 @@ $_SESSION['last_activity'] = time();
                         <div class="card-toolbar">
                             <div class="toolbar-left">
                                 <div class="search-input-box" style="width: 300px;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                     <input type="text" id="recordsSearchInput" placeholder="Search patient name, ID, physician, complaint...">
                                 </div>
                             </div>
@@ -322,7 +341,7 @@ $_SESSION['last_activity'] = time();
 
                             <div>
                                 <button type="button" class="btn-clean primary" id="btnSaveProfile">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                                     <span>Save changes</span>
                                 </button>
                             </div>
@@ -349,7 +368,7 @@ $_SESSION['last_activity'] = time();
 
                             <div>
                                 <button type="button" class="btn-clean primary" id="btnChangePassword">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                                     <span>Update password</span>
                                 </button>
                             </div>
@@ -363,7 +382,7 @@ $_SESSION['last_activity'] = time();
                                     <div class="settings-card-sub">Signed in as <?= htmlspecialchars($userFullName) ?> (<?= htmlspecialchars($deptLabel) ?>)</div>
                                 </div>
                                 <a href="/sdn/pages/logout.php" class="btn-clean danger-outline">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 5 12 10 7"></polyline><line x1="15" y1="12" x2="5" y2="12"></line></svg>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                                     <span>Sign out</span>
                                 </a>
                             </div>
@@ -384,7 +403,7 @@ $_SESSION['last_activity'] = time();
             <div class="clean-modal-body" id="patientDetailsContent"></div>
             <div class="clean-modal-footer">
                 <button type="button" class="btn-clean outline" onclick="printPatientSlipFromDetails()">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                     <span>Print Summary Slip</span>
                 </button>
                 <button type="button" class="btn-clean outline" onclick="closePatientDetailsModal()">Close</button>
@@ -404,9 +423,22 @@ $_SESSION['last_activity'] = time();
             </div>
             <div class="clean-modal-body" style="display:flex; flex-direction:column; gap:1.15rem;">
                 <input type="hidden" id="notePatientId">
-                <div class="form-group-clean">
-                    <label for="noteDiagnosis">Diagnosis <span style="color:#e11d48;">*</span></label>
-                    <input type="text" id="noteDiagnosis" class="form-control-clean" placeholder="Clinical diagnosis">
+                <div class="form-group-clean" style="position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label for="noteDiagnosis" style="font-weight:700; font-size:0.78rem; text-transform:uppercase; color:#334155; margin:0;">
+                            Diagnosis <span style="color:#e11d48;">*</span>
+                        </label>
+                        <span style="font-size:0.68rem; font-weight:700; color:#047857; background:#d1fae5; border:1px solid #a7f3d0; padding:1px 6px; border-radius:999px;">
+                            ⚡ CDSS Autocomplete
+                        </span>
+                    </div>
+                    <div style="position:relative;">
+                        <input type="text" id="noteDiagnosis" class="form-control-clean" placeholder="Type diagnosis (e.g. Hypertension, Migraine, Anxiety)..." autocomplete="off">
+                        <div id="noteDiagnosisSpinner" style="display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#059669; font-weight:600;">
+                            Searching...
+                        </div>
+                    </div>
+                    <div id="cdssDropdown" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; max-height:220px; overflow-y:auto; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 12px 28px rgba(0,0,0,0.15); z-index:9999;"></div>
                 </div>
                 <div class="form-group-clean">
                     <label for="noteTreatment">Treatment Plan</label>
@@ -578,7 +610,23 @@ $_SESSION['last_activity'] = time();
         </div>
     </div>
 
-    <div id="cleanToast" class="toast-clean"></div>
+    <div id="staffConfirmModal" class="clean-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="staffConfirmTitle">
+        <div class="clean-modal-box confirm-modal-box">
+            <div class="clean-modal-header">
+                <h3 id="staffConfirmTitle">Confirm</h3>
+                <button type="button" class="clean-modal-close" id="staffConfirmClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="clean-modal-body">
+                <p id="staffConfirmMessage" class="confirm-modal-copy"></p>
+            </div>
+            <div class="clean-modal-footer">
+                <button type="button" class="btn-clean outline" id="staffConfirmCancel">Keep visit</button>
+                <button type="button" class="btn-clean danger-outline" id="staffConfirmOk">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cleanToast" class="toast-clean" role="status" aria-live="polite"></div>
 
     <script>
         window.STAFF_DEPT = <?= json_encode($deptLabel) ?>;

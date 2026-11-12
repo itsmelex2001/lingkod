@@ -1,4 +1,4 @@
-<script>
+ <script>
   import { createEventDispatcher } from 'svelte';
 
   export let hasAgreedToPrivacy = false;
@@ -140,7 +140,7 @@
           type="button"
           on:click={handleProceed}
           disabled={!isConsentChecked}
-          class="inline-flex items-center justify-center px-6 py-2.5 text-xs font-bold rounded-lg shadow-sm transition-all duration-150 {isConsentChecked ? 'bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white cursor-pointer hover:shadow hover:-translate-y-0.5' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}"
+          class="inline-flex items-center justify-center w-full sm:w-auto min-h-12 sm:min-h-0 px-6 py-2.5 text-sm sm:text-xs font-bold rounded-lg shadow-sm transition-all duration-150 {isConsentChecked ? 'bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white cursor-pointer hover:shadow sm:hover:-translate-y-0.5' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}"
         >
           Proceed
         </button>

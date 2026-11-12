@@ -1,5 +1,5 @@
 <script>
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
   import DataPrivacyConsent from './DataPrivacyConsent.svelte';
 
   export let patientId = '';
@@ -18,68 +18,104 @@
   let chiefComplaint = '';
   let consultationMode = 'Face-to-Face';
   let appointmentDate = minDate;
-  let scheduledTime = '08:00:00';
+  let scheduledTime = '';
 
-  let disabledPeriods = [];
-  let disabledTimes = [];
+  let timeBlocks = [];
   let slotNotice = '';
   let isLoadingSlots = false;
   let isSubmitting = false;
+  let lastFetchedDate = '';
+  let slotsRequestId = 0;
 
   let errorMessage = '';
   let successMessage = '';
   let bookedRefId = '';
 
-  const timeSlots = [
-    { value: '08:00:00', label: '08:00 AM – 10:00 AM', period: 'Morning' },
-    { value: '10:00:00', label: '10:00 AM – 12:00 PM', period: 'Morning' },
-    { value: '13:00:00', label: '01:00 PM – 03:00 PM', period: 'Afternoon' },
-    { value: '15:00:00', label: '03:00 PM – 05:00 PM', period: 'Afternoon' }
-  ];
+  function isValidAppointmentDate(dateStr) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(dateStr || '');
+  }
 
-  async function fetchDayConflicts(dateStr) {
-    if (!dateStr) return;
+  function normalizeTimeBlock(block) {
+    const value = block.time_block_value || block.value || block.id || block.start_time || '';
+    const baseLabel = block.label
+      || `${block.start_time || value}${block.end_time ? ` - ${block.end_time}` : ''}${block.session ? ` (${block.session})` : ''}`;
+    const alreadyBooked = Boolean(
+      block.already_booked || block.alreadyBooked || block.booked || block.conflict || block.is_available === false
+    );
+    return { value, label: baseLabel, alreadyBooked };
+  }
+
+  function extractTimeBlocks(data) {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.time_blocks)) return data.time_blocks;
+    if (Array.isArray(data?.slots)) return data.slots;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+  }
+
+  async function fetchTimeBlocks(dateStr) {
+    const requestId = ++slotsRequestId;
     isLoadingSlots = true;
+    scheduledTime = '';
     errorMessage = '';
     slotNotice = '';
 
     try {
       const q = new URLSearchParams({
-        date: dateStr,
+        target_date: dateStr,
+        ...(department ? { department } : {}),
         ...(patientId ? { patient_id: patientId } : {}),
-        ...(email ? { email: email } : {})
+        ...(email ? { email } : {})
       });
-      const res = await fetch(`/sdn/api/appointments/check_conflicts.php?${q.toString()}`);
+      const res = await fetch(`/sdn/api/time-blocks.php?${q.toString()}`);
       const data = await res.json();
+      if (requestId !== slotsRequestId) return;
 
-      if (data.success) {
-        disabledPeriods = data.disabled_periods || [];
-        disabledTimes = data.disabled_times || [];
-        slotNotice = data.notice || '';
+      const blocks = extractTimeBlocks(data).map(normalizeTimeBlock).filter((block) => block.value);
+      timeBlocks = blocks;
 
-        // If selected slot is now disabled, auto-select first available slot
-        const isCurrentDisabled = disabledTimes.includes(scheduledTime);
-        if (isCurrentDisabled) {
-          const firstAvail = timeSlots.find(s => !disabledTimes.includes(s.value));
-          if (firstAvail) {
-            scheduledTime = firstAvail.value;
-          }
-        }
+      const bookedCount = blocks.filter((block) => block.alreadyBooked).length;
+      if (bookedCount > 0 && bookedCount < blocks.length) {
+        slotNotice = 'One session on this date is already booked. Choose an open time block to continue.';
+      } else if (blocks.length > 0 && bookedCount === blocks.length) {
+        slotNotice = 'You already have bookings for every time block on this date. Please choose another date.';
+      }
+
+      const current = blocks.find((block) => block.value === scheduledTime && !block.alreadyBooked);
+      if (!current) {
+        const firstOpen = blocks.find((block) => !block.alreadyBooked);
+        scheduledTime = firstOpen ? firstOpen.value : '';
       }
     } catch (e) {
-      console.warn('Conflict fetch error:', e);
+      if (requestId !== slotsRequestId) return;
+      console.warn('Time block fetch error:', e);
+      timeBlocks = [];
+      scheduledTime = '';
     } finally {
-      isLoadingSlots = false;
+      if (requestId === slotsRequestId) isLoadingSlots = false;
     }
   }
 
-  $: if (appointmentDate) {
-    fetchDayConflicts(appointmentDate);
+  $: if (isValidAppointmentDate(appointmentDate)) {
+    if (appointmentDate !== lastFetchedDate) {
+      lastFetchedDate = appointmentDate;
+      fetchTimeBlocks(appointmentDate);
+    }
+  } else if (lastFetchedDate || timeBlocks.length || scheduledTime || isLoadingSlots) {
+    lastFetchedDate = '';
+    timeBlocks = [];
+    scheduledTime = '';
+    isLoadingSlots = false;
   }
 
-  onMount(() => {
-    fetchDayConflicts(appointmentDate);
-  });
+  function timeBlockOptionLabel(block) {
+    const clean = String(block.label || block.value).replace(/\s*\(Already Booked\)\s*$/i, '');
+    return block.alreadyBooked ? `${clean} (Already Booked)` : clean;
+  }
+
+  $: selectedBlock = timeBlocks.find((block) => block.value === scheduledTime);
+  $: hasValidTimeBlock = Boolean(selectedBlock && !selectedBlock.alreadyBooked && !isLoadingSlots);
+  $: noSlotsForDate = !isLoadingSlots && isValidAppointmentDate(appointmentDate) && timeBlocks.length === 0;
 
   async function handleSubmit() {
     errorMessage = '';
@@ -95,8 +131,10 @@
       return;
     }
 
-    if (disabledTimes.includes(scheduledTime)) {
-      errorMessage = 'The selected time slot is already booked for this date. Please pick another session.';
+    if (!hasValidTimeBlock) {
+      errorMessage = noSlotsForDate
+        ? 'No available slots for this date. Please choose another appointment date.'
+        : 'Please select an available time block.';
       return;
     }
 
@@ -126,7 +164,11 @@
         // Anti-double booking conflict error from backend
         errorMessage = data.message || 'You already have an appointment scheduled for this time. Please select a different time (e.g., Afternoon) for your second consultation.';
         if (data.suggested_slot) {
-          const altSlot = timeSlots.find(s => s.period === data.suggested_slot && !disabledTimes.includes(s.value));
+          const altSlot = timeBlocks.find((block) => {
+            if (block.alreadyBooked) return false;
+            const period = (block.label || '').toLowerCase();
+            return period.includes(String(data.suggested_slot).toLowerCase());
+          });
           if (altSlot) scheduledTime = altSlot.value;
         }
         return;
@@ -152,7 +194,7 @@
 <DataPrivacyConsent bind:hasAgreedToPrivacy />
 
 <!-- Booking Appointment Form (Rendered and visible immediately; blurred & unclickable until consented) -->
-<div class="relative max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 font-sans transition-all duration-300 {!hasAgreedToPrivacy ? 'filter blur-[1.5px] pointer-events-none select-none opacity-85' : ''}">
+<div class="relative w-full max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-8 font-sans transition-all duration-300 {!hasAgreedToPrivacy ? 'filter blur-[1.5px] pointer-events-none select-none opacity-85' : ''}">
   <div class="mb-6">
     <h2 class="text-xl font-bold text-slate-800 tracking-tight">Book an Outpatient Consultation</h2>
     <p class="text-xs text-slate-500 mt-1">Select your preferred schedule and describe your chief complaint.</p>
@@ -195,7 +237,7 @@
         <select
           id="deptSelect"
           bind:value={department}
-          class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+          class="w-full max-w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm sm:text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
         >
           <option value="">No preference (Staff will assign based on complaint)</option>
           <option value="General Medical">General Medical</option>
@@ -216,19 +258,19 @@
           bind:value={chiefComplaint}
           placeholder="Describe your primary symptoms, duration, or medical reason for this consultation..."
           required
-          class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition resize-none"
+          class="w-full max-w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm sm:text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition resize-none"
         ></textarea>
       </div>
 
       <!-- 3. Consultation Mode -->
       <div>
         <span class="block text-xs font-semibold text-slate-700 mb-1.5">Consultation Mode</span>
-        <div class="grid grid-cols-2 gap-2.5">
-          <label class="flex items-center gap-2 p-2.5 border rounded-xl cursor-pointer text-xs transition {consultationMode === 'Face-to-Face' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <label class="flex items-center gap-2 min-h-12 sm:min-h-0 p-2.5 border rounded-xl cursor-pointer text-sm sm:text-xs transition {consultationMode === 'Face-to-Face' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}">
             <input type="radio" bind:group={consultationMode} value="Face-to-Face" class="text-emerald-600 focus:ring-emerald-500" />
             <span>In-Person (Hospital)</span>
           </label>
-          <label class="flex items-center gap-2 p-2.5 border rounded-xl cursor-pointer text-xs transition {consultationMode === 'Online Teleconsultation' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}">
+          <label class="flex items-center gap-2 min-h-12 sm:min-h-0 p-2.5 border rounded-xl cursor-pointer text-sm sm:text-xs transition {consultationMode === 'Online Teleconsultation' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}">
             <input type="radio" bind:group={consultationMode} value="Online Teleconsultation" class="text-emerald-600 focus:ring-emerald-500" />
             <span>Teleconsultation</span>
           </label>
@@ -238,7 +280,7 @@
       <!-- 4. Date & Time Selection (With Anti-Double Booking Conflict Detection) -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label for="apptDate" class="block text-xs font-semibold text-slate-700 mb-1.5">
+          <label for="apptDate" class="block text-xs font-semibold text-emerald-700 mb-1.5">
             Appointment Date <span class="text-red-500">*</span>
           </label>
           <input
@@ -247,45 +289,65 @@
             min={minDate}
             bind:value={appointmentDate}
             required
-            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
+            class="w-full max-w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm sm:text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
           />
         </div>
 
         <div>
-          <label for="apptTime" class="block text-xs font-semibold text-slate-700 mb-1.5">
-            Time Slot <span class="text-red-500">*</span>
+          <label for="apptTime" class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 mb-1.5">
+            <span>Scheduled Time Block <span class="text-red-500">*</span></span>
             {#if isLoadingSlots}
-              <span class="text-[10px] text-slate-400 font-normal ml-1">Checking slots...</span>
+              <svg class="animate-spin h-3 w-3 text-emerald-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
             {/if}
           </label>
-          <select
-            id="apptTime"
-            bind:value={scheduledTime}
-            required
-            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition"
-          >
-            {#each timeSlots as slot}
-              {@const isBooked = disabledTimes.includes(slot.value)}
-              <option value={slot.value} disabled={isBooked}>
-                {slot.label} ({slot.period}){isBooked ? ' — Booked' : ''}
-              </option>
-            {/each}
-          </select>
+          <div>
+            <select
+              id="apptTime"
+              bind:value={scheduledTime}
+              required
+              disabled={isLoadingSlots || noSlotsForDate || !hasAgreedToPrivacy}
+              class="w-full max-w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm sm:text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+            >
+              {#if isLoadingSlots}
+                <option value="">Loading available time blocks...</option>
+              {:else if noSlotsForDate}
+                <option value="">No available slots for this date</option>
+              {:else}
+                <option value="" disabled>Select a time block</option>
+                {#each timeBlocks as block}
+                  <option value={block.value} disabled={block.alreadyBooked}>
+                    {timeBlockOptionLabel(block)}
+                  </option>
+                {/each}
+              {/if}
+            </select>
+          </div>
         </div>
       </div>
 
       <!-- Final Submission Action Button -->
-      <div class="pt-3 border-t border-slate-100">
+      <div class="pt-3 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+        <button
+          type="button"
+          class="w-full sm:w-auto min-h-12 sm:min-h-0 px-5 py-3 border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm sm:text-xs font-bold rounded-xl transition"
+          on:click={() => dispatch('back')}
+          disabled={isSubmitting}
+        >
+          Back
+        </button>
         <button
           type="submit"
-          disabled={isSubmitting || disabledTimes.length >= timeSlots.length || !hasAgreedToPrivacy}
-          class="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition shadow-sm active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+          disabled={isSubmitting || !hasValidTimeBlock || !hasAgreedToPrivacy}
+          class="w-full sm:w-auto min-h-12 sm:min-h-0 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm sm:text-xs font-bold rounded-xl transition shadow-sm active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
         >
           {#if isSubmitting}
             <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
             <span>Verifying &amp; Booking...</span>
           {:else}
-            <span>Confirm Consultation Booking</span>
+            <span>Next</span>
           {/if}
         </button>
       </div>
