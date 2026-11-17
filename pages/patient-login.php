@@ -1,5 +1,17 @@
 <?php
 session_start();
+require_once __DIR__ . '/../api/config/db.php';
+require_once __DIR__ . '/../api/config/patient_remember.php';
+
+if (!empty($_SESSION['patient_logged_in']) && (!empty($_SESSION['patient_id']) || !empty($_SESSION['patient_email']))) {
+    header('Location: /sdn/pages/patient-dashboard.php');
+    exit;
+}
+if (isset($pdo) && tryAutoLoginPatientFromCookie($pdo)) {
+    header('Location: /sdn/pages/patient-dashboard.php');
+    exit;
+}
+$rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
 ?>
 <!doctype html>
 <html lang="en">
@@ -56,10 +68,23 @@ session_start();
         font-family: var(--font-sans);
         background-color: var(--color-bg);
         color: var(--color-text-body);
+        caret-color: transparent;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         scrollbar-width: none;
         -ms-overflow-style: none;
+      }
+
+      input, textarea {
+        caret-color: auto;
+      }
+
+      .brand-header,
+      .portal-left,
+      .portal-right-header,
+      .portal-right-footer {
+        user-select: none;
+        -webkit-user-select: none;
       }
 
       ::-webkit-scrollbar {
@@ -69,7 +94,7 @@ session_start();
       /* ── Layout Grid ── */
       .portal-layout {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr clamp(380px, 30vw, 460px);
         width: 100%;
         height: 100vh;
         height: 100dvh;
@@ -127,12 +152,10 @@ session_start();
       .hospital-logo {
         width: 44px;
         height: 44px;
-        border-radius: 50%;
         object-fit: contain;
-        background: #ffffff;
-        padding: 2px;
+        background: transparent;
+        padding: 0;
         flex-shrink: 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
       }
 
       .hospital-meta {
@@ -146,17 +169,15 @@ session_start();
         letter-spacing: 0.04em;
         color: #ffffff;
         line-height: 1.15;
-        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
       }
 
       .hospital-fullname {
         font-size: 0.75rem;
         font-weight: 400;
-        color: rgba(255, 255, 255, 0.9);
+        color: #e5e7eb;
         line-height: 1.35;
         max-width: 320px;
         margin-top: 2px;
-        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
       }
 
       .portal-left-body {
@@ -167,13 +188,12 @@ session_start();
       }
 
       .portal-left-tagline {
-        font-family: var(--font-serif);
-        font-size: clamp(1.45rem, 2.1vw, 2rem);
+        font-family: var(--font-sans);
+        font-size: clamp(2.5rem, 3.8vw, 3.5rem);
         font-weight: 700;
-        line-height: 1.25;
+        line-height: 1.12;
         color: #ffffff;
-        letter-spacing: -0.01em;
-        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+        letter-spacing: -0.025em;
       }
 
       .portal-left-translation {
@@ -181,24 +201,23 @@ session_start();
         font-family: var(--font-sans);
         font-size: 0.9rem;
         font-weight: 400;
-        color: rgba(255, 255, 255, 0.92);
-        margin-top: 0.35rem;
-        letter-spacing: 0.01em;
-        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+        color: #e5e7eb;
+        margin-top: 0.65rem;
+        letter-spacing: 0;
       }
 
       .portal-left-divider {
         width: 40px;
         height: 2px;
-        background: rgba(255, 255, 255, 0.5);
-        margin: clamp(0.85rem, 1.4vh, 1.25rem) 0;
+        background: rgba(255, 255, 255, 0.35);
+        margin: 1.5rem 0;
       }
 
       .portal-bullet-list {
         list-style: none;
         display: flex;
         flex-direction: column;
-        gap: clamp(0.55rem, 1vh, 0.85rem);
+        gap: clamp(0.65rem, 1.1vh, 0.9rem);
       }
 
       .portal-bullet-item {
@@ -206,23 +225,12 @@ session_start();
         align-items: flex-start;
         gap: 0.75rem;
         font-size: 0.875rem;
-        line-height: 1.4;
-        color: #ffffff;
-        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+        line-height: 1.45;
+        color: #e5e7eb;
       }
 
       .portal-bullet-icon {
-        flex-shrink: 0;
-        width: 18px;
-        height: 18px;
-        margin-top: 2px;
-        color: #86efac;
-        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
-      }
-
-      .portal-bullet-icon svg {
-        width: 100%;
-        height: 100%;
+        display: none;
       }
 
       /* ── Right Panel (Form) ── */
@@ -258,40 +266,34 @@ session_start();
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius);
-        border: 1px solid var(--color-border);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        border: none;
         background: transparent;
-        color: var(--color-text-body);
+        color: #6b7280;
         text-decoration: none;
-        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        transition: background-color 0.15s ease, color 0.15s ease;
       }
 
       .icon-btn-home:hover {
-        background-color: #f3f4f6;
-        border-color: var(--color-border-hover);
-        color: var(--color-text-strong);
+        background-color: #f9fafb;
+        color: #111827;
       }
 
       .icon-btn-home:focus-visible {
-        outline: 2px solid var(--color-primary);
+        outline: 2px solid #16a34a;
         outline-offset: 2px;
       }
 
       .icon-btn-home svg {
-        width: 17px;
-        height: 17px;
+        width: 18px;
+        height: 18px;
       }
 
       /* Language Toggle */
       .lang-toggle {
         display: inline-flex;
         align-items: center;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius);
-        background: #f9fafb;
-        padding: 2px;
         gap: 2px;
       }
 
@@ -300,22 +302,27 @@ session_start();
         border: none;
         font-family: var(--font-sans);
         font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--color-text-muted);
-        padding: 4px 8px;
-        border-radius: 6px;
+        font-weight: 500;
+        color: #6b7280;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
         cursor: pointer;
-        transition: all 0.15s ease;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+
+      .lang-btn:hover {
+        background-color: #f9fafb;
+        color: #111827;
       }
 
       .lang-btn.active {
-        background: #ffffff;
-        color: var(--color-primary);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        background-color: #f3f4f6;
+        color: #15803d;
+        font-weight: 600;
       }
 
       .lang-btn:focus-visible {
-        outline: 2px solid var(--color-primary);
+        outline: 2px solid #16a34a;
         outline-offset: 1px;
       }
 
@@ -345,13 +352,13 @@ session_start();
       }
 
       .portal-heading {
-        font-family: var(--font-serif);
-        font-size: clamp(1.3rem, 2vh, 1.55rem);
-        font-weight: 700;
-        color: var(--color-text-strong);
-        letter-spacing: -0.01em;
-        line-height: 1.2;
-        margin: 0 0 7px 0;
+        font-family: var(--font-sans);
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #111827;
+        letter-spacing: -0.025em;
+        line-height: 2rem;
+        margin: 0 0 4px 0;
       }
 
       .portal-subheading {
@@ -451,14 +458,15 @@ session_start();
         width: 100%;
         height: var(--control-height);
         padding: 0 40px 0 40px;
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius);
+        border: none;
+        border-radius: 0.5rem;
         background: #ffffff;
+        box-shadow: inset 0 0 0 1px #d1d5db;
         font-family: var(--font-sans);
-        font-size: 0.85rem;
+        font-size: 0.875rem;
         color: var(--color-text-strong);
         outline: none;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        transition: box-shadow 0.15s ease;
       }
 
       .form-input::placeholder {
@@ -467,26 +475,20 @@ session_start();
       }
 
       .form-input:hover {
-        border-color: var(--color-border-hover);
+        box-shadow: inset 0 0 0 1px #9ca3af;
       }
 
       .form-input:focus {
-        border-color: var(--color-border-focus);
-        box-shadow: 0 0 0 3px var(--color-primary-focus);
-      }
-
-      .input-wrapper:focus-within .input-icon-lead {
-        color: var(--color-primary);
+        box-shadow: inset 0 0 0 2px #16a34a;
       }
 
       .form-input.is-invalid {
-        border-color: var(--color-error);
+        box-shadow: inset 0 0 0 1px var(--color-error);
         background-color: #fffbfb;
       }
 
       .form-input.is-invalid:focus {
-        border-color: var(--color-error);
-        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+        box-shadow: inset 0 0 0 2px var(--color-error);
       }
 
       .toggle-pass-btn {
@@ -581,19 +583,21 @@ session_start();
       }
 
       .forgot-link {
-        color: var(--color-primary);
-        font-weight: 600;
+        color: #15803d;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        font-weight: 500;
         text-decoration: none;
-        transition: color 0.15s ease, text-decoration 0.15s ease;
+        transition: color 0.15s ease;
       }
 
       .forgot-link:hover {
-        color: var(--color-primary-hover);
+        color: #166534;
         text-decoration: underline;
       }
 
       .forgot-link:focus-visible {
-        outline: 2px solid var(--color-primary);
+        outline: 2px solid #16a34a;
         outline-offset: 2px;
       }
 
@@ -602,60 +606,62 @@ session_start();
         width: 100%;
         height: var(--control-height);
         border: none;
-        border-radius: var(--radius);
-        background-color: var(--color-primary);
+        border-radius: 0.5rem;
+        background-color: #15803d;
         color: #ffffff;
         font-family: var(--font-sans);
         font-size: 0.875rem;
-        font-weight: 600;
-        letter-spacing: 0.01em;
+        font-weight: 500;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.05s ease;
+        transition: background-color 0.15s ease, opacity 0.15s ease;
         margin-top: 0;
       }
 
       .btn-submit:hover:not(:disabled) {
-        background-color: var(--color-primary-hover);
+        background-color: #166534;
       }
 
       .btn-submit:active:not(:disabled) {
-        background-color: var(--color-primary-active);
-        transform: scale(0.99);
+        background-color: #14532d;
       }
 
       .btn-submit:focus-visible {
-        outline: 2px solid var(--color-primary);
+        outline: 2px solid #16a34a;
         outline-offset: 2px;
       }
 
       .btn-submit:disabled {
-        background-color: #e5e7eb;
-        color: #9ca3af;
+        opacity: 0.65;
         cursor: not-allowed;
       }
 
       /* Secondary Registration Prompt */
       .new-patient-prompt {
         text-align: center;
-        font-size: 0.78rem;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
         color: var(--color-text-muted);
         margin-top: 0;
       }
 
       .create-account-link {
-        color: var(--color-primary);
-        font-weight: 600;
+        color: #15803d;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        font-weight: 500;
         text-decoration: none;
         margin-left: 0.25rem;
+        transition: color 0.15s ease;
       }
 
       .create-account-link:hover {
         text-decoration: underline;
-        color: var(--color-primary-hover);
+        color: #166534;
       }
 
       .create-account-link:focus-visible {
@@ -1038,7 +1044,7 @@ session_start();
       <!-- ── Right Panel (Form) ── -->
       <main class="portal-right" aria-label="Patient Sign In">
         <div class="portal-right-header">
-          <a href="/sdn/index.php" class="icon-btn-home" aria-label="Return to hospital homepage" title="Home">
+          <a href="/sdn/index.php" class="icon-btn-home" aria-label="Return to hospital homepage" title="Home" onclick="try{sessionStorage.setItem('linkod_splash_shown','true')}catch(e){}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               <polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -1084,24 +1090,25 @@ session_start();
 
           <!-- Sign In Form -->
           <form id="patientSignInForm" novalidate onsubmit="handlePatientLogin(event)">
-            <!-- Email Field -->
+            <!-- Username Field -->
             <div class="form-group" id="groupEmail">
-              <label for="patientEmail" class="form-label" id="labelEmail">Email Address</label>
+              <label for="patientEmail" class="form-label" id="labelEmail">Username</label>
               <div class="input-wrapper">
                 <span class="input-icon-lead" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
                   </svg>
                 </span>
                 <input
-                  type="email"
+                  type="text"
                   id="patientEmail"
-                  name="email"
+                  name="username"
                   class="form-input"
-                  placeholder="Enter your email"
-                  autocomplete="email"
-                  inputmode="email"
+                  placeholder="e.g., yourname.lingkod"
+                  value="<?= htmlspecialchars($rememberedEmail) ?>"
+                  autocomplete="username"
+                  inputmode="text"
                   autocapitalize="none"
                   autocorrect="off"
                   spellcheck="false"
@@ -1113,7 +1120,7 @@ session_start();
                 />
               </div>
               <p class="field-error-msg" id="emailError" role="alert" aria-live="polite">
-                Enter a valid email address.
+                Enter your username.
               </p>
             </div>
 
@@ -1176,7 +1183,7 @@ session_start();
             <!-- Options Row (Remember Me & Forgot Password) -->
             <div class="form-options-row">
               <label class="remember-label">
-                <input type="checkbox" id="rememberMe" name="remember" class="remember-checkbox" />
+                <input type="checkbox" id="rememberMe" name="remember" class="remember-checkbox" <?= $rememberedEmail !== '' ? 'checked' : '' ?> />
                 <span id="labelRemember">Remember me</span>
               </label>
 
@@ -1186,7 +1193,7 @@ session_start();
             </div>
 
             <!-- Sign In Button -->
-            <button type="submit" id="btnSubmitLogin" class="btn-submit" disabled>
+            <button type="submit" id="btnSubmitLogin" class="btn-submit">
               <span id="btnSubmitText">Sign In</span>
             </button>
 
@@ -1196,6 +1203,31 @@ session_start();
               <a href="/sdn/pages/register.php" class="create-account-link" id="linkCreateAccount">
                 Create an account
               </a>
+            </div>
+          </form>
+
+          <!-- Email OTP Verification Step (First Sign-In) -->
+          <form id="otpVerifyView" style="display: none;" novalidate onsubmit="handleOtpVerify(event)">
+            <p id="otpNoticeText" style="margin: 0 0 14px; font-size: 0.88rem; color: #374151; line-height: 1.5;"></p>
+            <div class="form-group">
+              <label for="patientOtpInput" class="form-label">6-Digit Verification Code</label>
+              <input
+                type="text"
+                id="patientOtpInput"
+                class="form-input"
+                style="padding-left: 14px; letter-spacing: 0.35em; font-weight: 700; font-size: 1.15rem; text-align: center;"
+                placeholder="000000"
+                maxlength="6"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                required
+              />
+              <p class="field-error-msg" id="otpErrorMsg" role="alert" aria-live="polite"></p>
+            </div>
+            <button type="submit" id="btnVerifyOtp" class="btn-submit" style="margin-bottom: 10px;">Verify &amp; Sign In</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.84rem;">
+              <button type="button" id="btnResendOtp" class="forgot-link" style="background: none; border: 0; padding: 6px 0; cursor: pointer;" onclick="resendPatientOtp()">Resend Code</button>
+              <button type="button" class="forgot-link" style="background: none; border: 0; padding: 6px 0; cursor: pointer; color: #4b5563;" onclick="backToPasswordLogin()">Back to Sign In</button>
             </div>
           </form>
         </div>
@@ -1260,7 +1292,8 @@ session_start();
                   type="email"
                   id="forgotEmailInput"
                   class="form-input"
-                  placeholder="juan.delacruz@gmail.com"
+                  placeholder="Enter your email"
+                  value="<?= htmlspecialchars($rememberedEmail) ?>"
                   autocomplete="email"
                   inputmode="email"
                   autocapitalize="none"
@@ -1313,9 +1346,9 @@ session_start();
           translation: 'Reliable Service',
           portalHeading: 'Patient Portal',
           portalSubheading: 'Sign in to manage your appointments and clinical records.',
-          emailLabel: 'Email Address',
-          emailPlaceholder: 'Enter your email',
-          emailError: 'Enter a valid email address.',
+          emailLabel: 'Username',
+          emailPlaceholder: 'e.g., yourname.lingkod',
+          emailError: 'Enter your username.',
           passLabel: 'Password',
           passPlaceholder: 'Enter your password',
           passError: 'Please enter your password.',
@@ -1326,7 +1359,7 @@ session_start();
           signingIn: 'Signing in…',
           newPatient: 'New patient?',
           createAccount: 'Create an account',
-          incorrectAuth: 'Incorrect email or password.',
+          incorrectAuth: 'Incorrect username or password.',
           serverError: 'Unable to connect to the authentication server. Please try again.',
           unverified: 'Account not yet verified. Please check your email inbox.',
           dpaText: 'Protected under the Data Privacy Act of 2012 (RA 10173)',
@@ -1348,9 +1381,9 @@ session_start();
           translation: 'Serbisyong Maaasahan',
           portalHeading: 'Patient Portal',
           portalSubheading: 'Mag-sign in upang pamahalaan ang iyong appointment at talaan sa ospital.',
-          emailLabel: 'Email Address',
-          emailPlaceholder: 'Ilagay ang iyong email',
-          emailError: 'Maglagay ng wastong email address.',
+          emailLabel: 'Username',
+          emailPlaceholder: 'e.g., yourname.lingkod',
+          emailError: 'Ilagay ang iyong username.',
           passLabel: 'Password',
           passPlaceholder: 'Ilagay ang iyong password',
           passError: 'Pakilagay ang iyong password.',
@@ -1361,7 +1394,7 @@ session_start();
           signingIn: 'Nagla-log in…',
           newPatient: 'Bagong pasyente?',
           createAccount: 'Gumawa ng account',
-          incorrectAuth: 'Maling email o password.',
+          incorrectAuth: 'Maling username o password.',
           serverError: 'Hindi makakonekta sa authentication server. Pakisubukan muli.',
           unverified: 'Hindi pa beripikado ang account. Pakitingnan ang iyong email.',
           dpaText: 'Protektado sa ilalim ng Data Privacy Act ng 2012 (RA 10173)',
@@ -1434,9 +1467,9 @@ session_start();
 
       function validateEmailField(showError) {
         const val = emailInput.value.trim();
-        const valid = isValidEmail(val);
+        const valid = val.length >= 3;
 
-        if (!valid && (showError || val.length > 0)) {
+        if (!valid && showError) {
           emailInput.classList.add('is-invalid');
           emailError.classList.add('visible');
         } else {
@@ -1466,7 +1499,7 @@ session_start();
         if (formError.style.display !== 'none') {
           formError.style.display = 'none';
         }
-        if (emailInput.classList.contains('is-invalid') && isValidEmail(emailInput.value)) {
+        if (emailInput.classList.contains('is-invalid') && emailInput.value.trim().length >= 3) {
           emailInput.classList.remove('is-invalid');
           emailError.classList.remove('visible');
         }
@@ -1474,12 +1507,10 @@ session_start();
           passwordInput.classList.remove('is-invalid');
           passwordError.classList.remove('visible');
         }
-        updateSubmitState();
       }
 
       function updateSubmitState() {
-        const isReady = isValidEmail(emailInput.value) && passwordInput.value.trim().length > 0;
-        submitBtn.disabled = !isReady;
+        submitBtn.disabled = false;
       }
 
       function checkCapsLock(e) {
@@ -1533,12 +1564,22 @@ session_start();
           const res = await fetch('/sdn/api/patient_auth.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, remember })
+            body: JSON.stringify({ username: email, password, remember })
           });
           const data = await res.json();
 
           if (data.success) {
             window.location.href = '/sdn/pages/patient-dashboard.php';
+          } else if (data.otp_required) {
+            formError.style.display = 'none';
+            document.getElementById('patientSignInForm').style.display = 'none';
+            document.getElementById('otpVerifyView').style.display = 'block';
+            document.getElementById('otpNoticeText').textContent = data.message || 'Enter the 6-digit verification code sent to your email.';
+            const otpErr = document.getElementById('otpErrorMsg');
+            otpErr.style.display = 'none';
+            const otpInp = document.getElementById('patientOtpInput');
+            otpInp.value = '';
+            otpInp.focus();
           } else {
             // Trigger failure shake & inline feedback
             triggerLoginError(data.message || (data.unverified ? i18n[currentLang].unverified : i18n[currentLang].incorrectAuth));
@@ -1548,6 +1589,77 @@ session_start();
         } finally {
           submitBtn.innerHTML = `<span id="btnSubmitText">${originalText}</span>`;
           updateSubmitState();
+        }
+      }
+
+      function backToPasswordLogin() {
+        document.getElementById('otpVerifyView').style.display = 'none';
+        document.getElementById('patientSignInForm').style.display = 'block';
+        passwordInput.focus();
+      }
+
+      async function handleOtpVerify(e) {
+        e.preventDefault();
+        const otpInp = document.getElementById('patientOtpInput');
+        const otpErr = document.getElementById('otpErrorMsg');
+        const btn = document.getElementById('btnVerifyOtp');
+        const otp = otpInp.value.replace(/\D/g, '');
+        if (otp.length !== 6) {
+          otpErr.textContent = 'Enter the 6-digit verification code.';
+          otpErr.style.display = 'block';
+          otpInp.focus();
+          return;
+        }
+        otpErr.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+        try {
+          const res = await fetch('/sdn/api/patient_verify_otp.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify', otp })
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.location.href = data.redirect || '/sdn/pages/patient-dashboard.php';
+          } else {
+            otpErr.textContent = data.message || 'Invalid verification code.';
+            otpErr.style.display = 'block';
+            otpInp.focus();
+          }
+        } catch (err) {
+          otpErr.textContent = 'Unable to verify code. Please try again.';
+          otpErr.style.display = 'block';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Verify & Sign In';
+        }
+      }
+
+      async function resendPatientOtp() {
+        const otpErr = document.getElementById('otpErrorMsg');
+        const notice = document.getElementById('otpNoticeText');
+        const btn = document.getElementById('btnResendOtp');
+        btn.disabled = true;
+        try {
+          const res = await fetch('/sdn/api/patient_verify_otp.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'resend' })
+          });
+          const data = await res.json();
+          if (data.success) {
+            otpErr.style.display = 'none';
+            notice.textContent = data.message;
+          } else {
+            otpErr.textContent = data.message || 'Could not resend code.';
+            otpErr.style.display = 'block';
+          }
+        } catch (err) {
+          otpErr.textContent = 'Network error while resending code.';
+          otpErr.style.display = 'block';
+        } finally {
+          setTimeout(() => { btn.disabled = false; }, 3000);
         }
       }
 
@@ -1707,7 +1819,7 @@ session_start();
 
         if (!isValidEmail(val)) {
           input.classList.add('is-invalid');
-          err.textContent = i18n[currentLang].emailError;
+          err.textContent = i18n[currentLang].modalEmailError;
           err.classList.add('visible');
           input.focus();
           return;

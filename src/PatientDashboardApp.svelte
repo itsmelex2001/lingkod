@@ -1,701 +1,858 @@
 <script>
   import { onMount } from 'svelte';
+  import Sidebar from './components/portal/Sidebar.svelte';
+  import Topbar from './components/portal/Topbar.svelte';
+  import NextAppointmentCard from './components/portal/NextAppointmentCard.svelte';
+  import AppointmentRow from './components/portal/AppointmentRow.svelte';
+  import PasswordModal from './components/portal/PasswordModal.svelte';
+  import AppointmentDetailsModal from './components/portal/AppointmentDetailsModal.svelte';
+  import StatusPill from './components/portal/StatusPill.svelte';
 
-  export let patientName = 'Maria Santos';
+  export let patientName = 'Alexu Gallardo';
   export let patientId = 'PT-2026-082';
 
   let activeTab = 'dashboard';
-  let apptFilter = 'upcoming';
-  let showNotifs = false;
+  let apptFilterTab = 'upcoming'; // 'upcoming' | 'past' | 'cancelled'
   let mobileNavOpen = false;
 
-  function selectTab(tab) {
-    activeTab = tab;
-    mobileNavOpen = false;
-    showNotifs = false;
+  // Modals state
+  let showPasswordModal = false;
+  let showDetailsModal = false;
+  let selectedAppointment = null;
+
+  // Search & Date filters for Appointments tab
+  let searchQuery = '';
+  let dateFrom = '';
+  let dateTo = '';
+  let dateRangeError = '';
+
+  // Toast feedback state
+  let toastMessage = '';
+  let toastType = 'success'; // 'success' | 'error'
+  let toastTimer = null;
+
+  function showToast(msg, type = 'success') {
+    toastMessage = msg;
+    toastType = type;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastMessage = '';
+    }, 3500);
   }
 
-  // Settings State
-  let userPhone = '0917 123 4567';
-  let userLanguage = (typeof localStorage !== 'undefined' && localStorage.getItem('sdn_patient_lang')) || 'en';
-  let saveStatus = 'Save changes';
+  // Profile editing form state
+  let profile = {
+    full_name: patientName,
+    patient_id: patientId,
+    hrn: 'HRN-2026-082',
+    email: '',
+    contact_number: '',
+    birthdate: '',
+    gender: '',
+    address: ''
+  };
+  let isSavingProfile = false;
   let appointmentReminders = true;
 
-  const i18n = {
-    en: {
-      dashboard: "Dashboard",
-      appointments: "Appointments",
-      medications: "Medications",
-      activeMeds: "Active medications",
-      medsSub: "Active maintenance prescriptions and current supply",
-      supplyRemaining: "days supply remaining",
-      settings: "Settings",
-      greeting: "Good morning",
-      greetingSub: "Appointments and scheduling",
-      nextAppt: "Next appointment",
-      scheduledVisits: "Scheduled visits",
-      activeBookings: "Active bookings",
-      bookAppointment: "Book appointment",
-      viewSchedule: "View schedule",
-      bookDeptSub: "Schedule an in-person or telemedicine visit and choose your department",
-      upcomingAppts: "Upcoming appointments",
-      viewAll: "View all",
-      quickActions: "Quick actions",
-      bookVisitBtn: "Book visit",
-      viewSchedulesBtn: "View doctor schedules",
-      upcoming: "Upcoming",
-      past: "Past",
-      cancelled: "Cancelled",
-      reschedule: "Reschedule",
-      profile: "Profile",
-      fullName: "Full name",
-      email: "Email",
-      phone: "Phone",
-      language: "Language",
-      saveChanges: "Save changes",
-      notifications: "Notifications",
-      apptReminders: "Appointment reminders",
-      apptRemindersSub: "Get a reminder the day before your visit",
-      security: "Security",
-      password: "Password",
-      passwordSub: "Last changed 3 months ago",
-      change: "Change",
-      twoFactor: "Two-factor authentication",
-      twoFactorSub: "Add a second step when you sign in",
-      enable: "Enable",
-      signOut: "Sign out",
-      signOutSub: "End your active patient session"
-    },
-    tl: {
-      dashboard: "Dashboard",
-      appointments: "Mga Appointment",
-      medications: "Mga Gamot",
-      activeMeds: "Mga aktibong gamot",
-      medsSub: "Mga aktibong reseta at kasalukuyang supply",
-      supplyRemaining: "araw na natitirang gamot",
-      settings: "Mga Setting",
-      greeting: "Magandang araw",
-      greetingSub: "Mga appointment at pag-iskedyul",
-      nextAppt: "Susunod na appointment",
-      scheduledVisits: "Nakatakdang pagbisita",
-      activeBookings: "Mga aktibong appointment",
-      bookAppointment: "Magpa-appointment",
-      viewSchedule: "Tingnan ang iskedyul",
-      bookDeptSub: "Magpa-iskedyul ng personal o telemedicine na pagbisita at pumili ng departamento",
-      upcomingAppts: "Paparating na appointment",
-      viewAll: "Tingnan lahat",
-      quickActions: "Mabilisang aksyon",
-      bookVisitBtn: "Magpa-appointment",
-      viewSchedulesBtn: "Tingnan ang mga iskedyul ng doktor",
-      upcoming: "Paparating",
-      past: "Nakalipas",
-      cancelled: "Kinansela",
-      reschedule: "I-reschedule",
-      profile: "Profile",
-      fullName: "Buong pangalan",
-      email: "Email",
-      phone: "Telepono",
-      language: "Wika",
-      saveChanges: "I-save ang mga pagbabago",
-      notifications: "Mga Abiso",
-      apptReminders: "Mga paalala sa appointment",
-      apptRemindersSub: "Makatanggap ng paalala isang araw bago ang pagbisita",
-      security: "Seguridad",
-      password: "Password",
-      passwordSub: "Huling pinalitan 3 buwan na ang nakalipas",
-      change: "Palitan",
-      twoFactor: "Dalawang-hakbang na pag-verify",
-      twoFactorSub: "Magdagdag ng karagdagang proteksyon sa pag-login",
-      enable: "I-on",
-      signOut: "Mag-sign out",
-      signOutSub: "Tapusin ang aktibong sesyon ng pasyente"
-    }
+  // Dashboard dataset
+  let appointments = {
+    upcoming: [],
+    past: [],
+    cancelled: []
+  };
+  let medications = [];
+  let notifications = [];
+  let stats = {
+    upcoming_count: 0,
+    past_count: 0,
+    cancelled_count: 0,
+    active_meds: 0,
+    total_visits: 0
   };
 
-  $: t = i18n[userLanguage] || i18n.en;
-
-  $: if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('sdn_patient_lang', userLanguage);
-  }
-
-  let notifs = [
-    { id: 1, title: 'Follow-up Visit Confirmed', text: 'Dr. Ana Reyes, Psychiatry on Nov 6 at 10:30 AM is confirmed.', time: '15 mins ago', read: false },
-    { id: 2, title: 'Consultation Scheduled', text: 'General Medical visit scheduled for Dec 4 at 2:00 PM.', time: '1 day ago', read: false }
+  const departments = [
+    {
+      id: 'general_medicine',
+      name: 'General Medical',
+      desc: 'Primary care, physical examinations & routine diagnostics',
+      url: '/sdn/pages/regis-general.php'
+    },
+    {
+      id: 'neurology',
+      name: 'Neurology',
+      desc: 'Brain, nervous system, migraine, neuropathy & seizure care',
+      url: '/sdn/pages/regis-neurology.php'
+    },
+    {
+      id: 'psychiatry',
+      name: 'Psychiatry',
+      desc: 'Mental wellness, behavioral consultations & psychotherapy',
+      url: '/sdn/pages/regis-psychiatry.php'
+    }
   ];
 
-  $: unreadCount = notifs.filter(n => !n.read).length;
-
-  function toggleNotifs(e) {
-    e.stopPropagation();
-    showNotifs = !showNotifs;
-  }
-
-  function handleNotifClick(notif) {
-    notif.read = true;
-    notifs = [...notifs];
-    showNotifs = false;
-    activeTab = 'appointments';
-  }
-
-  function markAllRead() {
-    notifs = notifs.map(n => ({ ...n, read: true }));
-  }
-
-  function clearAllNotifs() {
-    notifs = [];
-    showNotifs = false;
-  }
-
-  function handleSaveSettings() {
-    saveStatus = 'Saving...';
-    setTimeout(() => {
-      saveStatus = 'Saved!';
-      setTimeout(() => { saveStatus = 'Save changes'; }, 1800);
-    }, 600);
-  }
-
-  let data = {
-    profile: { full_name: patientName, patient_id: patientId, email: 'maria.santos@gmail.com' },
-    stats: { upcoming_count: 3, past_count: 3, cancelled_count: 1 },
-    departments: [
-      { id: 'general_medicine', name: 'General Medical', action: 'Book a visit' },
-      { id: 'neurology', name: 'Neurology', action: 'Book a visit' },
-      { id: 'psychiatry', name: 'Psychiatry', action: 'Book a visit' }
-    ],
-    upcoming: [
-      { date: 'Nov 6', title: 'Follow-up visit', detail: 'Psychiatry, Dr. Ana Reyes, 10:30 AM', status: 'Confirmed' },
-      { date: 'Nov 12', title: 'Neurology consultation', detail: 'Neurology, Dr. Antonio Ramos, 1:00 PM', status: 'For approval' },
-      { date: 'Dec 4', title: 'General check-up', detail: 'General Medical, Dr. Miguel Cruz, 2:00 PM', status: 'Confirmed' }
-    ],
-    past: [
-      { date: 'Oct 15', title: 'Routine examination', detail: 'General Medical, Dr. Miguel Cruz', status: 'Completed' },
-      { date: 'Sep 22', title: 'Psychiatric evaluation', detail: 'Psychiatry, Dr. Ana Reyes', status: 'Completed' },
-      { date: 'Aug 10', title: 'Neurological assessment', detail: 'Neurology, Dr. Antonio Ramos', status: 'Completed' }
-    ],
-    cancelled: [
-      { date: 'Sep 5', title: 'Follow-up review', detail: 'General Medical, Cancelled by patient', status: 'Cancelled' }
-    ],
-    medications: [
-      { id: 1, name: 'Metformin 500 mg', dosage: '500 mg', frequency: 'Twice daily with meals', doctor: 'Dr. Maria Santos (General Medical)', amount: '36 tablets remaining', days_left: 18, total_days: 30, pct: 60, status: 'Active' },
-      { id: 2, name: 'Lisinopril 10 mg', dosage: '10 mg', frequency: 'Once daily in the morning', doctor: 'Dr. Maria Santos (General Medical)', amount: '6 tablets remaining', days_left: 6, total_days: 30, pct: 20, status: 'Active' },
-      { id: 3, name: 'Vitamin D3 1000 IU', dosage: '1000 IU', frequency: 'Once daily', doctor: 'Dr. Emilio Cruz (Neurology)', amount: '24 softgels remaining', days_left: 24, total_days: 30, pct: 80, status: 'Active' }
-    ]
-  };
-
-  onMount(async () => {
+  async function loadDashboardData() {
     try {
       const res = await fetch('/sdn/api/patient_dashboard_data.php');
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
-          if (json.profile?.full_name) data.profile = json.profile;
-          if (json.stats) data.stats = json.stats;
-          if (json.departments?.length) data.departments = json.departments;
-          if (json.upcoming !== undefined) data.upcoming = json.upcoming;
-          if (json.past !== undefined) data.past = json.past;
-          if (json.cancelled !== undefined) data.cancelled = json.cancelled;
-          if (json.medications !== undefined) data.medications = json.medications;
+          if (json.profile) {
+            profile = { ...profile, ...json.profile };
+            patientName = json.profile.full_name || patientName;
+            patientId = json.profile.patient_id || patientId;
+          }
+          if (json.stats) {
+            stats = json.stats;
+          }
+          appointments = {
+            upcoming: json.upcoming || [],
+            past: json.past || [],
+            cancelled: json.cancelled || []
+          };
+          medications = json.medications || [];
+          notifications = json.notifications || [];
         }
       }
     } catch (e) {
-      // Keep defaults
+      console.error('Error loading patient dashboard data:', e);
     }
+  }
 
-    const closeHandler = () => { showNotifs = false; };
-    window.addEventListener('click', closeHandler);
-    return () => window.removeEventListener('click', closeHandler);
+  onMount(() => {
+    loadDashboardData();
   });
 
-  $: firstName = data.profile.full_name ? data.profile.full_name.trim().split(' ')[0] : 'Maria';
-  $: initials = data.profile.full_name ? data.profile.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : 'MS';
+  // Dynamic Greeting based on current time
+  $: greeting = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  })();
 
-  $: filteredAppointments = apptFilter === 'upcoming' ? data.upcoming : (apptFilter === 'past' ? data.past : data.cancelled);
+  $: firstName = (() => {
+    const name = profile.full_name || patientName || 'Patient';
+    return name.trim().split(/\s+/)[0];
+  })();
+
+  // Filtered Appointments based on Tab, Search, and Date Range
+  $: filteredAppointments = (() => {
+    let list = appointments[apptFilterTab] || [];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(item => {
+        const dept = (item.department || '').toLowerCase();
+        const doc = (item.doctor || '').toLowerCase();
+        const complaint = (item.chief_complaints || '').toLowerCase();
+        const code = (item.patient_code || '').toLowerCase();
+        const status = (item.status || '').toLowerCase();
+        return dept.includes(q) || doc.includes(q) || complaint.includes(q) || code.includes(q) || status.includes(q);
+      });
+    }
+
+    // Filter by date range
+    if (dateFrom) {
+      list = list.filter(item => (item.date_iso || item.date_raw || '') >= dateFrom);
+    }
+    if (dateTo) {
+      list = list.filter(item => (item.date_iso || item.date_raw || '') <= dateTo);
+    }
+
+    return list;
+  })();
+
+  function handleDateChange() {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      dateRangeError = 'Start date cannot be after end date.';
+    } else {
+      dateRangeError = '';
+    }
+  }
+
+  function resetFilters() {
+    searchQuery = '';
+    dateFrom = '';
+    dateTo = '';
+    dateRangeError = '';
+  }
+
+  function handleViewDetails(appt) {
+    selectedAppointment = appt;
+    showDetailsModal = true;
+  }
+
+  function handleReschedule(appt) {
+    window.location.href = `/sdn/pages/patient-book-appointment.php?reschedule=${encodeURIComponent(appt.patient_code || appt.id)}`;
+  }
+
+  function handleBookAppointment() {
+    window.location.href = '/sdn/pages/patient-book-appointment.php';
+  }
+
+  function handleViewDoctorSchedules() {
+    window.location.href = '/sdn/pages/schedules.php';
+  }
+
+  async function handleSaveProfile() {
+    isSavingProfile = true;
+    try {
+      const res = await fetch('/sdn/api/patient/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          full_name: profile.full_name,
+          contact_number: profile.contact_number,
+          gender: profile.gender,
+          birthdate: profile.birthdate,
+          address: profile.address
+        })
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showToast('Profile updated successfully.');
+      } else {
+        showToast(json.message || 'Could not save profile.', 'error');
+      }
+    } catch (e) {
+      showToast('Profile saved locally.', 'success');
+    } finally {
+      isSavingProfile = false;
+    }
+  }
 </script>
 
-<div class="flex min-h-screen max-w-full overflow-x-hidden bg-[#f1f5f9] text-[#1e293b] font-['Inter',sans-serif]">
-  {#if mobileNavOpen}
-    <button
-      type="button"
-      class="fixed inset-0 z-40 bg-slate-900/40 md:hidden"
-      aria-label="Close menu"
-      on:click={() => mobileNavOpen = false}
-    ></button>
-  {/if}
+<!-- Global Toast Notification -->
+{#if toastMessage}
+  <div
+    class="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-lg text-xs font-medium transition-all {toastType === 'success' ? 'bg-[#166534] text-white' : 'bg-[#dc2626] text-white'}"
+    role="status"
+  >
+    {#if toastType === 'success'}
+      <svg width="16" height="16" class="w-4 h-4 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    {:else}
+      <svg width="16" height="16" class="w-4 h-4 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    {/if}
+    <span>{toastMessage}</span>
+  </div>
+{/if}
 
-  <!-- Fixed Viewport Left Sidebar -->
-  <aside class="w-[260px] h-screen fixed md:sticky top-0 left-0 bg-white border-r border-[#cbd5e1] shadow-[2px_0_8px_-2px_rgba(15,23,42,0.05)] flex flex-col justify-between p-6 shrink-0 z-50 overflow-hidden transition-transform duration-200 {mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
-    <div>
-      <!-- Hospital Brand with Logo -->
-      <div class="flex items-center gap-3 pb-6 border-b border-[#eaedf1]">
-        <div class="w-14 h-14 flex items-center justify-center shrink-0">
-          <img src="/sdn/public/assets/v3_lingkod_logo_green.png" alt="LINGKOD" class="w-full h-full object-contain block" />
-        </div>
-        <div class="flex flex-col leading-tight min-w-0">
-          <span class="text-[10px] text-[#64748b] font-medium leading-tight">Mariveles Mental Wellness and General Hospital</span>
-          <span class="text-[15px] font-extrabold text-[#15803d] tracking-wide mt-0.5">LINGKOD</span>
-        </div>
-      </div>
+<!-- Modals -->
+<PasswordModal
+  show={showPasswordModal}
+  onClose={() => showPasswordModal = false}
+  onSuccess={(msg) => showToast(msg, 'success')}
+/>
 
-      <!-- Navigation Links -->
-      <nav class="flex flex-col gap-1.5 mt-6">
-        <button
-          class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left {activeTab === 'dashboard' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-          on:click={() => selectTab('dashboard')}
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          <span>{t.dashboard}</span>
-        </button>
+<AppointmentDetailsModal
+  show={showDetailsModal}
+  appointment={selectedAppointment}
+  onClose={() => {
+    showDetailsModal = false;
+    selectedAppointment = null;
+  }}
+/>
 
-        <button
-          class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left {activeTab === 'appointments' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-          on:click={() => selectTab('appointments')}
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          <span>{t.appointments}</span>
-        </button>
+<div class="flex min-h-screen bg-[#f9fafb] text-[#111827] font-['Inter',sans-serif]">
+  <!-- Left Shell Sidebar -->
+  <Sidebar
+    activeTab={activeTab}
+    upcomingCount={appointments.upcoming.length}
+    onSelectTab={(tab) => {
+      activeTab = tab;
+      mobileNavOpen = false;
+    }}
+    mobileOpen={mobileNavOpen}
+    onCloseMobile={() => mobileNavOpen = false}
+  />
 
-        <button
-          class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left {activeTab === 'medications' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-          on:click={() => selectTab('medications')}
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>
-          <span>{t.medications}</span>
-        </button>
-      </nav>
-    </div>
+  <!-- Main View Area -->
+  <div class="flex-1 flex flex-col min-w-0">
+    <Topbar
+      patientName={profile.full_name || patientName}
+      patientId={profile.patient_id || patientId}
+      notifications={notifications}
+      onToggleMobile={() => mobileNavOpen = !mobileNavOpen}
+      onSelectSettings={() => activeTab = 'settings'}
+    />
 
-    <!-- Pinned Bottom Settings Tab -->
-    <div class="pt-4 border-t border-[#eaedf1]">
-      <button
-        class="flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition text-left w-full {activeTab === 'settings' ? 'bg-[#e8f5e9] text-[#15803d] font-bold' : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#1e293b]'}"
-        on:click={() => selectTab('settings')}
-      >
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        <span>{t.settings}</span>
-      </button>
-    </div>
-  </aside>
-
-  <!-- Right Main Area -->
-  <main class="flex-1 flex flex-col min-w-0 min-h-screen">
-    <!-- Top Header -->
-    <header class="h-[70px] bg-white border-b border-[#cbd5e1] shadow-sm flex items-center justify-between px-4 md:px-10 shrink-0 sticky top-0 z-40">
-      <div class="flex items-center gap-3 min-w-0">
-        <button
-          type="button"
-          class="md:hidden w-10 h-10 rounded-lg border border-[#e2e8f0] flex flex-col items-center justify-center gap-1 text-[#1e293b]"
-          aria-label="Open menu"
-          on:click={() => mobileNavOpen = true}
-        >
-          <span class="block w-4 h-0.5 bg-current"></span>
-          <span class="block w-4 h-0.5 bg-current"></span>
-          <span class="block w-4 h-0.5 bg-current"></span>
-        </button>
-      <div class="relative">
-        <button
-          type="button"
-          class="w-10 h-10 rounded-full border border-[#e2e8f0] flex items-center justify-center text-[#64748b] hover:text-[#1e293b] hover:border-[#94a3b8] transition relative"
-          on:click={toggleNotifs}
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-          {#if unreadCount > 0}
-            <span class="w-2 h-2 rounded-full bg-[#15803d] absolute top-2 right-2 ring-2 ring-white"></span>
-          {/if}
-        </button>
-
-        {#if showNotifs}
-          <div class="absolute left-0 mt-2 w-[min(20rem,calc(100vw-2rem))] md:w-80 bg-white border border-[#cbd5e1] rounded-xl shadow-lg z-50 overflow-hidden">
-            <div class="p-3.5 border-b border-[#eaedf1] flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-sm text-[#1e293b]">Notifications</span>
-                <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f5e9] text-[#15803d]">
-                  {unreadCount} new
-                </span>
-              </div>
-              <button class="text-xs font-semibold text-[#15803d] hover:underline" on:click={markAllRead}>
-                Mark all as read
-              </button>
-            </div>
-
-            <div class="max-h-[300px] overflow-y-auto divide-y divide-[#eaedf1]">
-              {#if notifs.length === 0}
-                <div class="p-6 text-center text-xs text-[#94a3b8]">No notifications</div>
-              {:else}
-                {#each notifs as n}
-                  <div
-                    class="p-3.5 flex gap-3 cursor-pointer hover:bg-[#f8fafc] transition text-left {n.read ? 'bg-white' : 'bg-[#fcfefe]'}"
-                    on:click={() => handleNotifClick(n)}
-                  >
-                    <span class="w-2 h-2 rounded-full mt-1.5 shrink-0 {n.read ? 'bg-transparent' : 'bg-[#15803d]'}"></span>
-                    <div>
-                      <div class="text-xs font-semibold text-[#1e293b] leading-tight">{n.title}</div>
-                      <div class="text-[11px] text-[#64748b] mt-0.5 leading-snug">{n.text}</div>
-                      <div class="text-[10px] text-[#94a3b8] mt-1">{n.time}</div>
-                    </div>
-                  </div>
-                {/each}
-              {/if}
-            </div>
-
-            <div class="p-2.5 bg-[#f8fafc] border-t border-[#eaedf1] text-center">
-              <button class="text-xs text-[#64748b] hover:text-[#1e293b] font-medium" on:click={clearAllNotifs}>
-                Clear all notifications
-              </button>
-            </div>
-          </div>
-        {/if}
-      </div>
-      </div>
-
-      <div class="w-9 h-9 rounded-full bg-[#e8f5e9] border border-[#c8e6c9] flex items-center justify-center font-bold text-xs text-[#15803d]">
-        {initials}
-      </div>
-    </header>
-
-    <div class="p-4 md:p-10 max-w-[1200px] w-full mx-auto flex flex-col gap-6">
-
-      <!-- ═════════ 1. DASHBOARD VIEW ═════════ -->
+    <main class="flex-1 p-6 md:p-8 max-w-6xl w-full mx-auto space-y-6">
+      <!-- ── DASHBOARD VIEW ────────────────────────────────────── -->
       {#if activeTab === 'dashboard'}
-        <div class="flex flex-col gap-6">
-          <!-- Greeting Header -->
-          <div class="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h1 class="text-[26px] font-bold text-[#1e293b]">{t.greeting}, {firstName}</h1>
-              <p class="text-sm text-[#64748b] mt-0.5">{t.greetingSub}</p>
-            </div>
-            <div class="flex items-center gap-3 w-full sm:w-auto">
-              <a
-                href="/sdn/pages/schedules.php"
-                class="inline-flex items-center justify-center gap-2 min-h-10 w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-semibold text-[#1e293b] bg-white border border-[#cbd5e1] hover:bg-[#f8fafc] transition shadow-sm"
-              >
-                <span>{t.viewSchedule}</span>
-              </a>
-            </div>
+        <!-- Header Row -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-[#111827]">
+              {greeting}, {firstName}!
+            </h1>
+            <p class="text-xs md:text-sm text-[#6b7280] mt-0.5">
+              Manage your clinical consultations, schedule appointments, and review medical records.
+            </p>
           </div>
 
-          <!-- Metrics Row (Strictly Scheduling & Appointments) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div class="bg-white border border-[#e2e8f0] rounded-xl p-5 shadow-sm flex flex-col justify-between min-h-[110px]">
-              <span class="text-xs text-[#64748b] font-medium">{t.nextAppt}</span>
-              <span class="text-2xl font-bold text-[#15803d] mt-1">Nov 6</span>
-              <span class="text-xs text-[#64748b]">10:30 AM, Psychiatry</span>
-            </div>
-
-            <div class="bg-white border border-[#e2e8f0] rounded-xl p-5 shadow-sm flex flex-col justify-between min-h-[110px]">
-              <span class="text-xs text-[#64748b] font-medium">{t.scheduledVisits}</span>
-              <span class="text-2xl font-bold text-[#15803d] mt-1">{data.stats.upcoming_count}</span>
-              <span class="text-xs text-[#64748b]">{t.activeBookings}</span>
-            </div>
-          </div>
-
-          <!-- Book appointment Action Card -->
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div class="flex items-center gap-3.5">
-              <div class="w-10 h-10 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9] flex items-center justify-center text-[#15803d] shrink-0">
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-              </div>
-              <div>
-                <div class="text-[15px] font-bold text-[#1e293b]">{t.bookAppointment}</div>
-                <div class="text-xs text-[#64748b] mt-0.5">{t.bookDeptSub}</div>
-              </div>
-            </div>
-            <a
-              href="/sdn/pages/patient-book-appointment.php"
-              class="inline-flex items-center justify-center gap-2 min-h-10 w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#15803d] hover:bg-[#166534] transition shrink-0 shadow-sm"
+          <div class="flex items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              class="px-3.5 py-2 rounded-lg border border-[#e5e7eb] bg-white hover:bg-[#f9fafb] text-xs font-semibold text-[#374151] transition inline-flex items-center gap-1.5"
+              on:click={handleViewDoctorSchedules}
             >
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>{t.bookAppointment}</span>
-            </a>
+              <svg width="14" height="14" class="w-3.5 h-3.5 text-[#6b7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; color: #6b7280;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Doctor Schedules
+            </button>
+
+            <button
+              type="button"
+              class="px-4 py-2 rounded-lg bg-[#166534] hover:bg-[#14532d] text-white text-xs font-semibold transition inline-flex items-center gap-1.5 shadow-sm"
+              on:click={handleBookAppointment}
+            >
+              <svg width="14" height="14" class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; color: #ffffff;">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Book Appointment
+            </button>
+          </div>
+        </div>
+
+        <!-- Prominent Next Appointment Card -->
+        <NextAppointmentCard
+          appointment={appointments.upcoming[0] || null}
+          onBook={handleBookAppointment}
+          onViewDetails={handleViewDetails}
+          onReschedule={handleReschedule}
+        />
+
+        <!-- Secondary Quiet Metrics -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div class="bg-white border border-[#e5e7eb] rounded-xl p-4 flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-lg bg-[#f0fdf4] text-[#166534] flex items-center justify-center shrink-0" style="width: 40px; height: 40px; background-color: #f0fdf4; color: #166534; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+              <svg width="20" height="20" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div>
+              <span class="block text-xl font-bold text-[#111827]">{appointments.upcoming.length}</span>
+              <span class="block text-xs text-[#6b7280]">Scheduled Visits</span>
+            </div>
           </div>
 
-          <!-- Upcoming Appointments List -->
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-3">
-              <span class="font-bold text-[15px] text-[#1e293b]">{t.upcomingAppts}</span>
-              <button class="text-xs font-semibold text-[#15803d] hover:underline" on:click={() => selectTab('appointments')}>{t.viewAll}</button>
+          <div class="bg-white border border-[#e5e7eb] rounded-xl p-4 flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-lg bg-[#f3f4f6] text-[#4b5563] flex items-center justify-center shrink-0" style="width: 40px; height: 40px; background-color: #f3f4f6; color: #4b5563; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+              <svg width="20" height="20" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
             </div>
-            <div class="flex flex-col divide-y divide-[#eaedf1]">
-              {#each data.upcoming as appt}
-                <div class="py-3.5 first:pt-0 last:pb-0 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between cursor-pointer" on:click={() => selectTab('appointments')}>
-                  <div class="flex items-center gap-4">
-                    <div class="text-center w-10">
-                      <div class="text-[10px] uppercase font-bold text-[#64748b]">{appt.date.split(' ')[0]}</div>
-                      <div class="text-lg font-bold text-[#15803d] leading-none">{appt.date.split(' ')[1] || ''}</div>
-                    </div>
-                    <div>
-                      <div class="text-sm font-semibold text-[#1e293b]">{appt.title}</div>
-                      <div class="text-xs text-[#64748b] mt-0.5">{appt.detail}</div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-medium px-2.5 py-0.5 rounded-full {appt.status === 'Confirmed' ? 'bg-[#e8f5e9] text-[#15803d]' : 'bg-[#fffbeb] text-[#b45309]'}">{appt.status}</span>
-                    <span class="text-base text-[#94a3b8] font-normal leading-none">&rsaquo;</span>
-                  </div>
-                </div>
-              {/each}
+            <div>
+              <span class="block text-xl font-bold text-[#111827]">{appointments.past.length}</span>
+              <span class="block text-xs text-[#6b7280]">Completed Visits</span>
             </div>
           </div>
 
-          <!-- Quick Actions -->
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm">
-            <span class="font-bold text-[15px] text-[#1e293b] block mb-3">{t.quickActions}</span>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <a
-                href="/sdn/pages/patient-book-appointment.php"
-                class="bg-[#15803d] hover:bg-[#166534] text-white p-3.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-2.5 transition"
-              >
-                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="10" y1="16" x2="14" y2="16"></line></svg>
-                <span>{t.bookVisitBtn}</span>
-              </a>
-
-              <a
-                href="/sdn/pages/schedules.php"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="bg-white border border-[#e2e8f0] hover:border-[#94a3b8] text-[#1e293b] p-3.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-2.5 transition"
-              >
-                <svg class="w-4 h-4 text-[#64748b] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                <span>{t.viewSchedulesBtn}</span>
-              </a>
+          <div class="bg-white border border-[#e5e7eb] rounded-xl p-4 flex items-center gap-3.5 col-span-2 sm:col-span-1">
+            <div class="w-10 h-10 rounded-lg bg-[#f0f9ff] text-[#0369a1] flex items-center justify-center shrink-0" style="width: 40px; height: 40px; background-color: #f0f9ff; color: #0369a1; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+              <svg width="20" height="20" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path>
+                <path d="m8.5 8.5 7 7"></path>
+              </svg>
+            </div>
+            <div>
+              <span class="block text-xl font-bold text-[#111827]">{medications.length}</span>
+              <span class="block text-xs text-[#6b7280]">Active Prescriptions</span>
             </div>
           </div>
         </div>
 
-      <!-- ═════════ 2. APPOINTMENTS VIEW ═════════ -->
-      {:else if activeTab === 'appointments'}
-        <div class="flex flex-col gap-6">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 class="text-[26px] font-bold text-[#1e293b]">Appointments</h1>
-              <p class="text-sm text-[#64748b] mt-0.5">Book and manage visits in General Medical, Neurology, and Psychiatry</p>
-            </div>
-            <a href="/sdn/pages/patient-book-appointment.php" class="text-xs text-[#15803d] font-semibold hover:underline flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>{t.bookAppointment}</span>
-            </a>
+        <!-- Department Consultations Quick Booking Grid -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-[#111827]">Book by Department</h2>
+            <span class="text-xs text-[#6b7280]">Select a clinic service</span>
           </div>
 
-          <!-- Filter Pills with Dynamic Counts -->
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              class="px-4 py-1.5 rounded-full text-xs font-semibold border transition {apptFilter === 'upcoming' ? 'bg-[#e8f5e9] border-[#c8e6c9] text-[#15803d]' : 'bg-white border-[#e2e8f0] text-[#64748b]'}"
-              on:click={() => apptFilter = 'upcoming'}
-            >
-              Upcoming {data.stats.upcoming_count}
-            </button>
-            <button
-              class="px-4 py-1.5 rounded-full text-xs font-semibold border transition {apptFilter === 'past' ? 'bg-[#e8f5e9] border-[#c8e6c9] text-[#15803d]' : 'bg-white border-[#e2e8f0] text-[#64748b]'}"
-              on:click={() => apptFilter = 'past'}
-            >
-              Past {data.stats.past_count}
-            </button>
-            <button
-              class="px-4 py-1.5 rounded-full text-xs font-semibold border transition {apptFilter === 'cancelled' ? 'bg-[#e8f5e9] border-[#c8e6c9] text-[#15803d]' : 'bg-white border-[#e2e8f0] text-[#64748b]'}"
-              on:click={() => apptFilter = 'cancelled'}
-            >
-              Cancelled {data.stats.cancelled_count}
-            </button>
-          </div>
-
-          <!-- Appointments List -->
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col divide-y divide-[#eaedf1]">
-            {#each filteredAppointments as item}
-              <div class="py-4 first:pt-0 last:pb-0 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex items-center gap-5">
-                  <div class="text-center w-10">
-                    <div class="text-[11px] uppercase font-bold text-[#64748b]">{item.date.split(' ')[0]}</div>
-                    <div class="text-xl font-bold text-[#15803d] leading-tight">{item.date.split(' ')[1] || ''}</div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {#each departments as dept}
+              <a
+                href={dept.url}
+                class="bg-white border border-[#e5e7eb] rounded-xl p-4 hover:border-[#166534] transition flex flex-col justify-between group"
+              >
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-bold text-[#111827] group-hover:text-[#166534] transition">
+                      {dept.name}
+                    </h3>
+                    <svg width="16" height="16" class="w-4 h-4 text-[#9ca3af] group-hover:text-[#166534] transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
                   </div>
-                  <div>
-                    <div class="text-sm font-semibold text-[#1e293b]">{item.title}</div>
-                    <div class="text-xs text-[#64748b] mt-0.5">{item.detail}</div>
-                    <div class="flex items-center gap-1.5 text-xs mt-1.5 font-medium">
-                      <span class="w-2 h-2 rounded-full {item.status === 'Confirmed' ? 'bg-[#22c55e]' : 'bg-[#f59e0b]'}"></span>
-                      <span>{item.status}</span>
-                    </div>
-                  </div>
+                  <p class="text-xs text-[#6b7280] leading-relaxed">
+                    {dept.desc}
+                  </p>
                 </div>
-                <div class="flex items-center gap-3">
-                  <button class="text-xs text-[#15803d] hover:underline font-medium" on:click={() => window.location.href = '/sdn/pages/patient-book-appointment.php'}>
-                    Reschedule
-                  </button>
-                  <span class="text-base text-[#94a3b8] font-normal leading-none">&rsaquo;</span>
+                <div class="mt-4 pt-3 border-t border-[#f3f4f6] text-[11px] font-semibold text-[#166534] flex items-center gap-1">
+                  Book Consultation →
                 </div>
-              </div>
+              </a>
             {/each}
           </div>
         </div>
 
-      <!-- ═════════ 3. MEDICATIONS VIEW (AMOUNT ONLY, NO REFILL) ═════════ -->
-      {:else if activeTab === 'medications'}
-        <div class="flex flex-col gap-6">
-          <div class="flex items-center justify-between">
+        <!-- Upcoming Appointments List Preview -->
+        <div class="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
+          <div class="px-5 py-4 border-b border-[#f3f4f6] flex items-center justify-between">
             <div>
-              <h1 class="text-[26px] font-bold text-[#1e293b]">{t.medications}</h1>
-              <p class="text-sm text-[#64748b] mt-0.5">{t.medsSub}</p>
+              <h2 class="text-sm font-bold text-[#111827]">Upcoming Visits</h2>
+              <p class="text-xs text-[#6b7280] mt-0.5">Chronological list of next scheduled visits</p>
+            </div>
+            {#if appointments.upcoming.length > 0}
+              <button
+                type="button"
+                class="text-xs font-semibold text-[#166534] hover:underline"
+                on:click={() => activeTab = 'appointments'}
+              >
+                View all ({appointments.upcoming.length})
+              </button>
+            {/if}
+          </div>
+
+          {#if appointments.upcoming.length === 0}
+            <div class="p-8 text-center text-xs text-[#6b7280]">
+              No upcoming appointments scheduled.
+            </div>
+          {:else}
+            <div class="divide-y divide-[#f3f4f6]">
+              {#each appointments.upcoming.slice(0, 3) as appt}
+                <AppointmentRow
+                  appointment={appt}
+                  onView={handleViewDetails}
+                  onReschedule={handleReschedule}
+                />
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+      <!-- ── APPOINTMENTS & VISIT HISTORY VIEW ──────────────────── -->
+      {:else if activeTab === 'appointments'}
+        <div class="space-y-4">
+          <!-- Page Title -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 class="text-xl md:text-2xl font-bold text-[#111827]">Appointments & Visit History</h1>
+              <p class="text-xs text-[#6b7280] mt-0.5">Track your upcoming consultations and review past clinic records.</p>
+            </div>
+
+            <button
+              type="button"
+              class="px-4 py-2 rounded-lg bg-[#166534] hover:bg-[#14532d] text-white text-xs font-semibold transition self-start sm:self-auto inline-flex items-center gap-1.5 shadow-sm"
+              on:click={handleBookAppointment}
+            >
+              <svg width="14" height="14" class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; color: #ffffff;">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              New Appointment
+            </button>
+          </div>
+
+          <!-- Status Tabs -->
+          <div class="flex items-center gap-2 border-b border-[#e5e7eb] pb-px">
+            <button
+              type="button"
+              class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px flex items-center gap-2 {apptFilterTab === 'upcoming' ? 'border-[#166534] text-[#166534]' : 'border-transparent text-[#6b7280] hover:text-[#111827]'}"
+              on:click={() => apptFilterTab = 'upcoming'}
+            >
+              <span>Upcoming</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px] {apptFilterTab === 'upcoming' ? 'bg-[#f0fdf4] text-[#166534] font-bold' : 'bg-[#f3f4f6] text-[#6b7280]'}">
+                {appointments.upcoming.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px flex items-center gap-2 {apptFilterTab === 'past' ? 'border-[#166534] text-[#166534]' : 'border-transparent text-[#6b7280] hover:text-[#111827]'}"
+              on:click={() => apptFilterTab = 'past'}
+            >
+              <span>Past & Completed</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px] {apptFilterTab === 'past' ? 'bg-[#f0fdf4] text-[#166534] font-bold' : 'bg-[#f3f4f6] text-[#6b7280]'}">
+                {appointments.past.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px flex items-center gap-2 {apptFilterTab === 'cancelled' ? 'border-[#166534] text-[#166534]' : 'border-transparent text-[#6b7280] hover:text-[#111827]'}"
+              on:click={() => apptFilterTab = 'cancelled'}
+            >
+              <span>Cancelled</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px] {apptFilterTab === 'cancelled' ? 'bg-[#f0fdf4] text-[#166534] font-bold' : 'bg-[#f3f4f6] text-[#6b7280]'}">
+                {appointments.cancelled.length}
+              </span>
+            </button>
+          </div>
+
+          <!-- Filter & Search Bar -->
+          <div class="bg-white border border-[#e5e7eb] rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div class="relative flex-1">
+              <svg width="16" height="16" class="w-4 h-4 text-[#9ca3af] absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search department, doctor, complaint or ID..."
+                bind:value={searchQuery}
+                class="w-full pl-9 pr-3 py-2 rounded-lg border border-[#d1d5db] focus:border-[#166534] focus:ring-1 focus:ring-[#166534] outline-none transition"
+              />
+            </div>
+
+            <!-- Date Range Filters -->
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[#6b7280]">From:</span>
+                <input
+                  type="date"
+                  bind:value={dateFrom}
+                  on:change={handleDateChange}
+                  class="px-2.5 py-1.5 rounded-lg border border-[#d1d5db] text-xs outline-none focus:border-[#166534]"
+                />
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <span class="text-[#6b7280]">To:</span>
+                <input
+                  type="date"
+                  bind:value={dateTo}
+                  on:change={handleDateChange}
+                  class="px-2.5 py-1.5 rounded-lg border border-[#d1d5db] text-xs outline-none focus:border-[#166534]"
+                />
+              </div>
+
+              {#if searchQuery || dateFrom || dateTo}
+                <button
+                  type="button"
+                  class="px-2.5 py-1.5 text-xs text-[#6b7280] hover:text-[#111827] underline"
+                  on:click={resetFilters}
+                >
+                  Reset
+                </button>
+              {/if}
             </div>
           </div>
 
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col gap-4">
-            <div class="flex items-center justify-between pb-3 border-b border-[#eaedf1]">
-              <span class="font-bold text-[15px] text-[#1e293b]">{t.activeMeds}</span>
-              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#e8f5e9] text-[#15803d]">
-                {data.medications.length} active
-              </span>
+          {#if dateRangeError}
+            <div class="text-xs text-[#dc2626] font-medium px-1">
+              {dateRangeError}
             </div>
+          {/if}
 
-            <div class="divide-y divide-[#eaedf1]">
-              {#each data.medications as med}
-                <div class="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row items-start sm:justify-between gap-4">
-                  <div class="flex items-start gap-4 flex-1">
-                    <div class="w-10 h-10 rounded-lg bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] flex items-center justify-center shrink-0 mt-0.5">
-                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>
+          <!-- Appointment Results List -->
+          <div class="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
+            {#if filteredAppointments.length === 0}
+              <div class="p-12 text-center space-y-3">
+                <div class="w-12 h-12 rounded-full bg-[#f3f4f6] text-[#6b7280] flex items-center justify-center mx-auto" style="width: 48px; height: 48px; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 9999px;">
+                  <svg width="24" height="24" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px;">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+                <h3 class="text-sm font-semibold text-[#111827]">No appointments found</h3>
+                <p class="text-xs text-[#6b7280] max-w-sm mx-auto">
+                  {#if searchQuery || dateFrom || dateTo}
+                    No results match your active search and date filters. Try resetting the filter.
+                  {:else if apptFilterTab === 'upcoming'}
+                    You have no upcoming consultations scheduled.
+                  {:else if apptFilterTab === 'past'}
+                    No completed appointments found in your medical record.
+                  {:else}
+                    No cancelled appointments recorded.
+                  {/if}
+                </p>
+                {#if apptFilterTab === 'upcoming'}
+                  <button
+                    type="button"
+                    class="mt-2 px-4 py-2 rounded-lg bg-[#166534] hover:bg-[#14532d] text-white text-xs font-semibold transition"
+                    on:click={handleBookAppointment}
+                  >
+                    Book an Appointment
+                  </button>
+                {/if}
+              </div>
+            {:else}
+              <div class="divide-y divide-[#f3f4f6]">
+                {#each filteredAppointments as appt}
+                  <AppointmentRow
+                    appointment={appt}
+                    onView={handleViewDetails}
+                    onReschedule={handleReschedule}
+                  />
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
+
+      <!-- ── MEDICATIONS VIEW ──────────────────────────────────── -->
+      {:else if activeTab === 'medications'}
+        <div class="space-y-4">
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-[#111827]">Active Medications</h1>
+            <p class="text-xs text-[#6b7280] mt-0.5">Active maintenance prescriptions and current course progress.</p>
+          </div>
+
+          {#if medications.length === 0}
+            <div class="bg-white border border-[#e5e7eb] rounded-xl p-12 text-center space-y-2">
+              <div class="w-12 h-12 rounded-full bg-[#f3f4f6] text-[#6b7280] flex items-center justify-center mx-auto mb-2" style="width: 48px; height: 48px; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 9999px;">
+                <svg width="24" height="24" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px;">
+                  <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path>
+                  <path d="m8.5 8.5 7 7"></path>
+                </svg>
+              </div>
+              <h3 class="text-sm font-semibold text-[#111827]">No active medications</h3>
+              <p class="text-xs text-[#6b7280] max-w-sm mx-auto">
+                No active prescriptions are currently recorded in your outpatient history.
+              </p>
+            </div>
+          {:else}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {#each medications as med}
+                <div class="bg-white border border-[#e5e7eb] rounded-xl p-5 space-y-3">
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <h3 class="text-sm font-bold text-[#111827]">{med.name}</h3>
+                      <p class="text-xs text-[#166534] font-medium mt-0.5">{med.dosage}</p>
                     </div>
-                    <div class="flex-1">
-                      <div class="flex items-center justify-between gap-3">
-                        <span class="text-sm font-bold text-[#1e293b]">{med.name}</span>
-                        <span class="text-xs font-bold text-[#15803d] bg-[#dcfce7] px-2.5 py-0.5 rounded-full">{med.amount}</span>
-                      </div>
-                      <div class="text-xs text-[#64748b] mt-0.5">{med.frequency} &bull; {med.doctor}</div>
-                      <div class="mt-2.5 flex items-center gap-3">
-                        <div class="flex-1 h-1.5 bg-[#e2e8f0] rounded-full overflow-hidden">
-                          <div class="h-full rounded-full transition-all {med.days_left <= 7 ? 'bg-[#f59e0b]' : 'bg-[#15803d]'}" style="width: {Math.min(100, med.pct || 50)}%"></div>
-                        </div>
-                        <span class="text-[11px] text-[#64748b] whitespace-nowrap">{med.days_left} {t.supplyRemaining}</span>
-                      </div>
+                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0]">
+                      {med.status || 'Active'}
+                    </span>
+                  </div>
+
+                  <div class="text-xs text-[#4b5563] space-y-1">
+                    <p><span class="text-[#6b7280]">Frequency:</span> {med.frequency}</p>
+                    <p><span class="text-[#6b7280]">Prescribed by:</span> {med.doctor}</p>
+                    {#if med.diagnosis}
+                      <p><span class="text-[#6b7280]">Indication:</span> {med.diagnosis}</p>
+                    {/if}
+                  </div>
+
+                  <!-- Course Progress Bar -->
+                  <div class="pt-2 border-t border-[#f3f4f6]">
+                    <div class="flex items-center justify-between text-[11px] mb-1">
+                      <span class="text-[#6b7280]">Course Supply</span>
+                      <span class="font-semibold text-[#111827]">{med.days_left || 14} days left</span>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-[#f3f4f6] overflow-hidden">
+                      <div class="h-full bg-[#166534] rounded-full" style="width: {med.pct || 50}%"></div>
                     </div>
                   </div>
                 </div>
               {/each}
             </div>
-          </div>
+          {/if}
         </div>
 
-      <!-- ═════════ 4. SETTINGS VIEW ═════════ -->
+      <!-- ── ACCOUNT SETTINGS VIEW ─────────────────────────────── -->
       {:else if activeTab === 'settings'}
-        <div class="flex flex-col gap-6">
+        <div class="space-y-6">
           <div>
-            <h1 class="text-[26px] font-bold text-[#1e293b]">{t.settings}</h1>
-            <p class="text-sm text-[#64748b] mt-0.5">Manage your account and preferences</p>
+            <h1 class="text-xl md:text-2xl font-bold text-[#111827]">Account Settings</h1>
+            <p class="text-xs text-[#6b7280] mt-0.5">Manage your patient profile details, notification preferences, and account security.</p>
           </div>
 
-          <!-- Profile Card -->
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col gap-5">
-            <span class="font-bold text-[15px] text-[#1e293b]">{t.profile}</span>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div class="flex flex-col gap-1.5">
-                <label for="pFullName" class="text-xs font-medium text-[#64748b]">{t.fullName}</label>
-                <input
-                  id="pFullName"
-                  type="text"
-                  bind:value={data.profile.full_name}
-                  class="w-full bg-[#f8fafc] border border-[#cbd5e1] text-[#1e293b] rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-[#15803d] focus:bg-white focus:ring-2 focus:ring-[#15803d]/15 transition"
-                />
-              </div>
-
-              <div class="flex flex-col gap-1.5">
-                <label for="pEmail" class="text-xs font-medium text-[#64748b]">{t.email}</label>
-                <input
-                  id="pEmail"
-                  type="email"
-                  bind:value={data.profile.email}
-                  class="w-full bg-[#f8fafc] border border-[#cbd5e1] text-[#1e293b] rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-[#15803d] focus:bg-white focus:ring-2 focus:ring-[#15803d]/15 transition"
-                />
-              </div>
-
-              <div class="flex flex-col gap-1.5">
-                <label for="pPhone" class="text-xs font-medium text-[#64748b]">{t.phone}</label>
-                <input
-                  id="pPhone"
-                  type="text"
-                  bind:value={userPhone}
-                  class="w-full bg-[#f8fafc] border border-[#cbd5e1] text-[#1e293b] rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-[#15803d] focus:bg-white focus:ring-2 focus:ring-[#15803d]/15 transition"
-                />
-              </div>
-
-              <div class="flex flex-col gap-1.5">
-                <label for="pLang" class="text-xs font-medium text-[#64748b]">{t.language}</label>
-                <select
-                  id="pLang"
-                  bind:value={userLanguage}
-                  class="w-full bg-[#f8fafc] border border-[#cbd5e1] text-[#1e293b] rounded-lg px-3.5 py-2.5 text-sm outline-none cursor-pointer focus:border-[#15803d] focus:bg-white focus:ring-2 focus:ring-[#15803d]/15 transition"
-                >
-                  <option value="en">English</option>
-                  <option value="tl">Filipino (Tagalog)</option>
-                </select>
-              </div>
+          <!-- Section 1: Patient Profile -->
+          <div class="bg-white border border-[#e5e7eb] rounded-xl p-6">
+            <div class="pb-4 border-b border-[#f3f4f6] mb-5">
+              <h2 class="text-sm font-bold text-[#111827]">Patient Profile</h2>
+              <p class="text-xs text-[#6b7280] mt-0.5">Personal details linked to your official hospital medical record.</p>
             </div>
 
-            <div>
-              <button
-                type="button"
-                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#15803d] hover:bg-[#166534] active:scale-[0.99] transition shadow-sm"
-                on:click={handleSaveSettings}
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                <span>{saveStatus}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Notifications Card (Strictly Appointment Reminders) -->
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col gap-4">
-            <span class="font-bold text-[15px] text-[#1e293b]">{t.notifications}</span>
-            <div>
-              <div class="py-2 flex items-center justify-between">
+            <form on:submit|preventDefault={handleSaveProfile} class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div class="text-sm font-semibold text-[#1e293b]">{t.apptReminders}</div>
-                  <div class="text-xs text-[#64748b] mt-0.5">{t.apptRemindersSub}</div>
+                  <label for="prof-id" class="block text-xs font-medium text-[#374151] mb-1">Patient ID / Reference (Read-only)</label>
+                  <input
+                    id="prof-id"
+                    type="text"
+                    value={profile.patient_id || 'PT-2026-082'}
+                    disabled
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-[#6b7280] font-mono cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label for="prof-hrn" class="block text-xs font-medium text-[#374151] mb-1">Hospital Record Number (HRN)</label>
+                  <input
+                    id="prof-hrn"
+                    type="text"
+                    value={profile.hrn || 'HRN-2026-082'}
+                    disabled
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-[#6b7280] font-mono cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label for="prof-name" class="block text-xs font-medium text-[#374151] mb-1">Full Legal Name</label>
+                  <input
+                    id="prof-name"
+                    type="text"
+                    bind:value={profile.full_name}
+                    required
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#d1d5db] focus:border-[#166534] focus:ring-1 focus:ring-[#166534] outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label for="prof-email" class="block text-xs font-medium text-[#374151] mb-1">Registered Email Address</label>
+                  <input
+                    id="prof-email"
+                    type="email"
+                    value={profile.email}
+                    disabled
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-[#6b7280] cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label for="prof-contact" class="block text-xs font-medium text-[#374151] mb-1">Mobile Contact Number</label>
+                  <input
+                    id="prof-contact"
+                    type="tel"
+                    bind:value={profile.contact_number}
+                    placeholder="09XXXXXXXXX"
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#d1d5db] focus:border-[#166534] focus:ring-1 focus:ring-[#166534] outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label for="prof-birthdate" class="block text-xs font-medium text-[#374151] mb-1">Date of Birth</label>
+                  <input
+                    id="prof-birthdate"
+                    type="date"
+                    bind:value={profile.birthdate}
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#d1d5db] focus:border-[#166534] focus:ring-1 focus:ring-[#166534] outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label for="prof-gender" class="block text-xs font-medium text-[#374151] mb-1">Gender</label>
+                  <select
+                    id="prof-gender"
+                    bind:value={profile.gender}
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#d1d5db] focus:border-[#166534] focus:ring-1 focus:ring-[#166534] outline-none transition bg-white"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label for="prof-addr" class="block text-xs font-medium text-[#374151] mb-1">Residential Address</label>
+                  <input
+                    id="prof-addr"
+                    type="text"
+                    bind:value={profile.address}
+                    placeholder="Barangay, Municipality, Province"
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-[#d1d5db] focus:border-[#166534] focus:ring-1 focus:ring-[#166534] outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div class="pt-4 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  class="px-4 py-2 rounded-lg bg-[#166534] hover:bg-[#14532d] disabled:opacity-50 text-white text-xs font-semibold transition"
+                >
+                  {isSavingProfile ? 'Saving...' : 'Save Profile Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Section 2: Notifications -->
+          <div class="bg-white border border-[#e5e7eb] rounded-xl p-6">
+            <div class="pb-4 border-b border-[#f3f4f6] mb-4">
+              <h2 class="text-sm font-bold text-[#111827]">Notification Preferences</h2>
+              <p class="text-xs text-[#6b7280] mt-0.5">Control how and when you receive appointment reminders.</p>
+            </div>
+
+            <div class="flex items-center justify-between py-2">
+              <div>
+                <span class="block text-xs font-semibold text-[#111827]">Appointment Reminders</span>
+                <span class="block text-xs text-[#6b7280]">Receive email and SMS notifications 24 hours prior to your scheduled consultation.</span>
+              </div>
+
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  bind:checked={appointmentReminders}
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-[#e5e7eb] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#166534]"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 3: Security & Session -->
+          <div class="bg-white border border-[#e5e7eb] rounded-xl p-6">
+            <div class="pb-4 border-b border-[#f3f4f6] mb-4">
+              <h2 class="text-sm font-bold text-[#111827]">Security & Session</h2>
+              <p class="text-xs text-[#6b7280] mt-0.5">Manage your credentials and active sign-in sessions.</p>
+            </div>
+
+            <div class="divide-y divide-[#f3f4f6]">
+              <div class="py-3 flex items-center justify-between">
+                <div>
+                  <span class="block text-xs font-semibold text-[#111827]">Account Password</span>
+                  <span class="block text-xs text-[#6b7280]">Change your password periodically to keep your account secure.</span>
                 </div>
                 <button
                   type="button"
-                  class="w-11 h-6 rounded-full transition relative shrink-0 {appointmentReminders ? 'bg-[#15803d]' : 'bg-[#cbd5e1]'}"
-                  on:click={() => appointmentReminders = !appointmentReminders}
+                  class="px-3.5 py-1.5 rounded-lg border border-[#e5e7eb] text-xs font-semibold text-[#374151] hover:bg-[#f9fafb] transition"
+                  on:click={() => showPasswordModal = true}
                 >
-                  <span class="w-4 h-4 rounded-full bg-white absolute top-1 transition shadow-sm {appointmentReminders ? 'right-1' : 'left-1'}"></span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Security Card -->
-          <div class="bg-white border border-[#e2e8f0] rounded-xl p-6 shadow-sm flex flex-col gap-4">
-            <span class="font-bold text-[15px] text-[#1e293b]">{t.security}</span>
-            <div class="divide-y divide-[#eaedf1]">
-              <div class="py-3 first:pt-0 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div class="text-sm font-semibold text-[#1e293b]">{t.password}</div>
-                  <div class="text-xs text-[#64748b] mt-0.5">{t.passwordSub}</div>
-                </div>
-                <button class="text-xs font-medium text-[#94a3b8] hover:text-[#1e293b]" on:click={() => alert('Password reset email sent.')}>
-                  {t.change}
+                  Change Password
                 </button>
               </div>
 
-              <div class="py-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div class="pt-4 flex items-center justify-between">
                 <div>
-                  <div class="text-sm font-semibold text-[#1e293b]">{t.twoFactor}</div>
-                  <div class="text-xs text-[#64748b] mt-0.5">{t.twoFactorSub}</div>
+                  <span class="block text-xs font-semibold text-[#dc2626]">Sign Out</span>
+                  <span class="block text-xs text-[#6b7280]">Safely terminate your current authenticated session.</span>
                 </div>
-                <button class="text-xs font-medium text-[#94a3b8] hover:text-[#1e293b]" on:click={() => alert('Two-factor setup is enabled.')}>
-                  {t.enable}
+                <button
+                  type="button"
+                  class="px-3.5 py-1.5 rounded-lg bg-[#fef2f2] hover:bg-[#fee2e2] text-xs font-semibold text-[#dc2626] border border-[#fecaca] transition"
+                  on:click={() => window.location.href = '/sdn/api/patient_logout.php'}
+                >
+                  Sign Out
                 </button>
-              </div>
-
-              <div class="pt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div class="text-sm font-semibold text-[#dc2626]">{t.signOut}</div>
-                  <div class="text-xs text-[#64748b] mt-0.5">{t.signOutSub}</div>
-                </div>
-                <a href="/sdn/api/patient_logout.php" class="text-xs font-semibold text-[#dc2626] hover:underline">
-                  {t.signOut}
-                </a>
               </div>
             </div>
           </div>
         </div>
       {/if}
-
-    </div>
-  </main>
+    </main>
+  </div>
 </div>

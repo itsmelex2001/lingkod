@@ -23,7 +23,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     // For "Pending Actions" (pending registrations and inquiries)
     $pendingStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE status IN ('pending', 'for_approval', 'for_processing')");
-    $pendingActions = $pendingStmt->fetchColumn() ?? 0;
+    $pendingActions = (int)($pendingStmt->fetchColumn() ?? 0);
+
+    $pendingApptStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE status IN ('pending', 'for_approval', 'for_processing') AND COALESCE(inquiry_only, 0) = 0");
+    $pendingAppointments = (int)($pendingApptStmt->fetchColumn() ?? 0);
+
+    $pendingInqStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE status IN ('pending', 'for_approval', 'for_processing') AND COALESCE(inquiry_only, 0) = 1");
+    $pendingInquiries = (int)($pendingInqStmt->fetchColumn() ?? 0);
+
+    $unassignedStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE COALESCE(inquiry_only, 0) = 0 AND status NOT IN ('completed', 'cancelled', 'rejected', 'no-show', 'transferred') AND (assigned_doctor IS NULL OR TRIM(assigned_doctor) = '' OR LOWER(TRIM(assigned_doctor)) = 'none')");
+    $unassignedUpcoming = (int)($unassignedStmt->fetchColumn() ?? 0);
 
     // Overall Patients
     $weekStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)");
@@ -35,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $yearStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE YEAR(created_at) = YEAR(CURDATE())");
     $thisYear = $yearStmt->fetchColumn() ?? 0;
 
-    // Recent system logs for overview
-    $alerts = getAdminActivity($pdo, 5);
+    // Recent system logs for overview notifications
+    $alerts = getAdminActivity($pdo, 8);
 
     // Chart Data Generation (Combined + 3 Departments: General Medical, Neurology, Psychiatry)
     $chartData = [];
@@ -130,6 +139,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'active_staff' => $staffStats['active_staff'] ?? 0,
         'todays_patients' => $todaysPatients,
         'pending_actions' => $pendingActions,
+        'pending_appointments' => $pendingAppointments,
+        'pending_inquiries' => $pendingInquiries,
+        'unassigned_upcoming' => $unassignedUpcoming,
         'patients_week' => $thisWeek,
         'patients_month' => $thisMonth,
         'patients_year' => $thisYear,

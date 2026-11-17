@@ -1,20 +1,90 @@
 <?php
 /**
  * api/patient_book_appointment.php
- * Handles appointment booking for authenticated patients:
- * - Validates patient session
+ * Handles 4-step appointment booking submissions (logged-in patients or direct bookings):
  * - Validates department, personal, medical, and appointment details
- * - Generates unique PT-YYYY-XXX patient/appointment ID
- * - Links to patient's account (email, HRN, credentials)
- * - Inserts into `patients` table with status 'for_approval'
+ * - Generates unique PT-YYYY-XXX ID and APT-YYYY-XXXX reference number
+ * - Links to existing patient account if matching email/session exists
+ * - Inserts into `patients` (status 'for_approval') and mirrors to `appointments`
  * - Records initial audit note into `progress_notes` and `system_logs`
  */
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
+
+function isPatientFirstTime(PDO $pdo, string $sessionPatientId, string $email, string $firstName, string $lastName, string $birthdate, bool $isOtherPatient): bool {
+    $baseWhere = "COALESCE(inquiry_only, 0) = 0
+        AND appointment_date IS NOT NULL
+        AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show')";
+
+    $firstName = trim($firstName);
+    $lastName  = trim($lastName);
+    $birthdate = trim($birthdate);
+    $email     = trim(strtolower($email));
+    $sessionPatientId = trim($sessionPatientId);
+
+    $conditions = [];
+    $params     = [];
+
+    if ($firstName !== '' && $lastName !== '') {
+        $simpleFull = trim("$firstName $lastName");
+        $nameSql = "((LOWER(TRIM(COALESCE(first_name, ''))) = LOWER(?) AND LOWER(TRIM(COALESCE(last_name, ''))) = LOWER(?)) OR LOWER(TRIM(COALESCE(full_name, ''))) = LOWER(?))";
+        $nameParams = [$firstName, $lastName, $simpleFull];
+        if ($birthdate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate)) {
+            $nameSql = "($nameSql AND (birthdate IS NULL OR birthdate = ?))";
+            $nameParams[] = $birthdate;
+        }
+        $conditions[] = $nameSql;
+        array_push($params, ...$nameParams);
+    }
+
+    if (!$isOtherPatient && ($sessionPatientId !== '' || $email !== '')) {
+        $acctClauses = [];
+        $acctParams  = [];
+        if ($sessionPatientId !== '') {
+            $acctClauses[] = 'patient_id = ?';
+            $acctParams[]  = $sessionPatientId;
+        }
+        if ($email !== '') {
+            $acctClauses[] = 'LOWER(TRIM(email)) = LOWER(?)';
+            $acctParams[]  = $email;
+        }
+        $conditions[] = "(COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent') AND (" . implode(' OR ', $acctClauses) . '))';
+        array_push($params, ...$acctParams);
+    }
+
+    if (empty($conditions)) {
+        return true;
+    }
+
+    $sql = "SELECT COUNT(*) FROM patients WHERE ($baseWhere) AND (" . implode(' OR ', $conditions) . ')';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return ((int)$stmt->fetchColumn() === 0);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'check_patient_status') {
+    $rawRecipient = trim((string)($_GET['recipient'] ?? $_GET['booking_for'] ?? 'Patient (Me)'));
+    $isOther = in_array(strtolower($rawRecipient), ['other patient', 'someone else / dependent', 'someone_else'], true);
+    $qSessionPid = trim((string)($_SESSION['patient_id'] ?? ''));
+    $qEmail      = trim(strtolower((string)($_GET['email'] ?? ($_SESSION['patient_email'] ?? ''))));
+    $qFirst      = trim((string)($_GET['first_name'] ?? ''));
+    $qLast       = trim((string)($_GET['last_name'] ?? ''));
+    $qBirth      = trim((string)($_GET['birthdate'] ?? ''));
+
+    $firstTime = isPatientFirstTime($pdo, $qSessionPid, $qEmail, $qFirst, $qLast, $qBirth, $isOther);
+    echo json_encode([
+        'success'       => true,
+        'is_first_time' => $firstTime,
+        'patient_type'  => $firstTime ? 'first-time' : 'returning',
+    ]);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -22,51 +92,70 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// 1. Authenticate patient session
-if (empty($_SESSION['patient_logged_in']) || (empty($_SESSION['patient_id']) && empty($_SESSION['patient_email']))) {
-    http_response_code(401);
-    echo json_encode([
-        'success'  => false,
-        'message'  => 'Session expired. Please sign in again to book an appointment.',
-        'redirect' => '/sdn/pages/patient-login.php'
-    ]);
-    exit;
-}
+$sessionPatientId = trim((string)($_SESSION['patient_id'] ?? ''));
+$sessionEmail     = trim((string)($_SESSION['patient_email'] ?? ''));
 
-$sessionPatientId = $_SESSION['patient_id'] ?? '';
-$sessionEmail     = $_SESSION['patient_email'] ?? '';
-
-// 2. Parse input data
+// Parse input data
 $raw = file_get_contents('php://input');
 $b = json_decode($raw, true);
 if (!is_array($b)) {
     $b = $_POST;
 }
 
-// 3. Extract and sanitize fields
-$department     = trim($b['department'] ?? '');
+// Extract and sanitize fields
+$department     = trim((string)($b['department'] ?? ''));
 $inquiryOnly    = !empty($b['inquiry_only']) ? 1 : 0;
-$firstName      = trim($b['first_name'] ?? '');
-$lastName       = trim($b['last_name'] ?? '');
-$middleInitial  = trim($b['middle_initial'] ?? '');
-$gender         = trim($b['gender'] ?? '');
-$birthdate      = trim($b['birthdate'] ?? '');
-$contactNumber  = trim($b['contact_number'] ?? '');
-$email          = trim(strtolower($b['email'] ?? $sessionEmail));
-$address        = trim($b['address'] ?? '');
-$bookingFor     = trim($b['booking_for'] ?? 'Myself');
-$isDependent    = ($bookingFor === 'Someone Else / Dependent' || $bookingFor === 'someone_else' || !empty($b['booking_for_someone_else']));
-$relationshipToPatient = trim($b['relationship_to_patient'] ?? '');
-$withCompanion  = $isDependent ? 1 : (!empty($b['with_companion']) && in_array(strtolower((string)$b['with_companion']), ['1', 'true', 'yes'], true) ? 1 : 0);
+$firstName      = trim((string)($b['first_name'] ?? ''));
+$lastName       = trim((string)($b['last_name'] ?? ''));
+$middleInitial  = trim((string)($b['middle_initial'] ?? ''));
+$gender         = trim((string)($b['gender'] ?? ''));
+$birthdate      = trim((string)($b['birthdate'] ?? ''));
+$contactNumber  = trim((string)($b['contact_number'] ?? ''));
+$email          = trim(strtolower((string)($b['email'] ?? $sessionEmail)));
+$address        = trim((string)($b['address'] ?? ''));
 
-$chiefComplaints    = trim($b['chief_complaints'] ?? '');
-$consultationNature = trim($b['consultation_nature'] ?? ($inquiryOnly ? 'General Inquiry' : 'Routine Consultation'));
-$illnessDescription = trim($b['illness_description'] ?? '');
-$referralSource     = trim($b['referral_source'] ?? 'Self-Referral');
+$rawRecipient   = trim((string)($b['appointment_recipient'] ?? $b['booking_for'] ?? 'Patient (Me)'));
+$isOtherPatient = in_array(strtolower($rawRecipient), ['other patient', 'someone else / dependent', 'someone_else'], true)
+    || !empty($b['booking_for_someone_else']);
+$appointmentRecipient  = $isOtherPatient ? 'Other Patient' : 'Patient (Me)';
+$relationshipToPatient = trim((string)($b['relationship_to_patient'] ?? ''));
+$withCompanion         = (!empty($b['with_companion']) && in_array(strtolower((string)$b['with_companion']), ['1', 'true', 'yes'], true)) ? 1 : 0;
 
-$consultationMode = trim($b['consultation_mode'] ?? 'Face-to-Face');
-$appointmentDate  = trim($b['appointment_date'] ?? '');
-$scheduledTime    = trim($b['scheduled_time'] ?? '08:00:00');
+$chiefComplaints          = trim((string)($b['chief_complaints'] ?? ''));
+$existingConditions       = trim((string)($b['existing_medical_conditions'] ?? ''));
+$currentMedications       = trim((string)($b['current_medications'] ?? ''));
+$consultationNature       = trim((string)($b['consultation_nature'] ?? ($inquiryOnly ? 'General Inquiry' : 'Routine Consultation')));
+$illnessDescriptionInput  = trim((string)($b['illness_description'] ?? ''));
+$referralSource           = trim((string)($b['referral_source'] ?? ''));
+
+$illnessParts = [];
+if ($existingConditions !== '') {
+    $illnessParts[] = 'Existing Conditions: ' . $existingConditions;
+}
+if ($currentMedications !== '') {
+    $illnessParts[] = 'Current Medications: ' . $currentMedications;
+}
+$illnessDescription = $illnessDescriptionInput !== ''
+    ? $illnessDescriptionInput
+    : implode(' | ', $illnessParts);
+
+$consultationMode  = trim((string)($b['consultation_mode'] ?? 'In-Person'));
+if (strcasecmp($consultationMode, 'Face-to-Face') === 0) {
+    $consultationMode = 'In-Person';
+} elseif (strcasecmp($consultationMode, 'Online Teleconsultation') === 0) {
+    $consultationMode = 'Teleconsultation';
+}
+
+$appointmentDate   = trim((string)($b['appointment_date'] ?? ''));
+$preferredTimeSlot = trim((string)($b['preferred_time_slot'] ?? ''));
+$scheduledTime     = trim((string)($b['scheduled_time'] ?? ''));
+
+if ($preferredTimeSlot !== '' && $scheduledTime === '') {
+    $scheduledTime = stripos($preferredTimeSlot, 'afternoon') !== false ? '13:00:00' : '08:00:00';
+}
+if ($scheduledTime === '') {
+    $scheduledTime = '08:00:00';
+}
 if (strpos($scheduledTime, '-') !== false) {
     $timeStart = trim(explode('-', $scheduledTime)[0]);
     $parsedTs = strtotime($timeStart);
@@ -74,8 +163,19 @@ if (strpos($scheduledTime, '-') !== false) {
         $scheduledTime = date('H:i:s', $parsedTs);
     }
 }
+if ($preferredTimeSlot === '' && !$inquiryOnly) {
+    $reqHour = (int)date('H', strtotime($scheduledTime));
+    $preferredTimeSlot = ($reqHour < 12) ? 'Morning (8:00 AM - 12:00 PM)' : 'Afternoon (1:00 PM - 5:00 PM)';
+}
 
-// 4. Strict Validation
+// Validation
+$deptCheck = strtolower($department);
+if ($department === '' || $deptCheck === 'null' || $deptCheck === 'unassigned' || $deptCheck === 'triage pending') {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'message' => 'Please select a department.']);
+    exit;
+}
+
 if ($firstName === '' || $lastName === '') {
     http_response_code(422);
     echo json_encode(['success' => false, 'message' => 'First Name and Last Name are required.']);
@@ -106,23 +206,16 @@ if ($address === '') {
     exit;
 }
 
-if ($isDependent && $relationshipToPatient === '') {
+if ($chiefComplaints === '') {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Please select your relationship to the patient.']);
+    echo json_encode(['success' => false, 'message' => 'Please enter your inquiry question or chief complaint.']);
     exit;
 }
 
-// If not inquiry-only, require medical complaints and future appointment date
 if (!$inquiryOnly) {
-    if ($chiefComplaints === '') {
-        http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Chief complaints / reason for consultation is required.']);
-        exit;
-    }
-
     if ($appointmentDate === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $appointmentDate)) {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'Please select a valid appointment date.']);
+        echo json_encode(['success' => false, 'message' => 'Please select a valid preferred date.']);
         exit;
     }
 
@@ -139,43 +232,41 @@ if (!$inquiryOnly) {
         exit;
     }
 
-    // Check Sunday closure
     if ((int)date('w', strtotime($appointmentDate)) === 0) {
         http_response_code(422);
         echo json_encode(['success' => false, 'message' => 'The hospital outpatient clinics are closed on Sundays. Please select a Monday to Saturday date.']);
         exit;
     }
-
-    // First-time patient restriction: initial consultation MUST be Face-to-Face
-    $stmtPrior = $pdo->prepare("
-        SELECT COUNT(*) 
-        FROM patients 
-        WHERE (patient_id = :pid OR (email = :pemail AND email != ''))
-          AND appointment_date IS NOT NULL
-          AND LOWER(status) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient')
-    ");
-    $stmtPrior->execute([
-        ':pid'    => $sessionPatientId,
-        ':pemail' => $sessionEmail
-    ]);
-    $isFirstTimePatient = ((int)$stmtPrior->fetchColumn() === 0);
-
-    if ($isFirstTimePatient && strtolower($consultationMode) !== 'face-to-face') {
-        http_response_code(422);
-        echo json_encode([
-            'success' => false,
-            'message' => 'First-time patients are required to attend an initial Face-to-Face consultation at the hospital. Online teleconsultation is available for returning follow-up patients only.'
-        ]);
-        exit;
-    }
 } else {
-    // In inquiry mode, if no date provided, set tentative date
     if ($appointmentDate === '') {
         $appointmentDate = date('Y-m-d', strtotime('+1 day'));
     }
-    if ($chiefComplaints === '') {
-        $chiefComplaints = 'General inquiry regarding department services and consultation schedule.';
+}
+
+function buildIdentityCondition(string $sessionPatientId, string $email): array {
+    $clauses = [];
+    $params  = [];
+    if ($sessionPatientId !== '') {
+        $clauses[] = 'patient_id = ?';
+        $params[]  = $sessionPatientId;
     }
+    if ($email !== '') {
+        $clauses[] = 'email = ?';
+        $params[]  = $email;
+    }
+    return [implode(' OR ', $clauses), $params];
+}
+
+// Determine patient_type (first-time vs returning)
+$isFirstTimePatient = isPatientFirstTime($pdo, $sessionPatientId, $email, $firstName, $lastName, $birthdate, $isOtherPatient);
+
+if (!$inquiryOnly && $isFirstTimePatient && strcasecmp($consultationMode, 'Teleconsultation') === 0) {
+    http_response_code(422);
+    echo json_encode([
+        'success' => false,
+        'message' => 'First-time patients are required to have an initial In-Person (Face-to-Face) consultation. Teleconsultation is only available for returning patients.'
+    ]);
+    exit;
 }
 
 // Clean and format middle initial
@@ -191,29 +282,34 @@ if ($birthdate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate)) {
     $birthObj = new DateTime($birthdate);
     $todayObj = new DateTime();
     $age = $todayObj->diff($birthObj)->y;
+} elseif (isset($b['age']) && is_numeric($b['age'])) {
+    $age = (int)$b['age'];
 }
 
-// 5. Retrieve existing patient account credentials and HRN
-$stmtExisting = $pdo->prepare("
-    SELECT hrn, username, password, is_verified 
-    FROM patients 
-    WHERE (patient_id = ? OR email = ?) AND password IS NOT NULL 
-    ORDER BY id DESC 
-    LIMIT 1
-");
-$stmtExisting->execute([$sessionPatientId, $sessionEmail]);
-$existingAccount = $stmtExisting->fetch(PDO::FETCH_ASSOC);
+// Retrieve existing patient account credentials and HRN if present
+$existingAccount = null;
+if ($sessionPatientId !== '' || $email !== '') {
+    [$idSql, $idParams] = buildIdentityCondition($sessionPatientId, $email);
+    $stmtExisting = $pdo->prepare("
+        SELECT hrn, username, password, is_verified
+        FROM patients
+        WHERE ($idSql)
+          AND password IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 1
+    ");
+    $stmtExisting->execute($idParams);
+    $existingAccount = $stmtExisting->fetch(PDO::FETCH_ASSOC);
+}
 
 $userPassword = $existingAccount['password'] ?? null;
 $username     = $existingAccount['username'] ?? null;
 $isVerified   = !empty($existingAccount['is_verified']) ? 1 : 1;
 $hrn          = !empty($existingAccount['hrn']) ? $existingAccount['hrn'] : null;
 
-// Normalize department name (optional, staff will triage if unassigned)
+// Normalize department name
 $rawDept = strtolower($department);
-if ($department === '' || $rawDept === 'null' || $rawDept === 'unassigned') {
-    $deptName = 'Triage Pending';
-} elseif (str_contains($rawDept, 'general') || str_contains($rawDept, 'medical')) {
+if (str_contains($rawDept, 'general') || str_contains($rawDept, 'medical')) {
     $deptName = 'General Medical';
 } elseif (str_contains($rawDept, 'psychiatry') || str_contains($rawDept, 'opu')) {
     $deptName = 'OPU Psychiatry';
@@ -223,43 +319,44 @@ if ($department === '' || $rawDept === 'null' || $rawDept === 'unassigned') {
     $deptName = $department;
 }
 
-// Anti-Double Booking / Same-Day Time Conflict Validation
-if (!$inquiryOnly && $appointmentDate !== '') {
+// Anti-Double Booking / Same-Day Time Slot Conflict Validation (when booking for Patient (Me))
+if (!$inquiryOnly && !$isOtherPatient && $appointmentDate !== '' && ($sessionPatientId !== '' || $email !== '')) {
     $reqHour = (int)date('H', strtotime($scheduledTime));
     $reqPeriod = ($reqHour < 12) ? 'Morning' : 'Afternoon';
 
+    [$idSql, $idParams] = buildIdentityCondition($sessionPatientId, $email);
     $stmtConflict = $pdo->prepare("
-        SELECT id, scheduled_time, status
+        SELECT id, scheduled_time, preferred_time_slot, status
         FROM patients
-        WHERE (patient_id = :pid OR email = :pemail)
-          AND appointment_date = :adate
+        WHERE ($idSql)
+          AND appointment_date = ?
           AND LOWER(status) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show')
     ");
-    $stmtConflict->execute([
-        ':pid'    => $sessionPatientId,
-        ':pemail' => $sessionEmail,
-        ':adate'  => $appointmentDate
-    ]);
+    $stmtConflict->execute(array_merge($idParams, [$appointmentDate]));
     $existingDayBookings = $stmtConflict->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($existingDayBookings as $eb) {
-        $ebTime = $eb['scheduled_time'] ?: '08:00:00';
-        $ebHour = (int)date('H', strtotime($ebTime));
-        $ebPeriod = ($ebHour < 12) ? 'Morning' : 'Afternoon';
+        $ebSlot = (string)($eb['preferred_time_slot'] ?? '');
+        if ($ebSlot !== '') {
+            $ebPeriod = stripos($ebSlot, 'afternoon') !== false ? 'Afternoon' : 'Morning';
+        } else {
+            $ebTime = $eb['scheduled_time'] ?: '08:00:00';
+            $ebHour = (int)date('H', strtotime($ebTime));
+            $ebPeriod = ($ebHour < 12) ? 'Morning' : 'Afternoon';
+        }
 
         if ($ebPeriod === $reqPeriod) {
             http_response_code(409);
             echo json_encode([
                 'success' => false,
                 'error'   => 'Conflict',
-                'message' => 'You already have an appointment scheduled for this time. Please select a different time (e.g., Afternoon) for your second consultation.'
+                'message' => 'You already have an appointment scheduled for this time slot. Please choose another time slot or date.'
             ]);
             exit;
         }
     }
 }
 
-// Function to generate new sequential PT-YYYY-XXX ID
 function generateNewPatientId(PDO $pdo): string {
     $year = date('Y');
     $stmt = $pdo->prepare("
@@ -276,7 +373,6 @@ try {
     $pdo->beginTransaction();
 
     $newPatientId = generateNewPatientId($pdo);
-
     if (!$hrn) {
         $hrn = 'HRN-' . substr($newPatientId, 3);
     }
@@ -291,15 +387,19 @@ try {
     $sql = "INSERT INTO patients (
         patient_id, user_id, department, full_name, first_name, last_name, middle_initial,
         gender, birthdate, age, contact_number, email, username, password, is_verified,
-        address, with_companion, relationship_to_patient, chief_complaints, consultation_nature, illness_description,
-        patient_type, appointment_type, consultation_mode, appointment_date, scheduled_time,
+        address, with_companion, relationship_to_patient, appointment_recipient,
+        chief_complaints, consultation_nature, illness_description,
+        existing_medical_conditions, current_medications,
+        patient_type, appointment_type, consultation_mode, appointment_date, scheduled_time, preferred_time_slot,
         referral_source, status, unscheduled_walkin, inquiry_only, mode_of_inquiry,
         select_type, hrn, specialty
     ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?,
+        ?, ?,
         ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?
     )";
@@ -324,15 +424,19 @@ try {
         $address,
         $withCompanion,
         $relationshipToPatient ?: null,
+        $appointmentRecipient,
         $chiefComplaints,
         $consultationNature,
         $illnessDescription ?: null,
-        !empty($isFirstTimePatient) ? 'first-time' : 'returning',
+        $existingConditions ?: null,
+        $currentMedications ?: null,
+        $isFirstTimePatient ? 'first-time' : 'returning',
         'online',
         $consultationMode,
         $appointmentDate,
         $scheduledTime,
-        $referralSource,
+        $preferredTimeSlot ?: null,
+        $referralSource !== '' ? $referralSource : null,
         'for_approval',
         0,
         $inquiryOnly,
@@ -342,67 +446,121 @@ try {
         $deptName . ' Consultation'
     ]);
 
+    $insertedPatientRowId = (int)$pdo->lastInsertId();
+    $prefix = $inquiryOnly ? 'INQ' : 'APT';
+    $referenceNo = sprintf('%s-%s-%04d', $prefix, date('Y'), $insertedPatientRowId);
+
+    try {
+        if ($pdo->query("SHOW COLUMNS FROM patients LIKE 'reference_no'")->fetch()) {
+            $pdo->prepare("UPDATE patients SET reference_no = ? WHERE id = ?")
+                ->execute([$referenceNo, $insertedPatientRowId]);
+        }
+    } catch (Throwable $ignoreRefCol) {}
+
     // Initial Progress Note
+    $slotNoteLabel = $preferredTimeSlot ?: date('h:i A', strtotime($scheduledTime));
     $noteText = $inquiryOnly
-        ? "Online Department Inquiry submitted via Patient Portal. Status: For Approval."
-        : "Online Appointment Booked via Patient Portal ({$deptName} on {$appointmentDate} at " . date('h:i A', strtotime($scheduledTime)) . "). Status: For Approval." . ($isDependent && $relationshipToPatient ? " [Booked for Dependent - Relationship: {$relationshipToPatient}]" : "");
+        ? "Online Department Inquiry submitted (Ref: {$referenceNo}). Status: For Approval."
+        : "Online Appointment Booked ({$deptName} on {$appointmentDate} • {$slotNoteLabel}, Mode: {$consultationMode}, Recipient: {$appointmentRecipient}, Ref: {$referenceNo}). Status: For Approval.";
 
-    $stmtNote = $pdo->prepare("
-        INSERT INTO progress_notes (patient_id, note, noted_by, created_at)
-        VALUES (?, ?, 'Patient Portal', NOW())
-    ");
-    $stmtNote->execute([$newPatientId, $noteText]);
+    try {
+        $stmtNote = $pdo->prepare("
+            INSERT INTO progress_notes (patient_id, note, noted_by, created_at)
+            VALUES (?, ?, 'Patient Portal', NOW())
+        ");
+        $stmtNote->execute([$newPatientId, $noteText]);
+    } catch (Throwable $ignoreNote) {}
 
-    // Mirror the booking into the shared appointments table so staff and admin
-    // schedules stay tied to the same patient record the portal just created.
+    // Mirror booking into appointments table
     if (!$inquiryOnly && $appointmentDate !== '') {
         try {
             $start = date('H:i:s', strtotime($scheduledTime));
-            $end = date('H:i:s', strtotime($scheduledTime . ' +30 minutes'));
+            $end = stripos($preferredTimeSlot, 'afternoon') !== false ? '17:00:00' : '12:00:00';
             $pdo->prepare("
-                INSERT INTO appointments (patient_id, department, appointment_date, start_time, end_time, status, notes, relationship_to_patient)
-                VALUES (?, ?, ?, ?, ?, 'scheduled', ?, ?)
+                INSERT INTO appointments (patient_id, department, appointment_date, start_time, end_time, status, notes, relationship_to_patient, consultation_mode, preferred_time_slot, reference_no)
+                VALUES (?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?)
             ")->execute([
                 $newPatientId,
                 $deptName,
                 $appointmentDate,
                 $start,
                 $end,
-                'Booked from the patient portal. Waiting for department approval.',
-                $relationshipToPatient ?: null
+                'Booked from appointment registration form. Waiting for department approval.',
+                $relationshipToPatient ?: null,
+                $consultationMode,
+                $preferredTimeSlot ?: null,
+                $referenceNo
             ]);
-        } catch (Exception $e) {
-            // The patients row is the queue source of truth if this table is absent.
+        } catch (Throwable $e) {
+            // Fallback insert if some optional columns don't exist on appointments
+            try {
+                $start = date('H:i:s', strtotime($scheduledTime));
+                $end = date('H:i:s', strtotime($scheduledTime . ' +30 minutes'));
+                $pdo->prepare("
+                    INSERT INTO appointments (patient_id, department, appointment_date, start_time, end_time, status, notes)
+                    VALUES (?, ?, ?, ?, ?, 'scheduled', ?)
+                ")->execute([
+                    $newPatientId,
+                    $deptName,
+                    $appointmentDate,
+                    $start,
+                    $end,
+                    'Booked from appointment registration form. Waiting for department approval.'
+                ]);
+            } catch (Throwable $ignoreAppt) {}
         }
     }
 
     // System log
     try {
         $stmtLog = $pdo->prepare("
-            INSERT INTO system_logs (action, description, performed_by, created_at)
-            VALUES (?, ?, ?, NOW())
+            INSERT INTO system_logs (level, action, user, details, created_at)
+            VALUES ('info', ?, ?, ?, NOW())
         ");
         $stmtLog->execute([
             'PATIENT_BOOK_APPOINTMENT',
-            "Patient {$fullName} ({$newPatientId}) booked {$deptName} appointment for {$appointmentDate}",
-            $email
+            substr($email, 0, 60),
+            "Patient {$fullName} (Ref: {$referenceNo}) booked {$deptName} appointment for {$appointmentDate} ({$slotNoteLabel})"
         ]);
-    } catch (Exception $e) {
-        // Non-critical log failure ignored
+    } catch (Throwable $e) {
+        // Fallback for older system_logs schemas
+        try {
+            $pdo->prepare("
+                INSERT INTO system_logs (action, description, performed_by, created_at)
+                VALUES (?, ?, ?, NOW())
+            ")->execute([
+                'PATIENT_BOOK_APPOINTMENT',
+                "Patient {$fullName} (Ref: {$referenceNo}) booked {$deptName} appointment for {$appointmentDate}",
+                $email
+            ]);
+        } catch (Throwable $ignoreLog) {}
     }
 
     $pdo->commit();
 
-    echo json_encode([
-        'success'          => true,
-        'message'          => $inquiryOnly ? 'Inquiry submitted successfully!' : 'Appointment booked successfully!',
-        'patient_id'       => $newPatientId,
-        'department'       => $deptName,
-        'appointment_date' => $appointmentDate,
-        'scheduled_time'   => date('h:i A', strtotime($scheduledTime)),
-        'redirect'         => '/sdn/pages/patient-dashboard.php'
-    ]);
+    $accountPatientId = '';
+    if ($userId) {
+        try {
+            if ($pdo->query("SHOW COLUMNS FROM users LIKE 'account_patient_id'")->fetch()) {
+                $apStmt = $pdo->prepare("SELECT account_patient_id FROM users WHERE id = ? LIMIT 1");
+                $apStmt->execute([$userId]);
+                $accountPatientId = trim((string)($apStmt->fetchColumn() ?: ''));
+            }
+        } catch (Throwable $ignoreAcct) {}
+    }
 
+    echo json_encode([
+        'success'             => true,
+        'message'             => $inquiryOnly ? 'Inquiry submitted successfully!' : 'Appointment booked successfully!',
+        'patient_id'          => $accountPatientId !== '' ? $accountPatientId : $newPatientId,
+        'reference_no'        => $referenceNo,
+        'booking_code'        => $newPatientId,
+        'department'          => $deptName,
+        'appointment_date'    => $appointmentDate,
+        'preferred_time_slot' => $preferredTimeSlot,
+        'scheduled_time'      => date('h:i A', strtotime($scheduledTime)),
+        'redirect'            => '/sdn/pages/patient-dashboard.php'
+    ]);
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
@@ -414,4 +572,3 @@ try {
         'message' => 'Failed to book appointment: ' . $e->getMessage()
     ]);
 }
-

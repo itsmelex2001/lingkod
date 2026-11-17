@@ -8,6 +8,8 @@
  * - POST: Supports password change (`action: 'change_password'`) and profile/preferences updates.
  */
 
+date_default_timezone_set('Asia/Manila');
+
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
@@ -80,7 +82,44 @@ function estimateDaysSupply(string $qtyStr, string $dosageStr): int {
     return max(1, (int)ceil($qtyNum / $perDay));
 }
 
-// ── Handle POST actions (Change Password / Update Preferences) ──────────────
+function ensureNotificationStateTable(PDO $pdo): void {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS patient_notification_states (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            patient_key VARCHAR(191) NOT NULL,
+            notification_id VARCHAR(120) NOT NULL,
+            is_read TINYINT(1) NOT NULL DEFAULT 0,
+            is_dismissed TINYINT(1) NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_patient_notif (patient_key, notification_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+}
+
+function getNotificationPatientKey(?int $userId, string $patientId, string $patientEmail): string {
+    if ($userId !== null && $userId > 0) return 'uid:' . $userId;
+    if ($patientEmail !== '') return 'email:' . strtolower(trim($patientEmail));
+    if ($patientId !== '') return 'pid:' . strtolower(trim($patientId));
+    return '';
+}
+
+function getNotificationPatientKeys(?int $userId, array $patientIds, array $emails): array {
+    $keys = [];
+    if ($userId !== null && $userId > 0) {
+        $keys[] = 'uid:' . $userId;
+    }
+    foreach ($emails as $email) {
+        $e = strtolower(trim((string)$email));
+        if ($e !== '') $keys[] = 'email:' . $e;
+    }
+    foreach ($patientIds as $pid) {
+        $p = strtolower(trim((string)$pid));
+        if ($p !== '') $keys[] = 'pid:' . $p;
+    }
+    return array_values(array_unique($keys));
+}
+
+// ── Handle POST actions (Change Password / Notification States) ───────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $raw = file_get_contents('php://input');
     $body = json_decode($raw, true);
@@ -134,6 +173,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } catch (Throwable $e) {
             echo json_encode(['success' => false, 'message' => 'Could not update password.']);
+            exit;
+        }
+    }
+
+    if ($action === 'mark_notifications_read' || $action === 'clear_notifications') {
+        $ids = $body['ids'] ?? [];
+        if (!is_array($ids)) $ids = [];
+        $ids = array_values(array_unique(array_filter(array_map('strval', $ids), fn($id) => $id !== '')));
+        $patientKey = getNotificationPatientKey($userId ? (int)$userId : null, (string)$patientId, (string)$patientEmail);
+
+        if ($patientKey === '') {
+            echo json_encode(['success' => false, 'message' => 'Missing patient identity.']);
+            exit;
+        }
+
+        try {
+            ensureNotificationStateTable($pdo);
+            if (!empty($ids)) {
+                $isDismissed = ($action === 'clear_notifications') ? 1 : 0;
+                $stmt = $pdo->prepare("
+                    INSERT INTO patient_notification_states (patient_key, notification_id, is_read, is_dismissed)
+                    VALUES (:pkey, :nid, 1, :dismissed)
+                    ON DUPLICATE KEY UPDATE
+                        is_read = 1,
+                        is_dismissed = GREATEST(is_dismissed, VALUES(is_dismissed))
+                ");
+                foreach ($ids as $nid) {
+                    $stmt->execute([
+                        ':pkey'      => $patientKey,
+                        ':nid'       => substr($nid, 0, 120),
+                        ':dismissed' => $isDismissed
+                    ]);
+                }
+            }
+            echo json_encode(['success' => true]);
+            exit;
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'message' => 'Could not save notification state.']);
             exit;
         }
     }
@@ -211,9 +288,21 @@ try {
         ];
     }
 
-    // Keep session in sync with the latest patient_id and name
-    if (!empty($profile['patient_id'])) {
-        $_SESSION['patient_id'] = $profile['patient_id'];
+    // Resolve permanent account_patient_id from users table so header ID never changes across bookings
+    $accountPatientId = '';
+    if ($userId) {
+        try {
+            if ($pdo->query("SHOW COLUMNS FROM users LIKE 'account_patient_id'")->fetch()) {
+                $apStmt = $pdo->prepare("SELECT account_patient_id FROM users WHERE id = ? LIMIT 1");
+                $apStmt->execute([$userId]);
+                $accountPatientId = trim((string)($apStmt->fetchColumn() ?: ''));
+            }
+        } catch (Throwable $ignoreAcct) {}
+    }
+
+    if ($accountPatientId !== '') {
+        $profile['patient_id'] = $accountPatientId;
+        $_SESSION['patient_id'] = $accountPatientId;
     }
     if (!empty($profile['full_name'])) {
         $_SESSION['patient_name'] = $profile['full_name'];
@@ -266,17 +355,23 @@ try {
         SELECT 
             id,
             patient_id,
+            reference_no,
             hrn,
             user_id,
             department,
             appointment_date,
             scheduled_time,
+            preferred_time_slot,
+            appointment_recipient,
             status,
             assigned_doctor,
             consultation_mode,
             appointment_type,
             chief_complaints,
             consultation_nature,
+            existing_medical_conditions,
+            current_medications,
+            referral_source,
             medical_history_diagnosis,
             medical_history_treatment,
             medical_history_prescription,
@@ -286,7 +381,12 @@ try {
             created_at,
             updated_at
         FROM patients
-        WHERE $apptSql
+        WHERE ($apptSql)
+          AND (
+            appointment_date IS NOT NULL
+            OR (department IS NOT NULL AND department <> '')
+            OR (chief_complaints IS NOT NULL AND chief_complaints <> '')
+          )
         ORDER BY id ASC
     ");
     $stmtAppts->execute($apptParams);
@@ -324,7 +424,8 @@ try {
         return strcmp($db, $da) ?: ($b['id'] <=> $a['id']);
     });
 
-    $today         = date('Y-m-d');
+    $now           = new DateTime('now', new DateTimeZone('Asia/Manila'));
+    $today         = $now->format('Y-m-d');
     $upcoming      = [];
     $past          = [];
     $cancelled     = [];
@@ -334,46 +435,73 @@ try {
     foreach ($appointments as $appt) {
         $statusLower = strtolower(trim($appt['status'] ?? 'pending'));
         $apptDate    = $appt['appointment_date'] ?: substr($appt['created_at'] ?? $today, 0, 10);
+        $timeIso     = !empty($appt['scheduled_time']) ? $appt['scheduled_time'] : '08:00:00';
         $deptLabel   = formatDeptName($appt['department'] ?? '');
         $rawDoc      = trim($appt['assigned_doctor'] ?? '');
         $doctor      = ($rawDoc !== '' && strtolower($rawDoc) !== 'none')
             ? (str_starts_with($rawDoc, 'Dr.') ? $rawDoc : 'Dr. ' . $rawDoc)
             : 'Attending Physician';
-        $timeLabel   = !empty($appt['scheduled_time']) ? date('g:i A', strtotime($appt['scheduled_time'])) : '8:00 AM';
+        $timeLabel   = !empty($appt['preferred_time_slot']) ? $appt['preferred_time_slot'] : date('g:i A', strtotime($timeIso));
 
-        $isWaiting   = in_array($statusLower, ['pending', 'for_approval', 'for approval', 'for_processing'], true);
-        $isConfirmed = in_array($statusLower, ['approved', 'confirmed', 'arrived', 'ongoing'], true);
-        $isCancelled = in_array($statusLower, ['cancelled', 'rejected', 'no-show'], true);
+        $apptDateTime = new DateTime($apptDate . ' ' . $timeIso, new DateTimeZone('Asia/Manila'));
+        $isPast = $apptDateTime < $now;
 
-        if ($statusLower === 'ongoing') {
-            $displayStatus = 'In Consultation';
+        $isExplicitCancelled = in_array($statusLower, ['cancelled', 'rejected', 'declined'], true);
+        $isExplicitMissed    = in_array($statusLower, ['no-show', 'no_show', 'missed'], true);
+        $isExplicitCompleted = ($statusLower === 'completed');
+
+        // Resolve display status cleanly
+        if ($isExplicitCancelled) {
+            $displayStatus = 'Cancelled';
+        } elseif ($isExplicitCompleted) {
+            $displayStatus = 'Completed';
+        } elseif ($isExplicitMissed) {
+            $displayStatus = 'Missed';
+        } elseif ($isPast) {
+            // Past appointment that was never concluded
+            $displayStatus = 'Missed';
+        } elseif ($statusLower === 'ongoing' || $statusLower === 'in_consultation') {
+            // Live window today
+            $diffHours = ($now->getTimestamp() - $apptDateTime->getTimestamp()) / 3600;
+            if ($apptDate === $today && $diffHours >= 0 && $diffHours <= 3) {
+                $displayStatus = 'In Consultation';
+            } else {
+                $displayStatus = 'Confirmed';
+            }
         } elseif ($statusLower === 'arrived') {
             $displayStatus = 'Checked In';
-        } elseif ($isConfirmed) {
+        } elseif (in_array($statusLower, ['approved', 'confirmed'], true)) {
             $displayStatus = 'Confirmed';
-        } elseif ($isWaiting) {
+        } elseif (in_array($statusLower, ['pending', 'for_approval', 'for approval', 'for_processing'], true)) {
             $displayStatus = 'For approval';
-        } elseif ($statusLower === 'completed') {
-            $displayStatus = 'Completed';
         } else {
-            $displayStatus = ucwords(str_replace('_', ' ', $statusLower));
+            $displayStatus = 'Confirmed';
         }
 
         $diagText = trim($appt['medical_history_diagnosis'] ?? '');
         $treatText = trim($appt['medical_history_treatment'] ?? '');
         $rxText = trim($appt['medical_history_prescription'] ?? '');
 
+        $refNo = !empty($appt['reference_no']) ? $appt['reference_no'] : ($appt['patient_id'] ?: ('APT-' . $appt['id']));
+
         $item = [
-            'id'                        => (int)$appt['id'],
-            'patient_code'              => $appt['patient_id'] ?: ('PT-' . $appt['id']),
-            'date'                      => date('M j, Y', strtotime($apptDate)),
-            'date_raw'                  => $apptDate,
-            'date_iso'                  => $apptDate,
-            'month'                     => strtoupper(date('M', strtotime($apptDate))),
-            'day'                       => date('j', strtotime($apptDate)),
-            'time'                      => $timeLabel,
-            'time_label'                => $timeLabel,
-            'time_iso'                  => $appt['scheduled_time'] ?: '08:00:00',
+            'id'                          => (int)$appt['id'],
+            'reference_no'                => $refNo,
+            'patient_code'                => $refNo,
+            'date'                        => date('M j, Y', strtotime($apptDate)),
+            'date_raw'                    => $apptDate,
+            'date_iso'                    => $apptDate,
+            'month'                       => strtoupper(date('M', strtotime($apptDate))),
+            'day'                         => date('j', strtotime($apptDate)),
+            'time'                        => $timeLabel,
+            'time_label'                  => $timeLabel,
+            'time_iso'                    => $timeIso,
+            'preferred_time_slot'         => $appt['preferred_time_slot'] ?? null,
+            'appointment_recipient'       => $appt['appointment_recipient'] ?? 'Patient (Me)',
+            'existing_medical_conditions' => $appt['existing_medical_conditions'] ?? null,
+            'current_medications'         => $appt['current_medications'] ?? null,
+            'referral_source'             => $appt['referral_source'] ?? null,
+            'datetime_iso'                => $apptDateTime->format(DateTime::ATOM),
             'title'                     => $deptLabel . ' Consultation',
             'detail'                    => $doctor . ' • ' . $timeLabel,
             'department'                => $deptLabel,
@@ -390,37 +518,32 @@ try {
             'previous_patient_id'       => $appt['_prev_id'] ?? null,
             'status'                    => $displayStatus,
             'status_raw'                => $statusLower,
-            'can_reschedule'            => $isWaiting && !$isCancelled && $apptDate >= $today
+            'can_reschedule'            => (!$isPast && !$isExplicitCancelled && $displayStatus === 'For approval')
         ];
 
-        $isActiveStatus = in_array($statusLower, ['approved', 'confirmed', 'ongoing', 'arrived', 'for_approval', 'for approval', 'pending', 'for_processing'], true);
-        $isRecentActive = $isActiveStatus && ($apptDate >= date('Y-m-d', strtotime('-3 days')));
-
-        if ($isCancelled) {
+        if ($isExplicitCancelled) {
             $cancelled[] = $item;
-        } elseif ($statusLower === 'completed') {
+        } elseif ($isExplicitCompleted || $isExplicitMissed || $isPast) {
             $past[] = $item;
-        } elseif ($isRecentActive || $apptDate >= $today) {
-            $upcoming[] = $item;
         } else {
-            $past[] = $item;
+            $upcoming[] = $item;
         }
 
         // Build notifications from real events
-        if ($isConfirmed) {
+        if ($displayStatus === 'Confirmed') {
             $notifications[] = [
                 'id'    => 'notif-confirm-' . $appt['id'],
-                'title' => $deptLabel . ' Visit ' . $displayStatus,
+                'title' => $deptLabel . ' Visit Confirmed',
                 'text'  => "{$doctor} on " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} ({$item['patient_code']}).",
                 'time'  => 'Active Schedule',
                 'view'  => 'appointments',
                 'warn'  => false
             ];
-        } elseif ($isWaiting) {
+        } elseif ($displayStatus === 'For approval') {
             $notifications[] = [
                 'id'    => 'notif-wait-' . $appt['id'],
                 'title' => 'Appointment Awaiting Approval',
-                'text'  => "{$deptLabel} visit on " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} is pending staff verification.",
+                'text'  => "{$deptLabel} visit on " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} ({$item['patient_code']}) is pending staff verification.",
                 'time'  => 'Pending Review',
                 'view'  => 'appointments',
                 'warn'  => true
@@ -511,14 +634,24 @@ try {
         }
     }
 
-    // Sort upcoming so nearest future active/confirmed visit is at index 0 (Next Appointment)
-    usort($upcoming, function($a, $b) use ($today) {
-        $da = $a['date_raw'] ?: $today;
-        $db = $b['date_raw'] ?: $today;
-        $aFuture = ($da >= $today) ? 0 : 1;
-        $bFuture = ($db >= $today) ? 0 : 1;
-        if ($aFuture !== $bFuture) return $aFuture <=> $bFuture;
-        if ($aFuture === 0) return strcmp($da, $db) ?: ($b['id'] <=> $a['id']);
+    // Sort upcoming so nearest future visit is at index 0 (Next Appointment)
+    usort($upcoming, function($a, $b) {
+        $da = ($a['date_iso'] ?? '') . ' ' . ($a['time_iso'] ?? '08:00:00');
+        $db = ($b['date_iso'] ?? '') . ' ' . ($b['time_iso'] ?? '08:00:00');
+        return strcmp($da, $db) ?: ($a['id'] <=> $b['id']);
+    });
+
+    // Sort past so most recent visit is at index 0
+    usort($past, function($a, $b) {
+        $da = ($a['date_iso'] ?? '') . ' ' . ($a['time_iso'] ?? '08:00:00');
+        $db = ($b['date_iso'] ?? '') . ' ' . ($b['time_iso'] ?? '08:00:00');
+        return strcmp($db, $da) ?: ($b['id'] <=> $a['id']);
+    });
+
+    // Sort cancelled by date DESC
+    usort($cancelled, function($a, $b) {
+        $da = ($a['date_iso'] ?? '') . ' ' . ($a['time_iso'] ?? '08:00:00');
+        $db = ($b['date_iso'] ?? '') . ' ' . ($b['time_iso'] ?? '08:00:00');
         return strcmp($db, $da) ?: ($b['id'] <=> $a['id']);
     });
 
@@ -542,6 +675,42 @@ try {
             'action' => 'Book Psychiatry'
         ]
     ];
+
+    $notifPatientKeys = getNotificationPatientKeys(
+        $userId ? (int)$userId : null,
+        [(string)$patientId, (string)($profile['patient_id'] ?? '')],
+        [(string)$patientEmail, (string)($profile['email'] ?? '')]
+    );
+    if (!empty($notifPatientKeys) && !empty($notifications)) {
+        try {
+            ensureNotificationStateTable($pdo);
+            $placeholders = implode(',', array_fill(0, count($notifPatientKeys), '?'));
+            $stmtNotif = $pdo->prepare("
+                SELECT notification_id, MAX(is_read) AS is_read, MAX(is_dismissed) AS is_dismissed
+                FROM patient_notification_states
+                WHERE patient_key IN ($placeholders)
+                GROUP BY notification_id
+            ");
+            $stmtNotif->execute($notifPatientKeys);
+            $notifStateMap = [];
+            foreach ($stmtNotif->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $notifStateMap[$row['notification_id']] = $row;
+            }
+            $filteredNotifs = [];
+            foreach ($notifications as $n) {
+                $nid = (string)($n['id'] ?? '');
+                $state = $notifStateMap[$nid] ?? null;
+                if ($state && !empty($state['is_dismissed'])) {
+                    continue;
+                }
+                $n['is_read'] = ($state && !empty($state['is_read']));
+                $filteredNotifs[] = $n;
+            }
+            $notifications = $filteredNotifs;
+        } catch (Throwable $e) {
+            // Fall back to unfiltered notifications if state lookup fails
+        }
+    }
 
     echo json_encode([
         'success'       => true,

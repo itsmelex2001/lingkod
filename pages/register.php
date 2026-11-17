@@ -12,7 +12,6 @@ session_start();
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>">
   <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=<?= time() ?>">
-  <link rel="stylesheet" href="/sdn/dist/assets/main.css?v=<?= time() ?>">
   <style>
     * {
       box-sizing: border-box;
@@ -27,23 +26,30 @@ session_start();
       background-color: #f1f5f9;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #1f2937;
-      min-height: 100vh;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    /* ── Main Viewport Container (Generous & Beautifully Proportioned) ── */
+    /* ── Main Viewport Container (Single-Viewport Non-Scrollable) ── */
     #new-patient-registration-app {
-      min-height: calc(100vh - 76px);
+      flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px 20px 32px;
+      padding: 14px 16px;
       box-sizing: border-box;
+      overflow: hidden;
     }
 
     .main-wrapper {
       width: 100%;
       max-width: 820px;
+      max-height: 100%;
+      min-height: 0;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -51,11 +57,11 @@ session_start();
       box-sizing: border-box;
     }
 
-    /* ── Stepper (Matching Inspo Image 2) ── */
+    /* ── Stepper (Compact Single-Viewport) ── */
     .stepper-container {
       width: 100%;
-      max-width: 640px;
-      margin-bottom: 24px;
+      max-width: 580px;
+      margin-bottom: 12px;
       flex-shrink: 0;
     }
 
@@ -68,11 +74,11 @@ session_start();
 
     .stepper-line {
       position: absolute;
-      top: 22px;
+      top: 16px;
       left: 55px;
       right: 55px;
-      height: 8px;
-      background-color: #5d7563;
+      height: 2px;
+      background-color: #e5e7eb;
       border-radius: 999px;
       z-index: 1;
     }
@@ -80,7 +86,7 @@ session_start();
     .stepper-line-fill {
       height: 100%;
       width: 0%;
-      background-color: #1b6e1b;
+      background-color: #16a34a;
       border-radius: 9999px;
       transition: width 0.35s ease;
     }
@@ -92,42 +98,32 @@ session_start();
       flex-direction: column;
       align-items: center;
       text-align: center;
-      width: 160px;
+      width: 150px;
       cursor: pointer;
     }
 
     .step-circle {
-      width: 44px;
-      height: 44px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
-      background-color: #5d7563;
-      color: #ffffff;
+      background-color: #ffffff;
+      border: 1.5px solid #d1d5db;
+      color: #6b7280;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: 1.15rem;
-      transition: all 0.25s ease;
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
     }
 
-    .step-node.active .step-circle {
-      background-color: #1b6e1b;
-    }
-
+    .step-node.active .step-circle,
     .step-node.current .step-circle {
-      background-color: #1b6e1b;
+      background-color: #ffffff;
+      border: 2px solid #16a34a;
+      color: #166534;
+      box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
       position: relative;
-    }
-
-    .step-node.current .step-circle::after {
-      content: "";
-      position: absolute;
-      inset: -7px;
-      border-radius: 50%;
-      border: 2px solid #1b6e1b;
-      background: transparent;
-      pointer-events: none;
-      animation: phaseHeartbeat 1.35s ease-in-out infinite;
     }
 
     .step-node.active:not(.current) {
@@ -158,66 +154,75 @@ session_start();
     }
 
     .step-text {
-      margin-top: 8px;
-      font-size: 0.88rem;
-      font-weight: 700;
+      margin-top: 5px;
+      font-size: 0.78rem;
+      font-weight: 600;
       color: #1e293b;
       white-space: nowrap;
     }
 
-    /* ── Form Card (Copied Exactly from Image 2 Inspo) ── */
+    /* ── Form Card (Single-Viewport Minimalist) ── */
     .card-wizard {
       background: #ffffff;
-      border-radius: 20px;
-      padding: 28px 36px 32px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 18px 28px 18px;
+      box-shadow: 0 4px 20px rgba(17, 24, 39, 0.06);
       width: 100%;
       max-width: 820px;
+      max-height: 100%;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
     }
 
+    #newPatientForm {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
     .card-heading {
-      font-size: 1.55rem;
+      font-size: 1.25rem;
       font-weight: 800;
-      color: #1e293b;
+      color: #111827;
       text-align: center;
-      margin: 0 0 20px 0;
+      margin: 0 0 12px 0;
       letter-spacing: -0.2px;
     }
 
     .inner-panel {
-      border: 1.5px solid #cbd5e1;
-      border-radius: 14px;
-      padding: 22px 24px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px 18px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
       background: #ffffff;
     }
 
     .grid-3 {
       display: grid;
-      grid-template-columns: 1fr 1fr 130px;
-      gap: 14px;
+      grid-template-columns: 1fr 1fr 120px;
+      gap: 12px;
     }
 
     .grid-contact {
       display: grid;
       grid-template-columns: 1fr 1.35fr;
-      gap: 14px;
+      gap: 12px;
     }
 
     .field-group {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 3px;
     }
 
     .field-group label {
-      font-size: 0.88rem;
-      font-weight: 700;
+      font-size: 0.8rem;
+      font-weight: 600;
       color: #1e293b;
       line-height: 1.2;
     }
@@ -229,26 +234,26 @@ session_start();
 
     .input-ctrl {
       width: 100%;
-      padding: 0 14px;
-      height: 44px;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 10px;
-      font-size: 0.92rem;
+      padding: 6px 12px;
+      height: 36px;
+      border: 0;
+      border-radius: 8px;
+      font-size: 0.875rem;
       font-family: inherit;
-      color: #1e293b;
+      color: #111827;
       outline: none;
       background: #ffffff;
+      box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05), inset 0 0 0 1px #e5e7eb;
       box-sizing: border-box;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: box-shadow 0.15s ease;
     }
 
     .input-ctrl::placeholder {
-      color: #94a3b8;
+      color: #9ca3af;
     }
 
     .input-ctrl:focus {
-      border-color: #1b6e1b;
-      box-shadow: 0 0 0 3px rgba(27, 110, 27, 0.16);
+      box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05), inset 0 0 0 2px #16a34a;
     }
 
     .input-readonly {
@@ -274,26 +279,28 @@ session_start();
     .contact-wrapper {
       display: flex;
       align-items: center;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
       overflow: hidden;
       background: #ffffff;
-      height: 44px;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      height: 36px;
+      box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
     .contact-wrapper:focus-within {
-      border-color: #1b6e1b;
-      box-shadow: 0 0 0 3px rgba(27, 110, 27, 0.16);
+      border-color: #16a34a;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
     }
 
     .prefix-badge {
       padding: 0 14px;
-      background: #ffffff;
+      background: #f9fafb;
       font-weight: 700;
-      font-size: 0.92rem;
-      color: #1e293b;
-      border-right: 1.5px solid #cbd5e1;
+      font-size: 0.875rem;
+      color: #111827;
+      border-right: 1px solid #d1d5db;
       user-select: none;
       height: 100%;
       display: flex;
@@ -303,13 +310,14 @@ session_start();
     .contact-wrapper input {
       border: none !important;
       border-radius: 0 !important;
+      background: transparent !important;
       flex: 1;
       padding: 0 12px;
       outline: none;
-      font-size: 0.92rem;
+      font-size: 0.875rem;
       height: 100%;
       box-sizing: border-box;
-      color: #1e293b;
+      color: #111827;
       font-family: inherit;
     }
 
@@ -329,11 +337,13 @@ session_start();
       right: 8px;
       top: 50%;
       transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
       background: none;
       border: none;
-      color: #64748b;
+      color: #6b7280;
       cursor: pointer;
-      padding: 6px 8px;
+      padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -386,88 +396,98 @@ session_start();
       display: block;
     }
 
-    /* Actions Row (Positioned Directly Below Card) */
+    /* Actions Row (Inside Card Footer, Permanently Visible) */
     .actions-row {
       display: flex;
-      justify-content: center;
-      gap: 16px;
-      margin-top: 22px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid #f3f4f6;
       width: 100%;
+      flex-shrink: 0;
     }
 
     .btn-pill-next {
-      background-color: #1b5e20;
+      background-color: #166534;
       color: #ffffff;
       border: none;
-      border-radius: 9999px;
-      padding: 12px 68px;
-      font-size: 1.02rem;
-      font-weight: 700;
+      border-radius: 8px;
+      padding: 0 28px;
+      font-size: 0.9rem;
+      font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(27, 94, 32, 0.28);
-      transition: background-color 0.2s ease, transform 0.15s ease;
+      box-shadow: 0 1px 2px rgba(17, 24, 39, 0.08);
+      transition: background-color 0.15s ease;
       text-decoration: none;
-      height: 44px;
+      height: 38px;
+      margin-left: auto;
       display: inline-flex;
       align-items: center;
       justify-content: center;
     }
 
     .btn-pill-next:hover:not(:disabled) {
-      background-color: #145314;
-      transform: translateY(-1px);
+      background-color: #14532d;
     }
 
     .btn-pill-back {
       background: #ffffff;
       color: #374151;
-      border: 1.5px solid #d1d5db;
-      border-radius: 9999px;
-      padding: 10px 42px;
-      font-size: 0.95rem;
-      font-weight: 700;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0 22px;
+      font-size: 0.9rem;
+      font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      transition: background-color 0.2s ease, transform 0.15s ease;
+      box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+      transition: background-color 0.15s ease;
       text-decoration: none;
-      height: 44px;
+      height: 38px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
     }
 
     .btn-pill-back:hover {
-      background: #f8fafc;
+      background: #f9fafb;
     }
 
     /* Confirmation Summary */
     .summary-heading {
-      font-size: 0.88rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      color: #1b6e1b;
+      color: #166534;
       border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 4px;
+      padding-bottom: 3px;
       margin-bottom: 6px;
     }
 
     .summary-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 32px;
       font-size: 0.84rem;
     }
 
     .summary-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
     }
 
     .summary-label {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       color: #6b7280;
-      font-weight: 700;
+      font-weight: 500;
       text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .summary-val {
+      color: #111827;
+      font-weight: 500;
     }
 
     .summary-val {
@@ -525,9 +545,9 @@ session_start();
     .reg-modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: rgba(17, 24, 39, 0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -537,106 +557,115 @@ session_start();
 
     .reg-modal-card {
       background: #ffffff;
-      border-radius: 20px;
-      padding: 30px 26px;
-      max-width: 440px;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 420px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
-      animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      border: 1px solid rgba(27, 110, 27, 0.15);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+      animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      border: 0;
     }
 
     @keyframes modalFadeIn {
-      from { opacity: 0; transform: scale(0.92) translateY(12px); }
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
       to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
     .reg-modal-icon {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #ecfdf5;
-      color: #059669;
+      width: 48px;
+      height: 48px;
+      border-radius: 9999px;
+      background: #f0fdf4;
+      color: #16a34a;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 16px;
-      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.12);
+      margin: 0 auto 14px;
+      box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.2);
     }
 
     .reg-modal-title {
-      font-size: 1.35rem;
-      font-weight: 800;
+      font-size: 1.125rem;
+      font-weight: 600;
       color: #111827;
+      letter-spacing: -0.015em;
       margin-bottom: 6px;
     }
 
     .reg-modal-desc {
-      font-size: 0.88rem;
-      color: #4b5563;
-      margin-bottom: 8px;
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 10px;
     }
 
     .reg-email-pill {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
       background: #f0fdf4;
-      color: #166534;
-      font-weight: 700;
-      font-size: 0.86rem;
-      padding: 5px 14px;
-      border-radius: 999px;
-      border: 1px solid #bbf7d0;
+      color: #15803d;
+      font-weight: 500;
+      font-size: 0.875rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 0;
+      box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.2);
       margin-bottom: 12px;
       word-break: break-all;
     }
 
     .reg-modal-subdesc {
-      font-size: 0.8rem;
+      font-size: 0.8125rem;
       color: #6b7280;
       line-height: 1.45;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
 
     .reg-modal-btns {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     .btn-modal-open-email {
-      background: #1b6e1b;
+      background: #15803d;
       color: #ffffff !important;
       text-decoration: none;
-      font-weight: 700;
-      font-size: 0.92rem;
-      padding: 10px 18px;
-      border-radius: 9999px;
-      box-shadow: 0 4px 12px rgba(27, 110, 27, 0.28);
-      transition: background 0.15s ease, transform 0.15s ease;
-      display: block;
+      font-weight: 500;
+      font-size: 0.875rem;
+      padding: 10px 16px;
+      min-height: 42px;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(17, 24, 39, 0.08);
+      transition: background-color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn-modal-open-email:hover {
-      background: #145314;
-      transform: translateY(-1px);
+      background: #166534;
     }
 
     .btn-modal-to-login {
-      background: #f8fafc;
+      background: #ffffff;
       color: #374151 !important;
-      border: 1px solid #cbd5e1;
+      border: 0;
+      box-shadow: inset 0 0 0 1px #d1d5db;
       text-decoration: none;
-      font-weight: 600;
-      font-size: 0.88rem;
-      padding: 9px 18px;
-      border-radius: 9999px;
-      transition: background 0.15s ease;
-      display: block;
+      font-weight: 500;
+      font-size: 0.875rem;
+      padding: 10px 16px;
+      min-height: 42px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn-modal-to-login:hover {
-      background: #e2e8f0;
+      background: #f9fafb;
     }
 
     @media (max-width: 768px) {
@@ -659,7 +688,8 @@ session_start();
       .stepper-line { left: 36px; right: 36px; }
       .step-node { width: auto; flex: 1; min-width: 0; }
       .step-circle { width: 40px; height: 40px; }
-      .step-text { font-size: 0.68rem; white-space: normal; line-height: 1.25; max-width: 96px; }
+      .btn-pill-next, .btn-pill-back { min-height: 44px; }
+    }
       .btn-pill-next { padding: 8px 30px; width: 100%; }
     }
   </style>
@@ -699,12 +729,7 @@ session_start();
 
           <div id="nodeStep2" class="step-node" onclick="goToStep(2)">
             <div class="step-circle">2</div>
-            <span class="step-text">Account Registration</span>
-          </div>
-
-          <div id="nodeStep3" class="step-node" onclick="goToStep(3)">
-            <div class="step-circle">3</div>
-            <span class="step-text">Confirmation</span>
+            <span class="step-text">Confirmation &amp; Review</span>
           </div>
         </div>
       </div>
@@ -735,8 +760,9 @@ session_start();
                 </div>
 
                 <div class="field-group">
-                  <label for="middleInitial">M.I. (Optional)</label>
-                  <input type="text" id="middleInitial" class="input-ctrl" placeholder="e.g., B." maxlength="5" />
+                  <label for="middleInitial">M.I. <span class="req-star">*</span></label>
+                  <input type="text" id="middleInitial" class="input-ctrl" placeholder="e.g., B." maxlength="5" required />
+                  <span id="errMiddleInitial" class="error-msg" role="alert">Middle initial is required.</span>
                 </div>
               </div>
 
@@ -830,65 +856,8 @@ session_start();
             </div>
           </div>
 
-          <!-- PHASE 2: ACCOUNT REGISTRATION -->
+          <!-- PHASE 2: CONFIRMATION & REVIEW -->
           <div id="phase2" class="wizard-phase">
-            <h2 class="card-heading">Account Registration</h2>
-
-            <div class="inner-panel">
-              <div class="field-group">
-                <label for="regUsername">Username <span class="req-star">*</span></label>
-                <input type="text" id="regUsername" class="input-ctrl" placeholder="Choose a username" required />
-                <span id="errUsername" class="error-msg">Username must be at least 3 characters.</span>
-              </div>
-
-              <div class="field-group">
-                <label for="regEmailDisplay">Login Email Address</label>
-                <input type="email" id="regEmailDisplay" class="input-ctrl input-readonly" readonly />
-                <span style="font-size: 0.78rem; color: #64748b;">Verification link will be delivered to this email.</span>
-              </div>
-
-              <div class="field-group">
-                <label for="regPassword">Password <span class="req-star">*</span></label>
-                <div class="password-wrapper">
-                  <input type="password" id="regPassword" class="input-ctrl" placeholder="Create password (minimum 8 characters)" required />
-                  <button type="button" class="btn-eye" onclick="togglePassVisibility('regPassword', this)" aria-label="Show password" title="Show password">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                  </button>
-                </div>
-                <span id="errPassword" class="error-msg">Password must be at least 8 characters.</span>
-              </div>
-
-              <div class="field-group">
-                <label for="regConfirmPassword">Confirm Password <span class="req-star">*</span></label>
-                <div class="password-wrapper">
-                  <input type="password" id="regConfirmPassword" class="input-ctrl" placeholder="Re-enter your password" required />
-                  <button type="button" class="btn-eye" onclick="togglePassVisibility('regConfirmPassword', this)" aria-label="Show password" title="Show password">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                  </button>
-                </div>
-                <span id="errConfirmPassword" class="error-msg">Passwords do not match.</span>
-              </div>
-
-              <div style="margin-top: 8px;">
-                <label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer;">
-                  <input type="checkbox" id="chkTerms" style="accent-color: #1b6e1b; width: 18px; height: 18px; margin-top: 2px;" />
-                  <span style="font-size: 0.84rem; color: #4b5563; line-height: 1.45;">
-                    I certify that all details provided are true and correct, and I agree to MMWGH's Data Privacy Policy regarding healthcare information.
-                  </span>
-                </label>
-                <span id="errTerms" class="error-msg">You must accept the data privacy statement.</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- PHASE 3: CONFIRMATION -->
-          <div id="phase3" class="wizard-phase">
             <h2 class="card-heading">Confirmation &amp; Review</h2>
 
             <div class="inner-panel">
@@ -928,24 +897,34 @@ session_start();
                 </div>
               </div>
 
-              <div class="summary-heading" style="margin-top: 1.5rem;">Account Credentials</div>
+              <div class="summary-heading" style="margin-top: 10px;">System-Generated Credentials</div>
               <div class="summary-grid">
                 <div class="summary-item">
                   <span class="summary-label">Username</span>
                   <span id="revUsername" class="summary-val"></span>
                 </div>
                 <div class="summary-item">
-                  <span class="summary-label">Account Status</span>
-                  <span class="summary-val" style="color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 6px; display: inline-block; font-size: 0.82rem;">
-                    Unverified (Pending Activation)
+                  <span class="summary-label">Password &amp; Status</span>
+                  <span class="summary-val" style="display: inline-flex; align-items: center; width: fit-content; background: #fefce8; color: #a16207; box-shadow: inset 0 0 0 1px rgba(202, 138, 4, 0.25); padding: 3px 9px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">
+                    Auto-Generated &amp; Unverified
                   </span>
                 </div>
               </div>
 
-              <div class="notice-box">
-                <div style="font-weight: bold; color: #059669; font-size: 1.1rem;">&#9432;</div>
-                <p>
-                  <strong>Email Verification Required:</strong> By clicking Submit, your record is created with <code>is_verified = 0</code>. A verification link will be sent to your email. You must click that link within 24 hours to activate your account for the Patient Portal.
+              <div style="margin-top: 6px;">
+                <label style="display: flex; gap: 8px; align-items: flex-start; cursor: pointer;">
+                  <input type="checkbox" id="chkTerms" style="accent-color: #166534; width: 16px; height: 16px; margin-top: 2px;" />
+                  <span style="font-size: 0.78rem; color: #4b5563; line-height: 1.4;">
+                    I certify that all details provided are true and correct, and I agree to MMWGH's Data Privacy Policy regarding healthcare information.
+                  </span>
+                </label>
+                <span id="errTerms" class="error-msg" role="alert">You must accept the data privacy statement.</span>
+              </div>
+
+              <div class="notice-box" style="margin-top: 4px; padding: 8px 12px; font-size: 0.78rem;">
+                <div style="font-weight: bold; color: #166534; font-size: 1rem;">&#9432;</div>
+                <p style="margin: 0;">
+                  <strong>Credential Delivery &amp; Email OTP:</strong> Your <code>.lingkod</code> username and temporary password will be emailed upon submission. A 6-digit email OTP will be required on your first sign-in.
                 </p>
               </div>
 
@@ -955,47 +934,44 @@ session_start();
 
         </form>
 
-      </div>
+        <!-- ACTIONS ROW (Inside Card Footer, Permanently Visible) -->
+        <div id="wizardActions" class="actions-row">
+          <button type="button" id="btnBack" class="btn-pill-back" onclick="handleBackStep()" style="display: none;">Back</button>
+          <button type="button" id="btnNext" class="btn-pill-next" onclick="handleNextStep()">Next</button>
+          <button type="submit" form="newPatientForm" id="btnSubmit" class="btn-pill-next" style="display: none;" onclick="document.getElementById('newPatientForm').requestSubmit()">Submit Registration</button>
+        </div>
 
-      <!-- ACTIONS ROW (Centered Below Card, matching reference design) -->
-      <div id="wizardActions" class="actions-row">
-        <button type="button" id="btnBack" class="btn-pill-back" onclick="handleBackStep()" style="display: none;">Back</button>
-        <button type="button" id="btnNext" class="btn-pill-next" onclick="handleNextStep()">Next</button>
-        <button type="submit" form="newPatientForm" id="btnSubmit" class="btn-pill-next" style="display: none;" onclick="document.getElementById('newPatientForm').requestSubmit()">Submit Registration</button>
       </div>
     </main>
 
   </div>
 
   <!-- Registration Success UI Modal -->
-  <div id="regSuccessModal" class="reg-modal-backdrop" style="display: none;">
+  <div id="regSuccessModal" class="reg-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="regModalTitle">
     <div class="reg-modal-card">
-      <div class="reg-modal-icon">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <div class="reg-modal-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <h3 class="reg-modal-title">Registration Submitted!</h3>
+      <h3 id="regModalTitle" class="reg-modal-title">Registration Submitted!</h3>
       <p class="reg-modal-desc">
-        A verification email has been sent to:
+        Your system-generated credentials and a verification link have been sent to:
       </p>
       <div id="regModalEmailBadge" class="reg-email-pill"></div>
       <p class="reg-modal-subdesc">
-        Please check your Gmail inbox and click the <strong>"Verify My Account"</strong> button to activate your account.
+        Check your inbox for your <code>.lingkod</code> username and temporary password, then sign in and enter the 6-digit email OTP.
       </p>
       <div class="reg-modal-btns">
         <a id="regModalEmailBtn" href="https://mail.google.com" target="_blank" rel="noopener noreferrer" class="btn-modal-open-email">
           Open Email Inbox &rarr;
         </a>
-        <a href="/sdn/pages/patient-login.php?registered=1" target="_blank" rel="noopener noreferrer" class="btn-modal-to-login">
-          Proceed to Patient Portal Sign In
+        <a href="/sdn/pages/patient-login.php?registered=1" class="btn-modal-to-login">
+          Proceed to Sign In
         </a>
       </div>
     </div>
   </div>
-
-  <!-- Load Compiled Svelte Bundle -->
-  <script type="module" crossorigin src="/sdn/dist/assets/main.js?v=<?= time() ?>"></script>
 
   <!-- Interactive Client-side Controller -->
   <script>
@@ -1039,7 +1015,7 @@ session_start();
       let valid = true;
       const fn = document.getElementById('firstName').value.trim();
       const ln = document.getElementById('lastName').value.trim();
-      const mi = document.getElementById('middleInitial').value.trim(); // Optional
+      const mi = document.getElementById('middleInitial').value.trim();
       const gender = document.getElementById('gender').value;
       const bd = document.getElementById('birthdate').value;
       const contact = document.getElementById('contactNumber').value.trim();
@@ -1052,6 +1028,7 @@ session_start();
 
       if (!fn) { document.getElementById('errFirstName').style.display = 'block'; valid = false; }
       if (!ln) { document.getElementById('errLastName').style.display = 'block'; valid = false; }
+      if (!mi) { document.getElementById('errMiddleInitial').style.display = 'block'; document.getElementById('middleInitial').classList.add('invalid'); valid = false; }
       if (!gender) { document.getElementById('errGender').style.display = 'block'; valid = false; }
       if (!bd) { document.getElementById('errBirthdate').style.display = 'block'; valid = false; }
       if (!contact || contact.length < 9) { document.getElementById('errContact').style.display = 'block'; valid = false; }
@@ -1070,23 +1047,6 @@ session_start();
       return valid;
     }
 
-    function validatePhase2() {
-      let valid = true;
-      const user = document.getElementById('regUsername').value.trim();
-      const pass = document.getElementById('regPassword').value;
-      const cpass = document.getElementById('regConfirmPassword').value;
-      const terms = document.getElementById('chkTerms').checked;
-
-      document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
-
-      if (!user || user.length < 3) { document.getElementById('errUsername').style.display = 'block'; valid = false; }
-      if (!pass || pass.length < 8) { document.getElementById('errPassword').style.display = 'block'; valid = false; }
-      if (pass !== cpass) { document.getElementById('errConfirmPassword').style.display = 'block'; valid = false; }
-      if (!terms) { document.getElementById('errTerms').style.display = 'block'; valid = false; }
-
-      return valid;
-    }
-
     function populateReview() {
       const fn = document.getElementById('firstName').value.trim();
       const mi = document.getElementById('middleInitial').value.trim();
@@ -1095,7 +1055,8 @@ session_start();
       document.getElementById('revGenderAge').innerText = `${document.getElementById('gender').value}, ${document.getElementById('age').value} yrs old`;
       document.getElementById('revBirthdate').innerText = document.getElementById('birthdate').value;
       document.getElementById('revContact').innerText = `+63 ${document.getElementById('contactNumber').value.trim().replace(/^0/, '')}`;
-      document.getElementById('revEmail').innerText = document.getElementById('email').value.trim();
+      const rawEmail = document.getElementById('email').value.trim();
+      document.getElementById('revEmail').innerText = rawEmail;
       document.getElementById('revAddress').innerText = document.getElementById('address').value.trim();
       
       const comp = document.querySelector('input[name="withCompanion"]:checked')?.value || 'No';
@@ -1112,52 +1073,38 @@ session_start();
         if (revGuardRow) revGuardRow.style.display = 'none';
       }
 
-      document.getElementById('revUsername').innerText = document.getElementById('regUsername').value.trim();
+      const emailPrefix = (rawEmail.split('@')[0] || 'patient').toLowerCase().replace(/[^a-z0-9._-]/g, '') || 'patient';
+      document.getElementById('revUsername').innerText = `${emailPrefix}.lingkod (emailed)`;
     }
 
     function updateWizardUI() {
       document.querySelectorAll('.wizard-phase').forEach(p => p.classList.remove('active'));
       document.getElementById(`phase${currentStep}`).classList.add('active');
 
-      // Update stepper nodes
+      // Update stepper nodes (2-step wizard)
       document.getElementById('nodeStep1').classList.toggle('active', currentStep >= 1);
       document.getElementById('nodeStep1').classList.toggle('current', currentStep === 1);
       document.getElementById('nodeStep2').classList.toggle('active', currentStep >= 2);
       document.getElementById('nodeStep2').classList.toggle('current', currentStep === 2);
-      document.getElementById('nodeStep3').classList.toggle('active', currentStep >= 3);
-      document.getElementById('nodeStep3').classList.toggle('current', currentStep === 3);
 
-      const fillPct = currentStep === 1 ? '0%' : (currentStep === 2 ? '50%' : '100%');
-      document.getElementById('stepLineFill').style.width = fillPct;
+      document.getElementById('stepLineFill').style.width = currentStep === 1 ? '0%' : '100%';
 
       // Buttons
-      document.getElementById('btnBack').style.display = currentStep > 1 ? 'inline-block' : 'none';
-      if (currentStep < 3) {
-        document.getElementById('btnNext').style.display = 'inline-block';
+      document.getElementById('btnBack').style.display = currentStep > 1 ? 'inline-flex' : 'none';
+      if (currentStep < 2) {
+        document.getElementById('btnNext').style.display = 'inline-flex';
         document.getElementById('btnSubmit').style.display = 'none';
       } else {
         document.getElementById('btnNext').style.display = 'none';
-        document.getElementById('btnSubmit').style.display = 'inline-block';
+        document.getElementById('btnSubmit').style.display = 'inline-flex';
       }
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function handleNextStep() {
       if (currentStep === 1) {
         if (!validatePhase1()) return;
-        // Prefill email & username
-        const email = document.getElementById('email').value.trim();
-        document.getElementById('regEmailDisplay').value = email;
-        if (!document.getElementById('regUsername').value) {
-          document.getElementById('regUsername').value = email.split('@')[0].replace(/[^a-zA-Z0-9_.]/g, '');
-        }
-        currentStep = 2;
-        updateWizardUI();
-      } else if (currentStep === 2) {
-        if (!validatePhase2()) return;
         populateReview();
-        currentStep = 3;
+        currentStep = 2;
         updateWizardUI();
       }
     }
@@ -1178,12 +1125,20 @@ session_start();
 
     async function handleFormSubmit(e) {
       e.preventDefault();
+      const errTerms = document.getElementById('errTerms');
+      if (errTerms) errTerms.style.display = 'none';
+      if (!document.getElementById('chkTerms').checked) {
+        if (errTerms) errTerms.style.display = 'block';
+        return;
+      }
       const submitBtn = document.getElementById('btnSubmit');
+      const backBtn = document.getElementById('btnBack');
       const errBanner = document.getElementById('submitErrorBanner');
       errBanner.style.display = 'none';
 
       submitBtn.disabled = true;
-      submitBtn.innerText = 'Submitting Registration...';
+      if (backBtn) backBtn.disabled = true;
+      submitBtn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;" aria-hidden="true"></span>Submitting...';
 
       const subAge = parseInt(document.getElementById('age').value, 10) || 0;
       const isSubMinor = subAge < 18;
@@ -1202,10 +1157,7 @@ session_start();
         guardian_contact_number: isSubMinor && subGuardContact ? '+63 ' + subGuardContact.replace(/^0/, '') : null,
         email: document.getElementById('email').value.trim(),
         address: document.getElementById('address').value.trim(),
-        with_companion: document.querySelector('input[name="withCompanion"]:checked')?.value || 'No',
-        username: document.getElementById('regUsername').value.trim(),
-        password: document.getElementById('regPassword').value,
-        confirm_password: document.getElementById('regConfirmPassword').value
+        with_companion: document.querySelector('input[name="withCompanion"]:checked')?.value || 'No'
       };
 
       try {
@@ -1242,6 +1194,7 @@ session_start();
         errBanner.style.display = 'block';
       } finally {
         submitBtn.disabled = false;
+        if (backBtn) backBtn.disabled = false;
         submitBtn.innerText = 'Submit Registration';
       }
     }

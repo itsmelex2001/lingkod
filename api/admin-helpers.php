@@ -110,14 +110,23 @@ function getFailedLogins($pdo, $limit = 10) {
  * Get admin activity (last N actions)
  */
 function getAdminActivity($pdo, $limit = 20) {
+    $safeLimit = max(1, min(100, (int)$limit));
     try {
         $stmt = $pdo->prepare(
-            "SELECT action, user, description, created_at 
-             FROM system_logs 
-             ORDER BY created_at DESC 
+            "SELECT l.id,
+                    l.level,
+                    DATE_FORMAT(l.created_at, '%b %d, %h:%i %p') AS timestamp,
+                    l.created_at,
+                    l.action,
+                    COALESCE(IF(u.role = 'admin', 'admin', u.username), l.user) AS user,
+                    l.details
+             FROM system_logs l
+             LEFT JOIN users u ON l.user = u.id
+             ORDER BY l.created_at DESC
              LIMIT ?"
         );
-        $stmt->execute([$limit]);
+        $stmt->bindValue(1, $safeLimit, PDO::PARAM_INT);
+        $stmt->execute();
         return $stmt->fetchAll();
     } catch (Exception $e) {
         error_log("Error getting admin activity: " . $e->getMessage());

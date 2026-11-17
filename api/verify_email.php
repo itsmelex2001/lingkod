@@ -197,13 +197,16 @@ if ($isJson) {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, body * { caret-color: transparent; }
+    input, textarea, select, [contenteditable="true"] { caret-color: auto; }
 
     html, body {
       min-height: 100vh;
       width: 100%;
-      background: #f4f6f8;
+      overflow-x: hidden;
+      background: #f9fafb;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #1f2937;
+      color: #111827;
       display: flex;
       flex-direction: column;
     }
@@ -274,69 +277,71 @@ if ($isJson) {
 
     .card {
       background: #ffffff;
-      max-width: 480px;
+      max-width: 440px;
       width: 100%;
       margin: 0 auto;
-      border-radius: 20px;
-      padding: 2.75rem 2.25rem;
-      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 2.25rem 2rem;
+      box-shadow: 0 4px 12px rgba(17, 24, 39, 0.06), inset 0 0 0 1px #e5e7eb;
       text-align: center;
-      border: 1px solid #e5e7eb;
+      border: 0;
     }
 
     .icon-badge {
-      width: 76px;
-      height: 76px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
-      margin: 0 auto 1.35rem;
+      margin: 0 auto 1.15rem;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .icon-success {
-      background: #ecfdf5;
-      color: #059669;
-      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.12);
+      background: #f0fdf4;
+      color: #166534;
+      box-shadow: inset 0 0 0 1px rgba(22, 101, 52, 0.2);
     }
 
     .icon-error {
       background: #fef2f2;
       color: #dc2626;
-      box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.2);
     }
 
     h1 {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.65rem;
+      font-family: 'Outfit', 'Inter', sans-serif;
+      font-size: 1.5rem;
       font-weight: 700;
       color: #111827;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.5rem;
       letter-spacing: -0.02em;
     }
 
     p {
       color: #4b5563;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       line-height: 1.55;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.4rem;
     }
 
     .info-box {
       background: #f9fafb;
       border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 1rem 1.15rem;
-      margin-bottom: 1.75rem;
+      border-radius: 8px;
+      padding: 0.25rem 1rem;
+      margin-bottom: 1.5rem;
       text-align: left;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
     }
 
     .info-row {
       display: flex;
       justify-content: space-between;
-      padding: 0.4rem 0;
-      border-bottom: 1px dashed #e5e7eb;
+      align-items: center;
+      gap: 12px;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #e5e7eb;
     }
 
     .info-row:last-child {
@@ -346,31 +351,61 @@ if ($isJson) {
     .info-row span:first-child {
       color: #6b7280;
       font-weight: 500;
+      flex-shrink: 0;
     }
 
     .info-row span:last-child {
       color: #111827;
       font-weight: 600;
+      text-align: right;
+      word-break: break-word;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-badge-verified {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #f0fdf4;
+      color: #166534 !important;
+      box-shadow: inset 0 0 0 1px rgba(22, 101, 52, 0.2);
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.78rem;
+      font-weight: 600 !important;
     }
 
     .btn-action-primary {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
-      background: #15803d;
+      min-height: 44px;
+      background: #166534;
       color: #ffffff !important;
       text-decoration: none;
       font-weight: 600;
-      font-size: 0.98rem;
-      padding: 0.85rem 1.75rem;
-      border-radius: 9999px;
-      box-shadow: 0 4px 14px rgba(21, 128, 61, 0.28);
-      transition: all 0.2s ease;
+      font-size: 0.92rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(17, 24, 39, 0.08);
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
     }
 
     .btn-action-primary:hover {
-      background: #166534;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(21, 128, 61, 0.35);
+      background: #14532d;
+      box-shadow: 0 2px 6px rgba(20, 83, 45, 0.2);
+    }
+
+    .btn-action-primary:focus-visible,
+    .top-bar-link:focus-visible {
+      outline: 3px solid #166534;
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
+
+    .top-bar-link:focus-visible {
+      outline-color: #ffffff;
     }
 
     .footer {
@@ -383,9 +418,9 @@ if ($isJson) {
     @media (max-width: 600px) {
       .top-bar { height: 64px; padding: 0 1rem; }
       .top-bar img { height: 48px; }
-      .top-title .hosp { font-size: 0.78rem; }
+      .top-title .hosp { font-size: 0.76rem; white-space: normal; }
       .top-title .brand { font-size: 1.05rem; }
-      .card { padding: 2rem 1.25rem; }
+      .card { padding: 1.75rem 1.25rem; }
     }
   </style>
 </head>
@@ -407,8 +442,8 @@ if ($isJson) {
     <div class="card">
 
       <?php if ($state === 'success' || $state === 'already_verified'): ?>
-        <div class="icon-badge icon-success">
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <div class="icon-badge icon-success" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
@@ -432,16 +467,16 @@ if ($isJson) {
             </div>
             <div class="info-row">
               <span>Account Status</span>
-              <span style="color: #059669; font-weight: 700;">Verified (Active)</span>
+              <span class="status-badge-verified">Verified (Active)</span>
             </div>
           </div>
         <?php endif; ?>
 
-        <a href="/sdn/pages/patient-login.php" target="_blank" rel="noopener noreferrer" class="btn-action-primary">Proceed to Patient Portal Sign In</a>
+        <a href="/sdn/pages/patient-login.php" class="btn-action-primary">Proceed to Patient Portal Sign In</a>
 
       <?php else: ?>
-        <div class="icon-badge icon-error">
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <div class="icon-badge icon-error" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="15" y1="9" x2="9" y2="15"></line>
             <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -451,7 +486,7 @@ if ($isJson) {
         <h1>Invalid Verification Link</h1>
         <p><?= htmlspecialchars($message) ?></p>
 
-        <a href="/sdn/pages/patient-login.php" target="_blank" rel="noopener noreferrer" class="btn-action-primary">Go to Patient Portal Sign In</a>
+        <a href="/sdn/pages/patient-login.php" class="btn-action-primary">Go to Patient Portal Sign In</a>
       <?php endif; ?>
 
     </div>

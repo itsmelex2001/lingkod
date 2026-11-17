@@ -241,7 +241,7 @@
 
 /* Card 1: Primary ("Already have an account") */
 .pbc-option-card.option-account {
-  border: 1px solid var(--pbc-primary);
+  border: 1px solid var(--pbc-border);
   background: #ffffff;
 }
 

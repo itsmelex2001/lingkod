@@ -14,14 +14,14 @@
 
     <style>
       :root {
-        --color-bg: #f7f7f5;
+        --color-bg: #eef8f0;
         --color-surface: #ffffff;
-        --color-text: #1a1f1c;
-        --color-text-muted: #6b726d;
-        --color-text-faint: #b3b8b4;
-        --color-hairline: #e6e8e5;
+        --color-text: #082f04;
+        --color-text-muted: #374151;
+        --color-text-faint: #9ca3af;
+        --color-hairline: #d1e7d5;
         --color-accent: #166534;
-        --color-hover: #f0f2ef;
+        --color-hover: rgba(20, 83, 45, 0.08);
         --color-dot-general: #0f9d74;
         --color-dot-neuro: #2b7fd4;
         --color-dot-psych: #7c4dcc;
@@ -33,6 +33,9 @@
         margin: 0;
         padding: 0;
       }
+
+      body, body * { caret-color: transparent; }
+      input, textarea, select, [contenteditable="true"] { caret-color: auto; }
 
       html, body {
         margin: 0;
@@ -59,6 +62,7 @@
         align-items: flex-start;
         justify-content: space-between;
         gap: 24px;
+        margin-bottom: 24px;
       }
 
       .sched-header-left {
@@ -228,22 +232,26 @@
       .dot-neuro { background-color: var(--color-dot-neuro); }
       .dot-psych { background-color: var(--color-dot-psych); }
 
-      /* ── Main Schedule Card (Single White Card) ── */
+      /* ── Main Split-Pane Layout ── */
       .schedule-card {
-        background: var(--color-surface);
-        border: 1px solid var(--color-hairline);
-        border-radius: 14px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
         display: flex;
-        min-height: 560px;
-        overflow: hidden;
+        align-items: flex-start;
+        gap: 32px;
+        min-height: 520px;
       }
 
-      /* ── Left Column: Calendar ── */
+      /* ── Left Column: Calendar Card ── */
       .calendar-col {
-        width: 400px;
+        width: 380px;
         flex-shrink: 0;
-        padding: 28px;
-        border-right: 1px solid var(--color-hairline);
+        padding: 24px;
+        background: #ffffff;
+        border: 0;
+        box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05), inset 0 0 0 1px #e5e7eb;
+        border-radius: 12px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -477,7 +485,7 @@
       .agenda-col {
         flex: 1;
         min-width: 0;
-        padding: 28px;
+        padding: 4px 0 0;
         display: flex;
         flex-direction: column;
       }
@@ -547,9 +555,13 @@
         background-color: var(--color-accent);
       }
 
-      /* Time block list */
+      /* Time block card list */
       .agenda-slots-scroll {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-top: 8px;
         overflow-y: auto;
         overflow-x: hidden;
         scrollbar-width: none;
@@ -565,57 +577,39 @@
         opacity: 0.4;
       }
 
-      /* Plain rows */
+      /* Read-only time block cards */
       .agenda-row {
         display: flex;
-        align-items: flex-start;
-        gap: 24px;
-        padding: 20px 0;
-        border-bottom: 1px solid var(--color-hairline);
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px;
+        background: #ffffff;
+        border: 1px solid #d1e7d5;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
       }
 
-      .agenda-row:last-child {
-        border-bottom: none;
-      }
-
-      .agenda-time-col {
-        width: 140px;
-        flex-shrink: 0;
+      .agenda-card-info {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
       }
 
       .agenda-time-range {
-        font-size: 15px;
+        font-size: 1.125rem;
         font-weight: 600;
-        color: var(--color-text);
+        color: #111827;
         line-height: 1.3;
-        white-space: nowrap;
-      }
-
-      .agenda-duration {
-        font-size: 12px;
-        color: var(--color-text-muted);
-        margin-top: 3px;
-      }
-
-      .agenda-details-col {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .agenda-dept-line {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        color: var(--color-text-muted);
-        margin-bottom: 3px;
+        font-variant-numeric: tabular-nums;
       }
 
       .agenda-service-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--color-text);
-        line-height: 1.35;
+        font-size: 0.875rem;
+        font-weight: 400;
+        color: #4b5563;
+        line-height: 1.4;
         margin: 0;
       }
 
@@ -661,13 +655,13 @@
 
         .schedule-card {
           flex-direction: column;
+          gap: 24px;
           min-height: auto;
         }
 
         .calendar-col {
           width: 100%;
-          border-right: none;
-          border-bottom: 1px solid var(--color-hairline);
+        }
           padding: 24px 20px;
         }
 
@@ -736,34 +730,13 @@
             type="text"
             id="sched-search-input"
             class="sched-search-input"
-            placeholder="Search service or department..."
-            aria-label="Search service or department"
+            placeholder="Search consultation or time..."
+            aria-label="Search consultation or time"
           />
         </div>
       </header>
 
-      <!-- ── Department Filter Tabs ── -->
-      <nav class="dept-tabs-nav" role="tablist" aria-label="Department filters">
-        <div class="dept-tabs-track">
-          <button type="button" class="dept-tab active" data-dept="ALL" role="tab" aria-selected="true">
-            All
-          </button>
-          <button type="button" class="dept-tab" data-dept="General Medical" role="tab" aria-selected="false">
-            <span class="dept-tab-dot dot-general" aria-hidden="true"></span>
-            General Medical
-          </button>
-          <button type="button" class="dept-tab" data-dept="Neurology" role="tab" aria-selected="false">
-            <span class="dept-tab-dot dot-neuro" aria-hidden="true"></span>
-            Neurology
-          </button>
-          <button type="button" class="dept-tab" data-dept="Psychiatry" role="tab" aria-selected="false">
-            <span class="dept-tab-dot dot-psych" aria-hidden="true"></span>
-            Psychiatry
-          </button>
-        </div>
-      </nav>
-
-      <!-- ── Main Content Card (Single White Card) ── -->
+      <!-- ── Main Content Split-Pane ── -->
       <div class="schedule-card">
         <!-- Calendar Column (Left) -->
         <section class="calendar-col" aria-label="Clinic Days Calendar">
@@ -1112,10 +1085,9 @@
 
             cell.className = cellClass;
 
-            // Generate department colored dots (when filtered, shows only that department's dot)
-            const uniqueDots = [...new Set(daySlots.map(s => s.dotClass))].slice(0, 3);
-            const dotsHtml = isOpen && uniqueDots.length > 0
-              ? `<div class="day-dots" aria-hidden="true">${uniqueDots.map(c => `<span class="day-dot ${c}"></span>`).join('')}</div>`
+            // Single subtle gray availability indicator
+            const dotsHtml = isOpen && daySlots.length > 0
+              ? `<div class="day-dots" aria-hidden="true"><span class="day-dot" style="background-color:#9ca3af;"></span></div>`
               : '';
 
             cell.innerHTML = `
@@ -1214,20 +1186,13 @@
             }
 
             slots.forEach(slot => {
+              const timeRange = `${formatTime12(slot.startTime)} – ${formatTime12(slot.endTime)}`;
               const row = document.createElement('article');
               row.className = 'agenda-row';
               row.innerHTML = `
-                <div class="agenda-time-col">
-                  <div class="agenda-time-range">${formatTime12(slot.startTime)} – ${formatTime12(slot.endTime)}</div>
-                  <div class="agenda-duration">${formatDuration(slot.startTime, slot.endTime)}</div>
-                </div>
-                <div class="agenda-details-col">
-                  <div class="agenda-dept-line">
-                    <span class="dept-tab-dot ${slot.dotClass}" aria-hidden="true"></span>
-                    <span>${slot.dept}</span>
-                  </div>
+                <div class="agenda-card-info">
+                  <div class="agenda-time-range">${timeRange}</div>
                   <h4 class="agenda-service-title">${slot.service}</h4>
-                  ${slot.desc ? `<p class="agenda-service-desc">${slot.desc}</p>` : ''}
                 </div>
               `;
               listEl.appendChild(row);
@@ -1263,21 +1228,6 @@
 
         document.getElementById('btn-next-open').addEventListener('click', () => {
           selectDate(getNextClinicDate(today));
-        });
-
-        // Department filter tabs
-        document.querySelectorAll('.dept-tab').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('.dept-tab').forEach(b => {
-              b.classList.remove('active');
-              b.setAttribute('aria-selected', 'false');
-            });
-            btn.classList.add('active');
-            btn.setAttribute('aria-selected', 'true');
-            activeDept = btn.getAttribute('data-dept') || 'ALL';
-            renderCalendar();
-            renderSelectedDaySchedule();
-          });
         });
 
         // Time of day tabs

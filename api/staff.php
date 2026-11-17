@@ -37,7 +37,7 @@ if ($method === 'GET') {
     // Get all staff (for both admin and staff portals), excluding current user
     if (!isset($_GET['patient_id'])) {
         $stmt = $pdo->prepare(
-            "SELECT id, username, full_name, role, department, created_at, status, 
+            "SELECT id, username, full_name, role, department, profile_image, created_at, status, 
                     CASE WHEN role = 'admin' THEN 'admin' ELSE COALESCE(department, 'Unassigned') END AS dept
              FROM users
              WHERE username != ?
@@ -110,13 +110,24 @@ if ($method === 'POST') {
              VALUES (?, ?, ?, 'staff', ?)"
         );
         $stmt->execute([$username, $fullName, $hashedPassword, $department]);
+        $newStaffId = $pdo->lastInsertId();
+
+        $profileImageUrl = null;
+        if (!empty($b['image_data']) && is_string($b['image_data'])) {
+            $profileImageUrl = saveUploadedAvatar($b['image_data'], 'avatar', $newStaffId);
+            if ($profileImageUrl !== null) {
+                $pdo->prepare("UPDATE users SET profile_image = ? WHERE id = ?")->execute([$profileImageUrl, $newStaffId]);
+            }
+        }
 
         addLog($pdo, 'info', 'Staff Account Created', $actor,
                "New staff account '$username' ($fullName) created for $department.");
 
         respondOk([
             'message' => 'Staff account created successfully.',
-            'username' => $username
+            'username' => $username,
+            'id' => $newStaffId,
+            'profile_image' => $profileImageUrl
         ]);
     }
 
@@ -211,33 +222,19 @@ if ($method === 'POST') {
         $newImagePath = null;
 
         if ($removeImage) {
+            deleteLocalAvatar($staffUser['profile_image'] ?? null);
             $updates[] = "profile_image = NULL";
             if ($staffUser['username'] === $actor) {
                 $_SESSION['profile_image'] = null;
             }
         } elseif (!empty($imageData) && is_string($imageData)) {
-            // Validate base64 image data URL
-            if (preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,(.*)$/i', $imageData, $matches)) {
-                $ext = strtolower($matches[1]);
-                if ($ext === 'jpeg') $ext = 'jpg';
-                $decoded = base64_decode($matches[2]);
-                if ($decoded !== false && strlen($decoded) > 0) {
-                    if (strlen($decoded) > 5 * 1024 * 1024) {
-                        respondErr('Profile image must not exceed 5MB.', 400);
-                    }
-                    $uploadDir = __DIR__ . '/../public/uploads/avatars/';
-                    if (!is_dir($uploadDir)) {
-                        @mkdir($uploadDir, 0777, true);
-                    }
-                    $filename = 'avatar_' . $userId . '_' . time() . '.' . $ext;
-                    $fullPath = $uploadDir . $filename;
-                    file_put_contents($fullPath, $decoded);
-                    $newImagePath = '/sdn/public/uploads/avatars/' . $filename;
-                    $updates[] = "profile_image = ?";
-                    $params[] = $newImagePath;
-                    if ($staffUser['username'] === $actor) {
-                        $_SESSION['profile_image'] = $newImagePath;
-                    }
+            $newImagePath = saveUploadedAvatar($imageData, 'avatar', $userId);
+            if ($newImagePath !== null) {
+                deleteLocalAvatar($staffUser['profile_image'] ?? null);
+                $updates[] = "profile_image = ?";
+                $params[] = $newImagePath;
+                if ($staffUser['username'] === $actor) {
+                    $_SESSION['profile_image'] = $newImagePath;
                 }
             }
         }

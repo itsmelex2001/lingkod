@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION['user']) || !in_array($_SESSION['role'], ['admin', 'staff'])) {
-    header('Location: /sdn/pages/login.php');
+    header('Location: /sdn/pages/portal@admin$staff_2026.php');
     exit;
 }
 $isStaff = ($_SESSION['role'] === 'staff');

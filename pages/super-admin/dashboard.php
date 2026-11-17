@@ -68,14 +68,6 @@ $adminName = $_SESSION['full_name'] ?? $_SESSION['user'] ?? 'Super Administrator
                     </svg>
                     <span>System Settings</span>
                 </a>
-                <a href="#" class="sa-nav-item" data-view="backups" data-title="Database Management &amp; Backups" data-tooltip="Database">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-                    </svg>
-                    <span>Database Backups</span>
-                </a>
                 <a href="#" class="sa-nav-item" data-view="audit" data-title="Master Audit Trail" data-tooltip="Audit Trail">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -85,14 +77,6 @@ $adminName = $_SESSION['full_name'] ?? $_SESSION['user'] ?? 'Super Administrator
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                     <span>Master Audit Trail</span>
-                </a>
-                <a href="#" class="sa-nav-item" data-view="archive" data-title="Data Archiving &amp; Retention" data-tooltip="Archiving">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="21 8 21 21 3 21 3 8"></polyline>
-                        <rect x="1" y="3" width="22" height="5"></rect>
-                        <line x1="10" y1="12" x2="14" y2="12"></line>
-                    </svg>
-                    <span>Data Archiving</span>
                 </a>
             </nav>
         </aside>
@@ -134,43 +118,43 @@ $adminName = $_SESSION['full_name'] ?? $_SESSION['user'] ?? 'Super Administrator
                     <!-- Metrics Row -->
                     <div class="sa-stats-grid">
                         <div class="sa-stat-card">
-                            <div class="sa-stat-info">
+                            <div class="sa-stat-top">
                                 <h3>Active Regular Admins</h3>
-                                <p id="metricAdmins">--</p>
+                                <svg class="sa-stat-icon-solid" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z" />
+                                </svg>
                             </div>
-                            <div class="sa-stat-icon sa-icon-blue">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-                            </div>
+                            <p class="sa-stat-val" id="metricAdmins">--</p>
                         </div>
 
                         <div class="sa-stat-card">
-                            <div class="sa-stat-info">
+                            <div class="sa-stat-top">
                                 <h3>Total Clinical Staff</h3>
-                                <p id="metricStaff">--</p>
+                                <svg class="sa-stat-icon-solid" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 8 18a9.953 9.953 0 0 1-5.385-1.572ZM16.25 5.75a.75.75 0 0 0-1.5 0v2h-2a.75.75 0 0 0 0 1.5h2v2a.75.75 0 0 0 1.5 0v-2h2a.75.75 0 0 0 0-1.5h-2v-2Z" />
+                                </svg>
                             </div>
-                            <div class="sa-stat-icon sa-icon-purple">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
-                            </div>
+                            <p class="sa-stat-val" id="metricStaff">--</p>
                         </div>
 
                         <div class="sa-stat-card">
-                            <div class="sa-stat-info">
+                            <div class="sa-stat-top">
                                 <h3>Registered Patients</h3>
-                                <p id="metricPatients">--</p>
+                                <svg class="sa-stat-icon-solid" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" />
+                                </svg>
                             </div>
-                            <div class="sa-stat-icon sa-icon-green">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            </div>
+                            <p class="sa-stat-val" id="metricPatients">--</p>
                         </div>
 
                         <div class="sa-stat-card">
-                            <div class="sa-stat-info">
+                            <div class="sa-stat-top">
                                 <h3>Today's Bookings</h3>
-                                <p id="metricAppointments">--</p>
+                                <svg class="sa-stat-icon-solid" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                                </svg>
                             </div>
-                            <div class="sa-stat-icon sa-icon-orange">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            </div>
+                            <p class="sa-stat-val" id="metricAppointments">--</p>
                         </div>
                     </div>
 
@@ -198,10 +182,10 @@ $adminName = $_SESSION['full_name'] ?? $_SESSION['user'] ?? 'Super Administrator
 
                             <div class="sa-form-group">
                                 <label for="saMaintenanceMsg">Public Maintenance Notice Message</label>
-                                <textarea id="saMaintenanceMsg" class="sa-textarea" rows="2" placeholder="Message shown to regular admins, staff, and patients during lockout"></textarea>
+                                <input type="text" id="saMaintenanceMsg" class="sa-input sa-maintenance-input" placeholder="Message shown to regular admins, staff, and patients during lockout" />
                             </div>
 
-                            <button type="button" class="sa-btn sa-btn-outline" onclick="handleMaintenanceToggle()">
+                            <button type="button" class="sa-btn sa-btn-secondary" onclick="handleMaintenanceToggle()">
                                 Update Notice Message
                             </button>
                         </div>

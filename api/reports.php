@@ -2,18 +2,14 @@
 /**
  * api/reports.php
  *
- * Comprehensive Admin Consolidated Reporting & Analytics Engine.
- * Pulls and consolidates patient records from all 3 core hospital departments:
+ * Operational Reporting & Upcoming Patient Analytics Engine.
+ * Pulls and consolidates patient records across:
  *   - General Medical
  *   - Neurology
  *   - OPU Psychiatry
  *
- * Supports:
- *   - Consolidated shared KPI metrics
- *   - Department-level comparative breakdowns
- *   - Daily statistical report aggregation
- *   - Monthly statistical report aggregation
- *   - CSV export / printable records
+ * Supports upcoming horizons (today, next_7, next_30) as well as monthly/all-time views,
+ * Morning vs Afternoon time-block distribution, physician readiness checks, and CSV export.
  */
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -29,10 +25,6 @@ if ($method !== 'GET') {
     respondErr('Method not allowed.', 405);
 }
 
-// Ensure caller is Admin or authorized staff
-$role = $_SESSION['role'] ?? 'staff';
-
-// Standardized Department Normalizer
 function normalizeDepartmentName(?string $raw): string {
     $clean = strtolower(trim($raw ?? ''));
     if (strpos($clean, 'psych') !== false || strpos($clean, 'opu') !== false) {
@@ -41,24 +33,35 @@ function normalizeDepartmentName(?string $raw): string {
     if (strpos($clean, 'neuro') !== false) {
         return 'Neurology';
     }
-    if (strpos($clean, 'general') !== false || strpos($clean, 'cardio') !== false) {
-        return 'General Medical';
-    }
     return 'General Medical';
 }
 
-$range      = trim($_GET['range'] ?? 'all'); // 'daily', 'monthly', 'all'
+function resolveTimeBlock(?string $preferredSlot, ?string $scheduledTime): string {
+    $pref = strtolower(trim($preferredSlot ?? ''));
+    if (strpos($pref, 'morning') !== false) return 'Morning';
+    if (strpos($pref, 'afternoon') !== false) return 'Afternoon';
+    if (!empty($scheduledTime)) {
+        $hour = (int)substr((string)$scheduledTime, 0, 2);
+        return $hour >= 12 ? 'Afternoon' : 'Morning';
+    }
+    return 'Morning';
+}
+
+$range      = trim($_GET['range'] ?? 'next_7'); // 'today', 'next_7', 'next_30', 'daily', 'monthly', 'all'
 $deptFilter = trim($_GET['department'] ?? 'all');
 $startDate  = trim($_GET['start_date'] ?? '');
 $endDate    = trim($_GET['end_date'] ?? '');
 $exportCsv  = !empty($_GET['export_csv']);
 
-// Base Date Filter Clause
 $whereParts = ["1=1"];
 $params = [];
 
-if ($range === 'daily') {
+if ($range === 'today' || $range === 'daily') {
     $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) = CURDATE()";
+} elseif ($range === 'next_7') {
+    $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 6 DAY)";
+} elseif ($range === 'next_30') {
+    $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 29 DAY)";
 } elseif ($range === 'monthly') {
     $whereParts[] = "DATE_FORMAT(COALESCE(appointment_date, DATE(created_at)), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')";
 }
@@ -74,121 +77,254 @@ if ($endDate !== '') {
 
 if ($deptFilter !== '' && $deptFilter !== 'all') {
     $cleanDept = strtolower($deptFilter);
-    if (strpos($cleanDept, 'psych') !== false) {
-        $whereParts[] = "LOWER(department) LIKE '%psych%'";
+    if (strpos($cleanDept, 'psych') !== false || strpos($cleanDept, 'opu') !== false) {
+        $whereParts[] = "(LOWER(department) LIKE '%psych%' OR LOWER(department) LIKE '%opu%')";
     } elseif (strpos($cleanDept, 'neuro') !== false) {
         $whereParts[] = "LOWER(department) LIKE '%neuro%'";
     } else {
-        $whereParts[] = "(LOWER(department) LIKE '%general%' OR LOWER(department) LIKE '%cardio%')";
+        $whereParts[] = "(LOWER(department) LIKE '%general%' OR LOWER(department) LIKE '%cardio%' OR LOWER(department) LIKE '%medical%')";
     }
 }
 
 $whereClause = implode(" AND ", $whereParts);
 
-// ── 1. Fetch Consolidated Patient Records ────────────────────────────────────
-$patientSql = "SELECT id, patient_id, full_name, department, status, appointment_date, 
-                      scheduled_time, patient_type, appointment_type, unscheduled_walkin,
+// Safely build optional column projections
+$refColExpr = 'NULL AS reference_no';
+$slotColExpr = 'NULL AS preferred_time_slot';
+$inqColExpr = '0 AS inquiry_only';
+$modeInqColExpr = 'NULL AS mode_of_inquiry';
+try {
+    $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+    if (in_array('reference_no', $cols, true)) $refColExpr = 'reference_no';
+    if (in_array('preferred_time_slot', $cols, true)) $slotColExpr = 'preferred_time_slot';
+    if (in_array('inquiry_only', $cols, true)) $inqColExpr = 'inquiry_only';
+    if (in_array('mode_of_inquiry', $cols, true)) $modeInqColExpr = 'mode_of_inquiry';
+} catch (Throwable $ignoreCols) {}
+
+$patientSql = "SELECT id, patient_id, $refColExpr, full_name, contact_number, department, status,
+                      appointment_date, scheduled_time, $slotColExpr, patient_type,
+                      appointment_type, unscheduled_walkin, $inqColExpr, $modeInqColExpr,
                       assigned_doctor, specialty, chief_complaints,
                       medical_history_diagnosis, medical_history_treatment,
                       reminder_status, reminder_sent_at, created_at,
                       COALESCE(appointment_date, DATE(created_at)) AS record_date
                FROM patients
                WHERE $whereClause
-               ORDER BY record_date DESC, id DESC";
+               ORDER BY record_date ASC, COALESCE(scheduled_time, '08:00:00') ASC, id DESC";
 
 $stmt = $pdo->prepare($patientSql);
 $stmt->execute($params);
 $allPatients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ── 2. Calculate Consolidated Shared Statistics ──────────────────────────────
-$totalPatients = count($allPatients);
-$completedCount = 0;
-$walkinCount = 0;
-$onlineCount = 0;
-$noshowCount = 0;
-$ongoingCount = 0;
-$forApprovalCount = 0;
-$approvedCount = 0;
+$totalPatients       = count($allPatients);
+$completedCount      = 0;
+$walkinCount         = 0;
+$onlineCount         = 0;
+$noshowCount         = 0;
+$ongoingCount        = 0;
+$forApprovalCount    = 0;
+$approvedCount       = 0;
+$needsDoctorCount    = 0;
+$confirmedReadyCount = 0;
+$inClinicCount       = 0;
+$inquiryCount        = 0;
+$morningCount        = 0;
+$afternoonCount      = 0;
+$assignedDoctorCount = 0;
+$upcomingTotalCount  = 0;
 
-$deptStats = [
-    'General Medical' => [
-        'name' => 'General Medical',
-        'total' => 0,
-        'completed' => 0,
-        'walkin' => 0,
-        'online' => 0,
-        'noshow' => 0,
-        'ongoing' => 0,
-        'for_approval' => 0,
-        'completion_rate' => 0.0
-    ],
-    'Neurology' => [
-        'name' => 'Neurology',
-        'total' => 0,
-        'completed' => 0,
-        'walkin' => 0,
-        'online' => 0,
-        'noshow' => 0,
-        'ongoing' => 0,
-        'for_approval' => 0,
-        'completion_rate' => 0.0
-    ],
-    'Psychiatry' => [
-        'name' => 'Psychiatry',
-        'total' => 0,
-        'completed' => 0,
-        'walkin' => 0,
-        'online' => 0,
-        'noshow' => 0,
-        'ongoing' => 0,
-        'for_approval' => 0,
-        'completion_rate' => 0.0
-    ]
+$deptTemplate = fn(string $name): array => [
+    'name'             => $name,
+    'total'            => 0,
+    'upcoming'         => 0,
+    'needs_action'     => 0,
+    'needs_approval'   => 0,
+    'needs_doctor'     => 0,
+    'confirmed_ready'  => 0,
+    'completed'        => 0,
+    'walkin'           => 0,
+    'online'           => 0,
+    'noshow'           => 0,
+    'ongoing'          => 0,
+    'for_approval'     => 0,
+    'morning'          => 0,
+    'afternoon'        => 0,
+    'completion_rate'  => 0.0,
 ];
 
-$dailyAggregation = [];
+$deptStats = [
+    'General Medical' => $deptTemplate('General Medical'),
+    'Neurology'       => $deptTemplate('Neurology'),
+    'Psychiatry'      => $deptTemplate('Psychiatry'),
+];
+
+$dailyAggregation   = [];
 $monthlyAggregation = [];
+$chartBuckets       = [];
+$upcomingList       = [];
+
+// Pre-fill upcoming 7-day chart buckets so quiet days remain visible in the timeline
+if ($range === 'next_7') {
+    for ($i = 0; $i < 7; $i++) {
+        $dObj = new DateTime("+$i day");
+        $dIso = $dObj->format('Y-m-d');
+        $chartBuckets[$dIso] = [
+            'key'        => $dIso,
+            'label'      => $dObj->format('D M j'),
+            'general'    => 0,
+            'neurology'  => 0,
+            'psychiatry' => 0,
+            'total'      => 0,
+            'morning'    => 0,
+            'afternoon'  => 0,
+        ];
+    }
+}
+
+$useMonthlyChart = ($range === 'all');
 
 foreach ($allPatients as &$p) {
     $normDept = normalizeDepartmentName($p['department']);
     $p['normalized_department'] = $normDept;
-    $isWalkin = !empty($p['unscheduled_walkin']) || strtolower($p['appointment_type'] ?? '') === 'walk-in';
+
+    $isInquiry = !empty($p['inquiry_only'])
+        || strcasecmp(trim((string)($p['appointment_type'] ?? '')), 'inquiry') === 0
+        || strpos((string)($p['patient_id'] ?? ''), 'INQ-') === 0;
+    $isWalkin = !$isInquiry && (!empty($p['unscheduled_walkin']) || strtolower($p['appointment_type'] ?? '') === 'walk-in');
     $p['is_walkin'] = $isWalkin ? 1 : 0;
 
-    $st = strtolower($p['status'] ?? 'pending');
+    $st = strtolower(trim($p['status'] ?? 'pending'));
     $recDate = $p['record_date'] ?: date('Y-m-d');
     $monthKey = substr($recDate, 0, 7);
+    $timeBlock = resolveTimeBlock($p['preferred_time_slot'] ?? null, $p['scheduled_time'] ?? null);
+    $docRaw = trim((string)($p['assigned_doctor'] ?? ''));
+    $hasDoctor = $docRaw !== '' && strcasecmp($docRaw, 'None') !== 0;
 
-    // Global totals
+    $isCancelledOrDone = in_array($st, ['completed', 'no-show', 'rejected', 'cancelled', 'transferred'], true);
+    $isWaitingApproval = in_array($st, ['pending', 'for_approval', 'for_processing', 'for approval'], true);
+    $isConfirmed       = in_array($st, ['approved', 'confirmed'], true);
+    $isInClinic        = in_array($st, ['arrived', 'ongoing'], true);
+
+    $p['time_block'] = $timeBlock;
+
+    if ($isInquiry) {
+        $inquiryCount++;
+    }
+
     if ($st === 'completed') {
         $completedCount++;
-    } elseif ($st === 'no-show' || $st === 'rejected') {
+    } elseif (in_array($st, ['no-show', 'rejected', 'cancelled'], true)) {
         $noshowCount++;
-    } elseif ($st === 'ongoing' || $st === 'arrived') {
+    } elseif ($isInClinic) {
         $ongoingCount++;
-    } elseif ($st === 'approved') {
+        $inClinicCount++;
+        $confirmedReadyCount++;
+    } elseif ($isConfirmed) {
         $approvedCount++;
         $ongoingCount++;
+        $confirmedReadyCount++;
     } else {
         $forApprovalCount++;
     }
 
+    if (!$isCancelledOrDone) {
+        $upcomingTotalCount++;
+        if (!$isInquiry && !$hasDoctor) {
+            $needsDoctorCount++;
+        }
+        if ($hasDoctor) {
+            $assignedDoctorCount++;
+        }
+        if ($timeBlock === 'Afternoon') {
+            $afternoonCount++;
+        } else {
+            $morningCount++;
+        }
+
+        if ($isInquiry) {
+            $readinessState = 'inquiry';
+            $readinessLabel = 'Inquiry Follow-up';
+        } elseif ($isWaitingApproval) {
+            $readinessState = $hasDoctor ? 'needs_approval' : 'needs_doctor';
+            $readinessLabel = $hasDoctor ? 'Needs Approval' : 'Assign Doctor & Approve';
+        } elseif ($isInClinic) {
+            $readinessState = 'in_clinic';
+            $readinessLabel = $st === 'ongoing' ? 'In Consultation' : 'Checked In';
+        } else {
+            $readinessState = $hasDoctor ? 'ready' : 'needs_doctor';
+            $readinessLabel = $hasDoctor ? 'Ready for Visit' : 'Needs Physician';
+        }
+
+        $p['readiness_state'] = $readinessState;
+        $p['readiness_label'] = $readinessLabel;
+        $upcomingList[] = $p;
+    }
+
     if ($isWalkin) {
         $walkinCount++;
-    } else {
+    } elseif (!$isInquiry) {
         $onlineCount++;
     }
 
-    // Department-level totals
     if (isset($deptStats[$normDept])) {
         $deptStats[$normDept]['total']++;
         if ($isWalkin) $deptStats[$normDept]['walkin']++;
-        else $deptStats[$normDept]['online']++;
+        elseif (!$isInquiry) $deptStats[$normDept]['online']++;
+
+        if (!$isCancelledOrDone) {
+            $deptStats[$normDept]['upcoming']++;
+            if ($timeBlock === 'Afternoon') $deptStats[$normDept]['afternoon']++;
+            else $deptStats[$normDept]['morning']++;
+
+            if ($isWaitingApproval || (!$isInquiry && !$hasDoctor)) {
+                $deptStats[$normDept]['needs_action']++;
+            }
+            if ($isWaitingApproval) {
+                $deptStats[$normDept]['needs_approval']++;
+            }
+            if (!$isInquiry && !$hasDoctor) {
+                $deptStats[$normDept]['needs_doctor']++;
+            }
+            if ($isConfirmed || $isInClinic) {
+                $deptStats[$normDept]['confirmed_ready']++;
+            }
+        }
 
         if ($st === 'completed') $deptStats[$normDept]['completed']++;
-        elseif ($st === 'no-show' || $st === 'rejected') $deptStats[$normDept]['noshow']++;
-        elseif ($st === 'ongoing' || $st === 'arrived' || $st === 'approved') $deptStats[$normDept]['ongoing']++;
-        elseif ($st === 'for_approval' || $st === 'for_processing' || $st === 'pending') $deptStats[$normDept]['for_approval']++;
+        elseif (in_array($st, ['no-show', 'rejected', 'cancelled'], true)) $deptStats[$normDept]['noshow']++;
+        elseif ($isInClinic || $isConfirmed) $deptStats[$normDept]['ongoing']++;
+        elseif ($isWaitingApproval) $deptStats[$normDept]['for_approval']++;
+    }
+
+    // Chart bucket (skip cancelled/transferred when focusing on upcoming load)
+    if ($range === 'all' || !$isCancelledOrDone || $st === 'completed') {
+        $bKey = $useMonthlyChart ? $monthKey : $recDate;
+        if (!isset($chartBuckets[$bKey])) {
+            $bLabel = $bKey;
+            if ($useMonthlyChart) {
+                $mObj = DateTime::createFromFormat('Y-m', $bKey);
+                $bLabel = $mObj ? $mObj->format('M Y') : $bKey;
+            } else {
+                $dObj = DateTime::createFromFormat('Y-m-d', $bKey);
+                $bLabel = $dObj ? $dObj->format('D M j') : $bKey;
+            }
+            $chartBuckets[$bKey] = [
+                'key'        => $bKey,
+                'label'      => $bLabel,
+                'general'    => 0,
+                'neurology'  => 0,
+                'psychiatry' => 0,
+                'total'      => 0,
+                'morning'    => 0,
+                'afternoon'  => 0,
+            ];
+        }
+        $chartBuckets[$bKey]['total']++;
+        if ($normDept === 'Neurology') $chartBuckets[$bKey]['neurology']++;
+        elseif ($normDept === 'Psychiatry') $chartBuckets[$bKey]['psychiatry']++;
+        else $chartBuckets[$bKey]['general']++;
+        if ($timeBlock === 'Afternoon') $chartBuckets[$bKey]['afternoon']++;
+        else $chartBuckets[$bKey]['morning']++;
     }
 
     // Daily breakdown
@@ -198,6 +334,7 @@ foreach ($allPatients as &$p) {
             'date'       => $recDate,
             'department' => $normDept,
             'total'      => 0,
+            'upcoming'   => 0,
             'online'     => 0,
             'walkin'     => 0,
             'completed'  => 0,
@@ -206,11 +343,12 @@ foreach ($allPatients as &$p) {
         ];
     }
     $dailyAggregation[$dailyKey]['total']++;
+    if (!$isCancelledOrDone) $dailyAggregation[$dailyKey]['upcoming']++;
     if ($isWalkin) $dailyAggregation[$dailyKey]['walkin']++;
-    else $dailyAggregation[$dailyKey]['online']++;
+    elseif (!$isInquiry) $dailyAggregation[$dailyKey]['online']++;
     if ($st === 'completed') $dailyAggregation[$dailyKey]['completed']++;
-    elseif ($st === 'no-show' || $st === 'rejected') $dailyAggregation[$dailyKey]['noshow']++;
-    elseif ($st === 'ongoing' || $st === 'arrived' || $st === 'approved') $dailyAggregation[$dailyKey]['ongoing']++;
+    elseif (in_array($st, ['no-show', 'rejected', 'cancelled'], true)) $dailyAggregation[$dailyKey]['noshow']++;
+    elseif ($isInClinic || $isConfirmed) $dailyAggregation[$dailyKey]['ongoing']++;
 
     // Monthly breakdown
     $monthlyKey = $monthKey . '___' . $normDept;
@@ -219,6 +357,7 @@ foreach ($allPatients as &$p) {
             'month'      => $monthKey,
             'department' => $normDept,
             'total'      => 0,
+            'upcoming'   => 0,
             'online'     => 0,
             'walkin'     => 0,
             'completed'  => 0,
@@ -227,29 +366,36 @@ foreach ($allPatients as &$p) {
         ];
     }
     $monthlyAggregation[$monthlyKey]['total']++;
+    if (!$isCancelledOrDone) $monthlyAggregation[$monthlyKey]['upcoming']++;
     if ($isWalkin) $monthlyAggregation[$monthlyKey]['walkin']++;
-    else $monthlyAggregation[$monthlyKey]['online']++;
+    elseif (!$isInquiry) $monthlyAggregation[$monthlyKey]['online']++;
     if ($st === 'completed') $monthlyAggregation[$monthlyKey]['completed']++;
-    elseif ($st === 'no-show' || $st === 'rejected') $monthlyAggregation[$monthlyKey]['noshow']++;
-    elseif ($st === 'ongoing' || $st === 'arrived' || $st === 'approved') $monthlyAggregation[$monthlyKey]['ongoing']++;
+    elseif (in_array($st, ['no-show', 'rejected', 'cancelled'], true)) $monthlyAggregation[$monthlyKey]['noshow']++;
+    elseif ($isInClinic || $isConfirmed) $monthlyAggregation[$monthlyKey]['ongoing']++;
 }
 unset($p);
 
-// Calculate Department Completion Rates
 foreach ($deptStats as &$ds) {
     $ds['completion_rate'] = $ds['total'] > 0 ? round(($ds['completed'] / $ds['total']) * 100, 1) : 0.0;
 }
 unset($ds);
 
-$completionRate = $totalPatients > 0 ? round(($completedCount / $totalPatients) * 100, 1) : 0.0;
-$noshowRate = $totalPatients > 0 ? round(($noshowCount / $totalPatients) * 100, 1) : 0.0;
-$walkinRatio = $totalPatients > 0 ? round(($walkinCount / $totalPatients) * 100, 1) : 0.0;
+$needsActionCount = count(array_filter($upcomingList, function ($item) {
+    return in_array($item['readiness_state'] ?? '', ['needs_approval', 'needs_doctor', 'inquiry'], true);
+}));
 
-// Sort aggregations descending by date
-krsort($dailyAggregation);
+$completionRate = $totalPatients > 0 ? round(($completedCount / $totalPatients) * 100, 1) : 0.0;
+$noshowRate     = $totalPatients > 0 ? round(($noshowCount / $totalPatients) * 100, 1) : 0.0;
+$walkinRatio    = $totalPatients > 0 ? round(($walkinCount / $totalPatients) * 100, 1) : 0.0;
+
+ksort($chartBuckets);
+if ($range === 'next_7') {
+    krsort($dailyAggregation);
+} else {
+    krsort($dailyAggregation);
+}
 krsort($monthlyAggregation);
 
-// Add calculated rates to daily and monthly tables
 $dailyList = array_values($dailyAggregation);
 foreach ($dailyList as &$d) {
     $d['completion_rate'] = $d['total'] > 0 ? round(($d['completed'] / $d['total']) * 100, 1) : 0.0;
@@ -266,64 +412,133 @@ foreach ($monthlyList as &$m) {
 }
 unset($m);
 
-// ── 3. CSV Export Handler ───────────────────────────────────────────────────
+// CSV Export Handler
 if ($exportCsv) {
     if (ob_get_length()) {
         ob_end_clean();
     }
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="MMWGH_All_Time_Report_' . date('Ymd_His') . '.csv"');
-    $out = fopen('php://output', 'w');
-    
-    // Header row
-    fputcsv($out, [
-        'Patient ID', 'Full Name', 'Department', 'Booking Type', 'Appointment Date',
-        'Scheduled Time', 'Status', 'Doctor Assigned', 'Diagnosis', 'Treatment'
-    ]);
+    $qfFilter = trim($_GET['qf'] ?? 'all');
+    $qSearch  = strtolower(trim($_GET['q'] ?? ''));
 
-    foreach ($allPatients as $row) {
+    $exportRows = ($range === 'all' && $qfFilter === 'all') ? $allPatients : $upcomingList;
+    if ($qfFilter === 'needs_action') {
+        $exportRows = array_values(array_filter($upcomingList, function ($item) {
+            return in_array($item['readiness_state'] ?? '', ['needs_approval', 'needs_doctor', 'inquiry'], true);
+        }));
+    } elseif ($qfFilter === 'ready') {
+        $exportRows = array_values(array_filter($upcomingList, function ($item) {
+            return in_array($item['readiness_state'] ?? '', ['ready', 'in_clinic'], true);
+        }));
+    }
+
+    if ($qSearch !== '') {
+        $exportRows = array_values(array_filter($exportRows, function ($item) use ($qSearch) {
+            return str_contains(strtolower((string)($item['full_name'] ?? '')), $qSearch)
+                || str_contains(strtolower((string)($item['patient_id'] ?? '')), $qSearch)
+                || str_contains(strtolower((string)($item['assigned_doctor'] ?? '')), $qSearch)
+                || str_contains(strtolower((string)($item['normalized_department'] ?? $item['department'] ?? '')), $qSearch);
+        }));
+    }
+
+    $rangeNames = [
+        'today'   => 'Today',
+        'next_7'  => 'Next 7 Days',
+        'next_30' => 'Next 30 Days',
+        'monthly' => 'This Month',
+        'all'     => 'All Time'
+    ];
+    $scopeRangeLabel = $rangeNames[$range] ?? ucfirst(str_replace('_', ' ', $range));
+    $scopeDeptLabel  = ($deptFilter === '' || strtolower($deptFilter) === 'all') ? 'All Departments' : normalizeDepartmentName($deptFilter);
+    $scopeQfLabel    = $qfFilter === 'needs_action' ? 'Needs Action Only' : ($qfFilter === 'ready' ? 'Ready / In Clinic Only' : 'All Operational Records');
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="MMWGH_Report_' . preg_replace('/[^a-z0-9_]/i', '', $range) . '_' . date('Ymd_His') . '.csv"');
+    $out = fopen('php://output', 'w');
+    // UTF-8 BOM for clean Excel rendering
+    fwrite($out, "\xEF\xBB\xBF");
+
+    fputcsv($out, ['MARIVELES MENTAL WELLNESS AND GENERAL HOSPITAL'], ',', '"', '\\');
+    fputcsv($out, ['OPD UPCOMING PATIENT OPERATIONS & ANALYTICS REPORT'], ',', '"', '\\');
+    fputcsv($out, ['Period Scope', $scopeRangeLabel, 'Department Scope', $scopeDeptLabel, 'Readiness Filter', $scopeQfLabel, 'Generated', date('M d, Y h:i A')], ',', '"', '\\');
+    fputcsv($out, ['Upcoming Total', $upcomingTotalCount, 'Needs Action', $needsActionCount, 'Ready / In Clinic', $confirmedReadyCount, 'Completed', $completedCount, 'No-Show / Cancelled', $noshowCount], ',', '"', '\\');
+    fputcsv($out, [], ',', '"', '\\');
+
+    fputcsv($out, [
+        'Patient / Ref ID', 'Patient Full Name', 'Contact Number', 'Department',
+        'Scheduled Date', 'Time Block', 'Visit Mode', 'Status',
+        'Readiness State', 'Attending Physician', 'Clinical Notes / Diagnosis'
+    ], ',', '"', '\\');
+
+    foreach ($exportRows as $row) {
         $normDept = $row['normalized_department'] ?? normalizeDepartmentName($row['department']);
-        $isWalkin = !empty($row['is_walkin']);
-        $recDate = $row['record_date'] ?: date('Y-m-d');
+        $isInquiry = !empty($row['inquiry_only'])
+            || strcasecmp(trim((string)($row['appointment_type'] ?? '')), 'inquiry') === 0
+            || strpos((string)($row['patient_id'] ?? ''), 'INQ-') === 0;
+        $isWalkin = !$isInquiry && !empty($row['is_walkin']);
+        $recDateRaw = $row['record_date'] ?: date('Y-m-d');
+        $dObj = DateTime::createFromFormat('Y-m-d', $recDateRaw);
+        $recDateFmt = $dObj ? $dObj->format('M d, Y') : $recDateRaw;
+        $tb = $row['time_block'] ?? resolveTimeBlock($row['preferred_time_slot'] ?? null, $row['scheduled_time'] ?? null);
+        $tbFmt = $tb === 'Afternoon' ? 'Afternoon (1:00 PM - 5:00 PM)' : 'Morning (8:00 AM - 12:00 PM)';
+        $modeLabel = $isInquiry ? 'Inquiry' : ($isWalkin ? 'Walk-in' : 'Online Booking');
+        $docLabel = $isInquiry ? 'General Inquiry' : ((!empty($row['assigned_doctor']) && strcasecmp((string)$row['assigned_doctor'], 'None') !== 0) ? $row['assigned_doctor'] : 'Unassigned Physician');
+        $readinessText = $row['readiness_label'] ?? ucwords(str_replace(['_', '-'], ' ', (string)($row['status'] ?? 'Pending')));
+        $notesText = trim((string)($row['medical_history_diagnosis'] ?? ''));
+        if ($notesText !== '' && !empty($row['medical_history_treatment'])) {
+            $notesText .= ' | ' . trim((string)$row['medical_history_treatment']);
+        }
+
         fputcsv($out, [
             $row['patient_id'],
             $row['full_name'],
+            $row['contact_number'] ?? '',
             $normDept,
-            $isWalkin ? 'Walk-in' : 'Online Booker',
-            $recDate,
-            $row['scheduled_time'] ?? 'N/A',
-            strtoupper($row['status']),
-            $row['assigned_doctor'] ?? 'Unassigned',
-            $row['medical_history_diagnosis'] ?? '',
-            $row['medical_history_treatment'] ?? ''
-        ]);
+            $recDateFmt,
+            $tbFmt,
+            $modeLabel,
+            ucwords(str_replace(['_', '-'], ' ', (string)($row['status'] ?? ''))),
+            $readinessText,
+            $docLabel,
+            $notesText
+        ], ',', '"', '\\');
     }
     fclose($out);
     exit;
 }
 
-// ── 4. Standard JSON Response ───────────────────────────────────────────────
 $payload = [
+    'range'   => $range,
     'summary' => [
-        'total_patients'       => $totalPatients,
-        'total_completed'      => $completedCount,
-        'total_walkin'         => $walkinCount,
-        'total_online'         => $onlineCount,
-        'total_noshow'         => $noshowCount,
-        'total_ongoing'        => $ongoingCount,
-        'total_approved'       => $approvedCount,
-        'total_for_approval'   => $forApprovalCount,
-        'completion_rate'      => $completionRate,
-        'completion_rate_text' => $completionRate . '%',
-        'noshow_rate'          => $noshowRate,
-        'noshow_rate_text'     => $noshowRate . '%',
-        'walkin_ratio'         => $walkinRatio,
-        'walkin_ratio_text'    => $walkinRatio . '%'
+        'total_patients'        => $totalPatients,
+        'total_upcoming'        => $upcomingTotalCount,
+        'total_needs_action'    => $needsActionCount,
+        'total_needs_doctor'    => $needsDoctorCount,
+        'total_for_approval'    => $forApprovalCount,
+        'total_confirmed_ready' => $confirmedReadyCount,
+        'total_in_clinic'       => $inClinicCount,
+        'total_completed'       => $completedCount,
+        'total_walkin'          => $walkinCount,
+        'total_online'          => $onlineCount,
+        'total_noshow'          => $noshowCount,
+        'total_ongoing'         => $ongoingCount,
+        'total_approved'        => $approvedCount,
+        'total_inquiries'       => $inquiryCount,
+        'morning_count'         => $morningCount,
+        'afternoon_count'       => $afternoonCount,
+        'assigned_doctor_count' => $assignedDoctorCount,
+        'completion_rate'       => $completionRate,
+        'completion_rate_text'  => $completionRate . '%',
+        'noshow_rate'           => $noshowRate,
+        'noshow_rate_text'      => $noshowRate . '%',
+        'walkin_ratio'          => $walkinRatio,
+        'walkin_ratio_text'     => $walkinRatio . '%'
     ],
-    'departments'        => array_values($deptStats),
-    'daily_reports'      => $dailyList,
-    'monthly_reports'    => $monthlyList,
-    'recent_records'     => array_slice($allPatients, 0, 100)
+    'departments'       => array_values($deptStats),
+    'chart_series'      => array_values($chartBuckets),
+    'upcoming_patients' => array_slice($upcomingList, 0, 150),
+    'daily_reports'     => $dailyList,
+    'monthly_reports'   => $monthlyList,
+    'recent_records'    => array_slice(array_reverse($allPatients), 0, 100)
 ];
 
 respondOk(array_merge(['data' => $payload], $payload));

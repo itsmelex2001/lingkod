@@ -14,6 +14,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/patient_otp.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -118,16 +119,21 @@ try {
               . "Mariveles Mental Wellness and General Hospital\r\n"
               . "LINGKOD Patient Portal Support";
 
-    // 6. Send email via PHPMailer / Gmail SMTP
+    flushJsonAndContinue([
+        'success'   => true,
+        'message'   => 'A password reset link has been sent to your email address (' . htmlspecialchars($patient['email']) . '). Please check your Gmail inbox or spam folder.',
+        'emailSent' => true
+    ]);
+
+    // 6. Send email via PHPMailer / Gmail SMTP (After Response Flushed)
     $smtpUser = trim($_ENV['SMTP_USER'] ?? '');
     $smtpPass = trim($_ENV['SMTP_PASS'] ?? '');
-    $mailSent = false;
-    $mailError = '';
 
     if (!empty($smtpUser) && !empty($smtpPass) && class_exists(PHPMailer::class)) {
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
+            $mail->Timeout    = 8;
             $mail->Host       = !empty($_ENV['SMTP_HOST']) ? $_ENV['SMTP_HOST'] : 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
             $mail->Username   = $smtpUser;
@@ -157,16 +163,8 @@ try {
         $headers  = "From: no-reply@mmwgh.gov.ph\r\n"
                   . "Reply-To: no-reply@mmwgh.gov.ph\r\n"
                   . "Content-Type: text/plain; charset=UTF-8\r\n";
-        $mailSent = @mail($patient['email'], $subject, $textBody, $headers);
+        @mail($patient['email'], $subject, $textBody, $headers);
     }
-
-    echo json_encode([
-        'success'   => true,
-        'message'   => 'A password reset link has been sent to your email address (' . htmlspecialchars($patient['email']) . '). Please check your Gmail inbox or spam folder.',
-        'mail_sent' => $mailSent,
-        // Include reset link in dev environment if email sending is blocked by local network
-        'dev_link'  => (!$mailSent && ($host === 'localhost' || str_contains($host, '127.0.0.1'))) ? $resetUrl : null
-    ]);
 
 } catch (PDOException $e) {
     http_response_code(500);

@@ -84,29 +84,82 @@
                   </svg>
                 </button>
 
-                <!-- Single Visual Frame -->
-                <div id="howto-visual-single" class="howto-visual-single-wrap">
-                  <div class="howto-placeholder-scene">
-                    <svg viewBox="0 0 800 280" preserveAspectRatio="xMidYMid slice" class="howto-scene-svg" xmlns="http://www.w3.org/2000/svg">
-                      <defs>
-                        <linearGradient id="skyGradSingle" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stop-color="#bae6fd"/>
-                          <stop offset="65%" stop-color="#e0f2fe"/>
-                          <stop offset="100%" stop-color="#f0f9ff"/>
-                        </linearGradient>
-                      </defs>
-                      <rect width="800" height="280" fill="url(#skyGradSingle)"/>
-                      <!-- Clouds -->
-                      <g fill="#ffffff">
-                        <path d="M165 65h52a18 18 0 0 0 0-36 22 22 0 0 0-42-6 16 16 0 0 0-10 42z"/>
-                        <path d="M360 76h85a26 26 0 0 0 0-52 34 34 0 0 0-65-10 24 24 0 0 0-20 62z"/>
-                        <path d="M645 60h42a14 14 0 0 0 0-28 18 18 0 0 0-34-5 13 13 0 0 0-8 33z"/>
-                      </g>
-                      <!-- Back Light Green Hills -->
-                      <path d="M0 205 Q60 195 120 215 Q260 165 440 210 Q640 230 800 198 L800 280 L0 280 Z" fill="#c7e576"/>
-                      <!-- Front Olive Green Hills -->
-                      <path d="M0 255 Q45 250 85 198 Q135 142 195 205 Q245 255 315 232 Q385 202 465 235 Q540 260 605 205 Q665 150 735 218 Q770 250 800 252 L800 280 L0 280 Z" fill="#7ca600"/>
+                <!-- Single Visual Frame (Step Video Player) -->
+                <div id="howto-visual-single" class="howto-visual-single-wrap" onclick="handleHowtoVideoSurfaceClick(event)">
+                  <video
+                    id="howto-step-video"
+                    class="howto-step-video"
+                    muted
+                    playsinline
+                    preload="metadata"
+                  ></video>
+
+                  <button
+                    type="button"
+                    id="howto-video-center-btn"
+                    class="howto-video-center-btn"
+                    onclick="toggleHowtoVideo(event)"
+                    aria-label="Play step video"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <polygon points="7 4 20 12 7 20 7 4"></polygon>
                     </svg>
+                  </button>
+
+                  <div class="howto-video-controls" onclick="event.stopPropagation()">
+                    <button
+                      type="button"
+                      id="howto-video-toggle-btn"
+                      class="howto-video-ctrl-btn"
+                      onclick="toggleHowtoVideo(event)"
+                      aria-label="Play or pause video"
+                    >
+                      <svg id="howto-ctrl-play-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <polygon points="6 4 20 12 6 20 6 4"></polygon>
+                      </svg>
+                      <svg id="howto-ctrl-pause-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display: none;">
+                        <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                        <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                      </svg>
+                    </button>
+
+                    <div
+                      id="howto-video-progress-track"
+                      class="howto-video-progress-track"
+                      onclick="seekHowtoVideo(event)"
+                      role="slider"
+                      aria-label="Video progress"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="0"
+                      tabindex="0"
+                    >
+                      <div id="howto-video-progress-fill" class="howto-video-progress-fill"></div>
+                    </div>
+
+                    <span id="howto-video-time" class="howto-video-time">0s / 0s</span>
+
+                    <button
+                      type="button"
+                      id="howto-video-expand-btn"
+                      class="howto-video-ctrl-btn"
+                      onclick="toggleHowtoMaximize(event)"
+                      aria-label="Maximize video"
+                      title="Maximize"
+                    >
+                      <svg id="howto-expand-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <polyline points="9 21 3 21 3 15"></polyline>
+                        <line x1="21" y1="3" x2="14" y2="10"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                      </svg>
+                      <svg id="howto-compress-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                        <polyline points="4 14 10 14 10 20"></polyline>
+                        <polyline points="20 10 14 10 14 4"></polyline>
+                        <line x1="14" y1="10" x2="21" y2="3"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
@@ -167,6 +220,14 @@
             </div>
           </div>
         </div>
+
+  <!-- Maximized Video Lightbox -->
+  <div id="howto-video-lightbox" class="howto-video-lightbox" onclick="minimizeHowtoVideo()" aria-hidden="true">
+    <div class="howto-video-lightbox-inner" onclick="event.stopPropagation()">
+      <button type="button" class="howto-lightbox-close-btn" onclick="minimizeHowtoVideo()" aria-label="Minimize video">&times;</button>
+      <div id="howto-video-lightbox-slot" class="howto-video-lightbox-slot"></div>
+    </div>
+  </div>
 
   <!-- Services Section -->
   <section id="services-specialties" class="services-section-inline" style="scroll-margin-top: 76px;">
@@ -537,6 +598,7 @@
     pointer-events: none;
   }
   .howto-visual-single-wrap {
+    position: relative;
     width: 100%;
     max-width: 520px;
     height: 100%;
@@ -547,10 +609,176 @@
     border: 2px solid #e2e8f0;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    background: #0f172a;
+    background: #0b1320;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .howto-step-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: #0b1320;
+  }
+  .howto-video-center-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(6px);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+    transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    padding-left: 3px;
+  }
+  .howto-visual-single-wrap:hover .howto-video-center-btn {
+    background: rgba(21, 128, 61, 0.9);
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  .howto-visual-single-wrap.is-playing .howto-video-center-btn {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0.88);
+  }
+  .howto-video-controls {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 20px 12px 9px;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.88) 0%, rgba(15, 23, 42, 0.45) 60%, transparent 100%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 4;
+    cursor: default;
+  }
+  .howto-video-ctrl-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease;
+  }
+  .howto-video-ctrl-btn:hover {
+    background: rgba(34, 197, 94, 0.85);
+  }
+  .howto-video-progress-track {
+    flex: 1;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.28);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: height 0.15s ease;
+  }
+  .howto-video-progress-track:hover {
+    height: 7px;
+  }
+  .howto-video-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #22c55e;
+    border-radius: 999px;
+    transition: width 0.08s linear;
+  }
+  .howto-video-time {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #f8fafc;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .howto-video-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.68);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+  }
+  .howto-video-lightbox.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .howto-video-lightbox-inner {
+    position: relative;
+    width: min(1040px, 94vw);
+    max-height: 88vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .howto-video-lightbox-slot {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .howto-visual-single-wrap.is-maximized {
+    max-width: 100%;
+    width: 100%;
+    max-height: 84vh;
+    height: auto;
+    border-radius: 16px;
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  }
+  .howto-lightbox-close-btn {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: #1e293b;
+    color: #ffffff;
+    font-size: 1.45rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .howto-lightbox-close-btn:hover {
+    background: #15803d;
+    transform: scale(1.08);
   }
   .howto-visual-dual-wrap {
     width: 100%;
@@ -580,7 +808,7 @@
   .howto-visual-single-wrap img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
   }
   .howto-modal-reminder-inline {
@@ -934,6 +1162,7 @@
       title: 'Click "Book Appointment."',
       titleTl: 'I-click ang "Magpa-appointment."',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-1.mp4',
       desc: 'On the homepage, locate and click the Book Appointment button to begin the appointment process.',
       descTl: 'Sa homepage, hanapin at i-click ang button na Magpa-appointment upang simulan ang proseso ng appointment.'
     },
@@ -943,6 +1172,7 @@
       title: 'Select "Already Have an Account" or "New Patient".',
       titleTl: 'Piliin ang "May Account Na" o "Bagong Pasyente".',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-2.mp4',
       desc: 'A prompt will appear asking for your patient status. Choose "Already Have an Account" if you are a returning patient to sign in, or select "New Patient" to begin registration.',
       descTl: 'May lalabas na opsyon para sa estado ng pasyente. Piliin ang "May Account Na" kung dati ka nang may account upang mag-sign in, o piliin ang "Bagong Pasyente" upang simulan ang rehistrasyon.'
     },
@@ -952,6 +1182,7 @@
       title: 'Register and Verify Your Account.',
       titleTl: 'Magrehistro at Mag-verify ng Account.',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-3.mp4',
       desc: 'For new patients, fill out the registration form with your personal details and create your account credentials. You must then verify your account through email before you can log in.',
       descTl: 'Para sa mga bagong pasyente, sagutan ang registration form gamit ang iyong personal na detalye at lumikha ng account credentials. I-verify ang iyong account sa email bago mag-log in.'
     },
@@ -961,6 +1192,7 @@
       title: 'Log In to Book an Appointment.',
       titleTl: 'Mag-login para Magpa-appointment.',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-4.mp4',
       desc: 'After successfully logging in to your patient account, navigate to the patient portal and click "Book Appointment" to begin your consultation request.',
       descTl: 'Pagkatapos mag-log in sa iyong patient account, magtungo sa patient portal at i-click ang "Book Appointment" upang simulan ang iyong kahilingan sa konsultasyon.'
     },
@@ -970,6 +1202,7 @@
       title: 'Fill Out the Required Form.',
       titleTl: 'Sagutan ang Kinakailangang Form.',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-5v2.mp4',
       desc: 'First, review and accept the Data Privacy Consent (R.A. 10173) by scrolling to the bottom and confirming. Then, fill out your chief complaint and choose your consultation schedule.',
       descTl: 'Una, basahin at tanggapin ang Data Privacy Consent (R.A. 10173) sa pamamagitan ng pag-scroll pababa at pag-confirm. Pagkatapos, punan ang iyong chief complaint at piliin ang iskedyul ng konsultasyon.'
     },
@@ -979,6 +1212,7 @@
       title: 'Confirm Your Appointment.',
       titleTl: 'Kumpirmahin ang Appointment.',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-6.mp4',
       desc: 'Review your entered information, clinic date, and consultation details carefully. Once confirmed, click Submit to queue your appointment request.',
       descTl: 'Suriing mabuti ang lahat ng ibinigay na impormasyon, petsa ng clinic, at detalye ng konsultasyon. Kapag tama na ang lahat, i-click ang Submit upang maipila ang appointment.'
     },
@@ -988,6 +1222,7 @@
       title: 'Wait for Appointment Approval.',
       titleTl: 'Maghintay ng Pag-apruba ng Appointment.',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-7.mp4',
       desc: 'Your appointment will be queued for review. Monitor its status in your Patient Dashboard under Upcoming Appointments while our clinical staff reviews your complaints and assigns the proper department.',
       descTl: 'Ang iyong appointment ay nakapila para sa pagsusuri. Subaybayan ang estado nito sa iyong Patient Dashboard sa ilalim ng Upcoming Appointments habang sinusuri ng clinical staff ang iyong complaint at itinatalaga ang tamang departamento.'
     },
@@ -997,6 +1232,7 @@
       title: 'Confirmed Appointment.',
       titleTl: 'Kumpirmadong Appointment.',
       layout: 'single',
+      video: '/sdn/public/assets/HOW_TO_USE_LINGKOD/STEP-8.mp4',
       desc: 'Once approved by the hospital staff, your appointment status will change to "Confirmed". You will receive reminder notifications with complete visit instructions before your clinic day.',
       descTl: 'Kapag naaprubahan na ng hospital staff, ang estado ng appointment ay magiging "Confirmed". Makakatanggap ka ng mga abiso ng paalala kasama ang kumpletong tagubilin bago ang araw ng iyong konsultasyon.',
       reminder: '<strong>Reminder:</strong> Please arrive on time at the Outpatient Triage desk on your confirmed appointment date with a valid ID.',
@@ -1014,6 +1250,157 @@
   }
 
   let currentHowtoIndex = 0;
+
+  function formatHowtoSeconds(sec) {
+    if (!Number.isFinite(sec) || sec < 0) return '0s';
+    const total = Math.floor(sec);
+    if (total < 60) return `${total}s`;
+    const mins = Math.floor(total / 60);
+    const secs = String(total % 60).padStart(2, '0');
+    return `${mins}:${secs}`;
+  }
+
+  function syncHowtoVideoUI() {
+    const video = document.getElementById('howto-step-video');
+    const wrap = document.getElementById('howto-visual-single');
+    const playIcon = document.getElementById('howto-ctrl-play-icon');
+    const pauseIcon = document.getElementById('howto-ctrl-pause-icon');
+    const fill = document.getElementById('howto-video-progress-fill');
+    const track = document.getElementById('howto-video-progress-track');
+    const timeEl = document.getElementById('howto-video-time');
+    if (!video || !wrap) return;
+
+    const isPlaying = !video.paused && !video.ended;
+    wrap.classList.toggle('is-playing', isPlaying);
+    if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
+    if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
+
+    const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+    const cur = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+    const pct = dur > 0 ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
+
+    if (fill) fill.style.width = `${pct}%`;
+    if (track) track.setAttribute('aria-valuenow', String(Math.round(pct)));
+    if (timeEl) {
+      timeEl.textContent = dur > 0
+        ? `${formatHowtoSeconds(cur)} / ${formatHowtoSeconds(dur)}`
+        : '0s / --s';
+    }
+  }
+
+  function loadHowtoStepVideo(src) {
+    const video = document.getElementById('howto-step-video');
+    if (!video) return;
+    video.muted = true;
+    video.pause();
+    if (src && video.dataset.src !== src) {
+      video.dataset.src = src;
+      video.src = src;
+      video.load();
+    } else {
+      video.currentTime = 0;
+    }
+    syncHowtoVideoUI();
+  }
+
+  function toggleHowtoVideo(e) {
+    if (e) e.stopPropagation();
+    const video = document.getElementById('howto-step-video');
+    if (!video) return;
+    if (video.paused || video.ended) {
+      if (video.ended) video.currentTime = 0;
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }
+
+  function seekHowtoVideo(e) {
+    if (e) e.stopPropagation();
+    const video = document.getElementById('howto-step-video');
+    const track = document.getElementById('howto-video-progress-track');
+    if (!video || !track || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    video.currentTime = ratio * video.duration;
+    syncHowtoVideoUI();
+  }
+
+  let isHowtoVideoMaximized = false;
+
+  function updateHowtoExpandIcons() {
+    const expandIcon = document.getElementById('howto-expand-icon');
+    const compressIcon = document.getElementById('howto-compress-icon');
+    const expandBtn = document.getElementById('howto-video-expand-btn');
+    if (expandIcon) expandIcon.style.display = isHowtoVideoMaximized ? 'none' : 'block';
+    if (compressIcon) compressIcon.style.display = isHowtoVideoMaximized ? 'block' : 'none';
+    if (expandBtn) {
+      expandBtn.setAttribute('aria-label', isHowtoVideoMaximized ? 'Minimize video' : 'Maximize video');
+      expandBtn.setAttribute('title', isHowtoVideoMaximized ? 'Minimize' : 'Maximize');
+    }
+  }
+
+  function maximizeHowtoVideo() {
+    if (isHowtoVideoMaximized) return;
+    const visSingle = document.getElementById('howto-visual-single');
+    const lightbox = document.getElementById('howto-video-lightbox');
+    const slot = document.getElementById('howto-video-lightbox-slot');
+    const video = document.getElementById('howto-step-video');
+    if (!visSingle || !lightbox || !slot) return;
+
+    slot.appendChild(visSingle);
+    visSingle.classList.add('is-maximized');
+    lightbox.classList.add('open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    isHowtoVideoMaximized = true;
+    updateHowtoExpandIcons();
+
+    if (video && (video.paused || video.ended)) {
+      if (video.ended) video.currentTime = 0;
+      video.play().catch(() => {});
+    }
+  }
+
+  function minimizeHowtoVideo() {
+    if (!isHowtoVideoMaximized) return;
+    const visSingle = document.getElementById('howto-visual-single');
+    const visDual = document.getElementById('howto-visual-dual');
+    const lightbox = document.getElementById('howto-video-lightbox');
+    if (!visSingle || !visDual || !lightbox) return;
+
+    visDual.before(visSingle);
+    visSingle.classList.remove('is-maximized');
+    lightbox.classList.remove('open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    isHowtoVideoMaximized = false;
+    updateHowtoExpandIcons();
+  }
+
+  function toggleHowtoMaximize(e) {
+    if (e) e.stopPropagation();
+    if (isHowtoVideoMaximized) {
+      minimizeHowtoVideo();
+    } else {
+      maximizeHowtoVideo();
+    }
+  }
+
+  function handleHowtoVideoSurfaceClick(e) {
+    if (e) e.stopPropagation();
+    if (!isHowtoVideoMaximized) {
+      maximizeHowtoVideo();
+    } else {
+      toggleHowtoVideo(e);
+    }
+  }
+
+  (function bindHowtoVideoEvents() {
+    const video = document.getElementById('howto-step-video');
+    if (!video) return;
+    ['loadedmetadata', 'timeupdate', 'play', 'pause', 'ended'].forEach((evt) => {
+      video.addEventListener(evt, syncHowtoVideoUI);
+    });
+  })();
 
   function renderHowtoStep(index) {
     if (index < 0) index = 0;
@@ -1042,8 +1429,9 @@
       descSingle.style.display = 'block';
       descSingle.textContent = howtoField(item, 'desc');
       descDual.style.display = 'none';
-      visSingle.style.display = 'block';
+      visSingle.style.display = 'flex';
       visDual.style.display = 'none';
+      loadHowtoStepVideo(item.video);
     }
 
     if (item.reminder) {
@@ -1103,6 +1491,13 @@
   }
 
   function closeHowtoModal() {
+    minimizeHowtoVideo();
+    const video = document.getElementById('howto-step-video');
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
+      syncHowtoVideoUI();
+    }
     const stage = document.getElementById('howto-stage-area');
     const modal = document.getElementById('howto-modal-backdrop');
     if (stage) stage.classList.remove('modal-open');
@@ -1143,6 +1538,14 @@
     if (!modal || !modal.classList.contains('open')) return;
     if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
       e.preventDefault();
+    }
+    if (e.key === ' ') toggleHowtoVideo();
+    if (e.key === 'Escape') {
+      if (isHowtoVideoMaximized) {
+        minimizeHowtoVideo();
+      } else {
+        closeHowtoModal();
+      }
     }
     if (e.key === 'ArrowRight') nextHowtoStep();
     if (e.key === 'ArrowLeft') prevHowtoStep();

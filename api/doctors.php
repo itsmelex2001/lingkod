@@ -36,6 +36,14 @@ if ($method === 'POST' || $method === 'DELETE') {
 $dept = $_GET['department'] ?? null;
 $mode = $_GET['mode']       ?? null;
 
+// Ensure profile_image column exists even if schema lock predates v6
+try {
+    $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('profile_image', $docCols, true)) {
+        @$pdo->exec("ALTER TABLE doctors ADD COLUMN profile_image VARCHAR(255) NULL");
+    }
+} catch (Throwable $ignore) {}
+
 // ── GET ──────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
     
@@ -43,7 +51,7 @@ if ($method === 'GET') {
     if ($mode === 'manage') {
         $stmt = $pdo->query(
             "SELECT id, name, specialization, department, schedule_start, schedule_end,
-                    total_slots, status, schedule_date
+                    total_slots, status, schedule_date, profile_image
              FROM doctors
              ORDER BY department, name ASC"
         );
@@ -61,7 +69,7 @@ if ($method === 'GET') {
     // Assign-doctor dropdown (admin patient profile)
     if ($mode === 'assign') {
         $stmt = $pdo->query(
-            "SELECT id, name, specialization, department, status
+            "SELECT id, name, specialization, department, status, profile_image
              FROM doctors
              ORDER BY department, name ASC"
         );
@@ -74,7 +82,7 @@ if ($method === 'GET') {
             "SELECT id, name, specialization, department,
                     TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
-                    status, schedule_date
+                    status, schedule_date, profile_image
              FROM doctors
              WHERE (LOWER(department) = LOWER(?) OR LOWER(department) LIKE CONCAT('%', LOWER(?), '%'))
              ORDER BY schedule_start ASC"
@@ -85,7 +93,7 @@ if ($method === 'GET') {
             "SELECT id, name, specialization, department,
                     TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
-                    status, schedule_date
+                    status, schedule_date, profile_image
              FROM doctors
              ORDER BY department, schedule_start ASC"
         );
@@ -165,11 +173,20 @@ if ($method === 'POST' && $isAdmin) {
              VALUES (?, ?, ?, ?, ?, CURDATE())"
         );
         $stmt->execute([$name, $specialization, $department, $totalSlots, $status]);
+        $newDoctorId = $pdo->lastInsertId();
+
+        $profileImageUrl = null;
+        if (!empty($b['image_data']) && is_string($b['image_data'])) {
+            $profileImageUrl = saveUploadedAvatar($b['image_data'], 'doctor', $newDoctorId);
+            if ($profileImageUrl !== null) {
+                $pdo->prepare("UPDATE doctors SET profile_image = ? WHERE id = ?")->execute([$profileImageUrl, $newDoctorId]);
+            }
+        }
 
         addLog($pdo, 'info', 'Doctor Added', $actor,
                "New doctor '$name' ($specialization) added to $department department.");
 
-        respondOk(['message' => "Doctor '$name' added successfully.", 'id' => $pdo->lastInsertId()]);
+        respondOk(['message' => "Doctor '$name' added successfully.", 'id' => $newDoctorId, 'profile_image' => $profileImageUrl]);
     }
 
     // ── UPDATE doctor ────────────────────────────────────────────────────────
@@ -177,9 +194,10 @@ if ($method === 'POST' && $isAdmin) {
         $id = $b['id'] ?? '';
         if ($id === '') respondErr('id is required.');
 
-        $check = $pdo->prepare("SELECT name FROM doctors WHERE id = ?");
+        $check = $pdo->prepare("SELECT name, profile_image FROM doctors WHERE id = ?");
         $check->execute([$id]);
-        if (!$check->fetch()) respondErr('Doctor not found.', 404);
+        $existingDoc = $check->fetch();
+        if (!$existingDoc) respondErr('Doctor not found.', 404);
 
         $updates = [];
         $params  = [];
@@ -224,6 +242,20 @@ if ($method === 'POST' && $isAdmin) {
             }
         }
 
+        $removeImage = !empty($b['remove_image']);
+        $newImageUrl = null;
+        if ($removeImage) {
+            deleteLocalAvatar($existingDoc['profile_image'] ?? null);
+            $updates[] = "profile_image = NULL";
+        } elseif (!empty($b['image_data']) && is_string($b['image_data'])) {
+            $newImageUrl = saveUploadedAvatar($b['image_data'], 'doctor', $id);
+            if ($newImageUrl !== null) {
+                deleteLocalAvatar($existingDoc['profile_image'] ?? null);
+                $updates[] = "profile_image = ?";
+                $params[] = $newImageUrl;
+            }
+        }
+
         if (empty($updates)) respondErr('No fields to update.');
 
         $params[] = $id;
@@ -234,7 +266,7 @@ if ($method === 'POST' && $isAdmin) {
         addLog($pdo, 'info', 'Doctor Updated', $actor,
                "Doctor ID $id has been updated.");
 
-        respondOk(['message' => 'Doctor updated successfully.']);
+        respondOk(['message' => 'Doctor updated successfully.', 'profile_image' => $removeImage ? null : ($newImageUrl ?? ($existingDoc['profile_image'] ?? null))]);
     }
 
     // ── TOGGLE LEAVE ─────────────────────────────────────────────────────────
@@ -270,11 +302,12 @@ if ($method === 'DELETE' && $isAdmin) {
     $doctorId = $_GET['doctor_id'] ?? '';
     if ($doctorId === '') respondErr('doctor_id is required.');
 
-    $check = $pdo->prepare("SELECT name FROM doctors WHERE id = ?");
+    $check = $pdo->prepare("SELECT name, profile_image FROM doctors WHERE id = ?");
     $check->execute([$doctorId]);
     $doctor = $check->fetch();
     if (!$doctor) respondErr('Doctor not found.', 404);
 
+    deleteLocalAvatar($doctor['profile_image'] ?? null);
     $del = $pdo->prepare("DELETE FROM doctors WHERE id = ?");
     $del->execute([$doctorId]);
 

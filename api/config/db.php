@@ -66,7 +66,7 @@ try {
 
 // ── Self-healing Schema Check ────────────────────────────────────────────────
 try {
-    $lockFile = sys_get_temp_dir() . '/sdn_schema_v3.lock';
+    $lockFile = sys_get_temp_dir() . '/sdn_schema_v6.lock';
     if (!file_exists($lockFile) && isset($pdo)) {
         @touch($lockFile);
         $uCols = $pdo->query("SHOW COLUMNS FROM `users`")->fetchAll(PDO::FETCH_COLUMN);
@@ -76,13 +76,34 @@ try {
         if (!in_array('patient_id', $uCols, true)) {
             @$pdo->exec("ALTER TABLE `users` ADD COLUMN `patient_id` INT NULL AFTER `department`");
         }
+        if (!in_array('profile_image', $uCols, true)) {
+            @$pdo->exec("ALTER TABLE `users` ADD COLUMN `profile_image` VARCHAR(255) NULL AFTER `department`");
+        }
 
         $pCols = $pdo->query("SHOW COLUMNS FROM `patients`")->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('user_id', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `user_id` INT NULL AFTER `id`");
         }
+        if (!in_array('reference_no', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `reference_no` VARCHAR(20) NULL AFTER `patient_id`");
+        }
+        if (!in_array('first_name', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `first_name` VARCHAR(60) NULL AFTER `full_name`");
+        }
+        if (!in_array('last_name', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `last_name` VARCHAR(60) NULL AFTER `first_name`");
+        }
+        if (!in_array('middle_initial', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `middle_initial` VARCHAR(10) NULL AFTER `last_name`");
+        }
+        if (!in_array('username', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `username` VARCHAR(80) NULL AFTER `email`");
+        }
         if (!in_array('password', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `password` VARCHAR(255) NULL AFTER `email`");
+        }
+        if (!in_array('is_verified', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `is_verified` TINYINT(1) NOT NULL DEFAULT 1 AFTER `password`");
         }
         if (!in_array('email_verified', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `email_verified` TINYINT(1) NOT NULL DEFAULT 0 AFTER `password`");
@@ -95,6 +116,24 @@ try {
         }
         if (!in_array('informant', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `informant` VARCHAR(100) NULL AFTER `contact_number`");
+        }
+        if (!in_array('with_companion', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `with_companion` TINYINT(1) NOT NULL DEFAULT 0 AFTER `address`");
+        }
+        if (!in_array('relationship_to_patient', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `relationship_to_patient` VARCHAR(50) NULL AFTER `with_companion`");
+        }
+        if (!in_array('appointment_recipient', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `appointment_recipient` VARCHAR(50) NULL DEFAULT 'Patient (Me)' AFTER `relationship_to_patient`");
+        }
+        if (!in_array('existing_medical_conditions', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `existing_medical_conditions` TEXT NULL AFTER `illness_description`");
+        }
+        if (!in_array('current_medications', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `current_medications` TEXT NULL AFTER `existing_medical_conditions`");
+        }
+        if (!in_array('referral_source', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `referral_source` VARCHAR(150) NULL");
         }
         if (!in_array('recommendation_remarks', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `recommendation_remarks` TEXT NULL AFTER `illness_description`");
@@ -119,6 +158,9 @@ try {
         }
         if (!in_array('scheduled_time', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `scheduled_time` TIME NULL AFTER `appointment_date`");
+        }
+        if (!in_array('preferred_time_slot', $pCols, true)) {
+            @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `preferred_time_slot` VARCHAR(60) NULL AFTER `scheduled_time`");
         }
         if (!in_array('medical_history_diagnosis', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `medical_history_diagnosis` TEXT NULL");
@@ -153,6 +195,24 @@ try {
         if (!in_array('day_of_reminder_sent', $pCols, true)) {
             @$pdo->exec("ALTER TABLE `patients` ADD COLUMN `day_of_reminder_sent` TINYINT(1) NOT NULL DEFAULT 0");
         }
+        @$pdo->exec("ALTER TABLE `patients` MODIFY COLUMN `status` VARCHAR(40) NOT NULL DEFAULT 'for_approval'");
+
+        $hasAppointments = $pdo->query("SHOW TABLES LIKE 'appointments'")->fetchColumn();
+        if ($hasAppointments) {
+            $aCols = $pdo->query("SHOW COLUMNS FROM `appointments`")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('reference_no', $aCols, true)) {
+                @$pdo->exec("ALTER TABLE `appointments` ADD COLUMN `reference_no` VARCHAR(20) NULL AFTER `id`");
+            }
+            if (!in_array('relationship_to_patient', $aCols, true)) {
+                @$pdo->exec("ALTER TABLE `appointments` ADD COLUMN `relationship_to_patient` VARCHAR(50) NULL");
+            }
+            if (!in_array('consultation_mode', $aCols, true)) {
+                @$pdo->exec("ALTER TABLE `appointments` ADD COLUMN `consultation_mode` VARCHAR(50) NULL");
+            }
+            if (!in_array('preferred_time_slot', $aCols, true)) {
+                @$pdo->exec("ALTER TABLE `appointments` ADD COLUMN `preferred_time_slot` VARCHAR(60) NULL");
+            }
+        }
 
         @$pdo->exec("
             CREATE TABLE IF NOT EXISTS `progress_notes` (
@@ -172,6 +232,9 @@ try {
         $dCols = $pdo->query("SHOW COLUMNS FROM `doctors`")->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('total_slots', $dCols, true)) {
             @$pdo->exec("ALTER TABLE `doctors` ADD COLUMN `total_slots` INT NOT NULL DEFAULT 20");
+        }
+        if (!in_array('profile_image', $dCols, true)) {
+            @$pdo->exec("ALTER TABLE `doctors` ADD COLUMN `profile_image` VARCHAR(255) NULL");
         }
         @$pdo->exec("ALTER TABLE `doctors` MODIFY COLUMN `status` VARCHAR(30) NOT NULL DEFAULT 'in'");
     }

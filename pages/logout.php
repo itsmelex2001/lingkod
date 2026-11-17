@@ -6,6 +6,6 @@ session_destroy();
 if ($wasStaffOrAdmin) {
     header('Location: /sdn/pages/portal@admin$staff_2026.php?logout=1');
 } else {
-    header("Location: /sdn/pages/login.php");
+    header("Location: /sdn/pages/patient-login.php");
 }
 exit;

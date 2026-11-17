@@ -43,19 +43,18 @@
     margin-bottom: 0; 
   }
 
-  /* Exact green gradient filter and shadowy bottom */
+  /* Original natural top tone from previous version with dark green shadow on the bottom */
   .hero-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    /* Green tint matching the screenshot */
     background: linear-gradient(
       to bottom, 
-      rgba(67, 184, 73, 0.45) 0%, 
-      rgba(15, 115, 23, 0.75) 80%,
-      rgba(5, 75, 12, 0.95) 100%
+      rgba(0, 0, 0, 0.1) 0%,      /* Light natural tone at top, exactly like previous */
+      rgba(20, 100, 30, 0.7) 60%, /* Transition to green shadow */
+      rgba(4, 32, 14, 0.98) 100%  /* Dark shade shadow of green on the bottom part only */
     );
     z-index: 1;
   }

@@ -138,3 +138,50 @@ function addLog(PDO $pdo, string $level, string $action, string $user, string $d
     );
     $stmt->execute([$level, $action, $user, $details]);
 }
+
+/** Validate and persist a base64 image data URL under /public/uploads/avatars/. */
+function saveUploadedAvatar(?string $imageData, string $prefix, $entityId): ?string {
+    if (empty($imageData) || !is_string($imageData)) {
+        return null;
+    }
+    if (!preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,(.*)$/is', trim($imageData), $matches)) {
+        respondErr('Invalid image format. Please use PNG, JPG, or WEBP.', 400);
+    }
+    $ext = strtolower($matches[1]);
+    if ($ext === 'jpeg') $ext = 'jpg';
+
+    $decoded = base64_decode($matches[2], true);
+    if ($decoded === false || strlen($decoded) === 0) {
+        respondErr('Uploaded image could not be decoded.', 400);
+    }
+    if (strlen($decoded) > 5 * 1024 * 1024) {
+        respondErr('Profile image must not exceed 5MB.', 400);
+    }
+    if (@getimagesizefromstring($decoded) === false) {
+        respondErr('Uploaded file is not a valid image.', 400);
+    }
+
+    $uploadDir = dirname(__DIR__, 2) . '/public/uploads/avatars/';
+    if (!is_dir($uploadDir)) {
+        @mkdir($uploadDir, 0777, true);
+    }
+    $safePrefix = preg_replace('/[^a-z0-9_-]/i', '', $prefix) ?: 'avatar';
+    $safeId     = preg_replace('/[^a-z0-9_-]/i', '', (string)$entityId) ?: '0';
+    $filename   = "{$safePrefix}_{$safeId}_" . time() . '_' . bin2hex(random_bytes(3)) . ".{$ext}";
+    if (@file_put_contents($uploadDir . $filename, $decoded) === false) {
+        respondErr('Failed to save profile image.', 500);
+    }
+    return '/sdn/public/uploads/avatars/' . $filename;
+}
+
+/** Delete an existing local avatar file if stored under /sdn/public/uploads/avatars/. */
+function deleteLocalAvatar(?string $url): void {
+    if (empty($url) || !str_starts_with($url, '/sdn/public/uploads/avatars/')) {
+        return;
+    }
+    $filename = basename($url);
+    $fullPath = dirname(__DIR__, 2) . '/public/uploads/avatars/' . $filename;
+    if (is_file($fullPath)) {
+        @unlink($fullPath);
+    }
+}

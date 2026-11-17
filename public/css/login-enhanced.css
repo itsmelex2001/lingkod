@@ -1,0 +1,510 @@
+/* Enhanced Patient Login Styles (scoped to body.login-v2) */
+
+body.login-v2 {
+  --login-w: clamp(380px, 30vw, 460px);
+  --login-green-deep: #146c2e;
+  --login-green-darker: #0d4a20;
+  --login-mint: #e6f4ea;
+}
+
+/* ── 1. Narrower Login Side (Grid Split) ── */
+body.login-v2 .portal-layout {
+  grid-template-columns: 1fr var(--login-w);
+}
+
+body.login-v2 .portal-right {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1rem, 2vh, 1.5rem) clamp(1.35rem, 2.5vw, 2.25rem);
+}
+
+body.login-v2 .portal-right-header,
+body.login-v2 .portal-form-container,
+body.login-v2 .portal-right-footer {
+  position: relative;
+  z-index: 2;
+}
+
+body.login-v2 .portal-form-container {
+  max-width: 100%;
+  margin: auto 0;
+  justify-content: center;
+}
+
+/* ── Typography: Match MMWGH Sans-Serif Style on Headings ── */
+body.login-v2 .portal-left-tagline,
+body.login-v2 .portal-heading {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+body.login-v2 .portal-left-tagline {
+  font-size: clamp(2.75rem, 4.2vw, 3.75rem);
+  line-height: 1.12;
+}
+
+body.login-v2 .portal-left-translation {
+  margin-top: 0.7rem;
+}
+
+body.login-v2 .portal-left-divider {
+  margin: 1.5rem 0;
+}
+
+/* ── 3. Remove White Outline Around Top-Left MMWGH Seal ── */
+body.login-v2 .hospital-logo {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* ── 4. Hero Bullet Badges & Inline SVG Mask Icons ── */
+body.login-v2 .portal-bullet-list {
+  gap: clamp(0.85rem, 1.5vh, 1.15rem);
+}
+
+body.login-v2 .portal-bullet-item {
+  align-items: center;
+  gap: 0.9rem;
+}
+
+body.login-v2 .portal-bullet-icon {
+  display: none;
+}
+
+body.login-v2 .portal-bullet-icon::before {
+  content: '';
+  position: absolute;
+  left: -40%;
+  top: -60%;
+  width: 180%;
+  height: 14px;
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.38) 50%,
+      rgba(255, 255, 255, 0) 100%);
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+
+body.login-v2 .portal-bullet-icon svg {
+  display: none;
+}
+
+body.login-v2 .portal-bullet-icon::after {
+  content: '';
+  position: relative;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  background-color: #8ee6a8;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Bullet 1: Video consultation */
+body.login-v2 .portal-bullet-item:nth-child(1) .portal-bullet-icon::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m22 8-6 4 6 4V8Z'/%3E%3Crect width='14' height='12' x='2' y='6' rx='2' ry='2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m22 8-6 4 6 4V8Z'/%3E%3Crect width='14' height='12' x='2' y='6' rx='2' ry='2'/%3E%3C/svg%3E");
+}
+
+/* Bullet 2: Calendar with check */
+body.login-v2 .portal-bullet-item:nth-child(2) .portal-bullet-icon::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3Cpath d='m9 16 2 2 4-4'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3Cpath d='m9 16 2 2 4-4'/%3E%3C/svg%3E");
+}
+
+/* Bullet 3: Shield with check */
+body.login-v2 .portal-bullet-item:nth-child(3) .portal-bullet-icon::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E");
+}
+
+body.login-v2 .portal-bullet-item:hover .portal-bullet-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(142, 230, 168, 0.45);
+}
+
+/* ── 2. Decorative Background Layer (Blobs + ECG) ── */
+body.login-v2 .login-bg-decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+body.login-v2 .login-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+body.login-v2 .login-blob-1 {
+  width: 240px;
+  height: 240px;
+  background: #bfe8cb;
+  top: -70px;
+  right: -60px;
+}
+
+body.login-v2 .login-blob-2 {
+  width: 220px;
+  height: 220px;
+  background: #d9f2e0;
+  top: 42%;
+  left: -90px;
+}
+
+body.login-v2 .login-blob-3 {
+  width: 200px;
+  height: 200px;
+  background: #a7dfb8;
+  bottom: -60px;
+  right: -40px;
+  opacity: 0.45;
+}
+
+body.login-v2 .login-ecg-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 76px;
+  height: 38px;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+body.login-v2 .login-ecg-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+body.login-v2 .login-ecg-path {
+  fill: none;
+  stroke: var(--login-green-deep);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 760;
+  stroke-dashoffset: 0;
+}
+
+/* ── Input Focus Glow ── */
+body.login-v2 .form-input:focus {
+  border-color: var(--login-green-deep);
+  box-shadow: 0 0 0 4px rgba(20, 108, 46, 0.16);
+}
+
+/* ── Sign In Button States & Shine Sweep ── */
+body.login-v2 #btnSubmitLogin {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+body.login-v2 #btnSubmitLogin:disabled {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+
+body.login-v2 #btnSubmitLogin:not(:disabled) {
+  background-color: var(--login-green-deep);
+  color: #ffffff;
+}
+
+body.login-v2 #btnSubmitLogin:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(115deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.28) 50%,
+      rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+body.login-v2 #btnSubmitLogin:hover:not(:disabled) {
+  background-color: var(--login-green-darker);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(20, 108, 46, 0.28);
+}
+
+body.login-v2 #btnSubmitLogin:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(20, 108, 46, 0.22);
+}
+
+/* ── Motion & Keyframes (Disabled when prefers-reduced-motion: reduce) ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes loginBlobDrift1 {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+      transform: translate(-28px, 32px) scale(1.12);
+    }
+  }
+
+  @keyframes loginBlobDrift2 {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+      transform: translate(30px, -24px) scale(1.1);
+    }
+  }
+
+  @keyframes loginBlobDrift3 {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+      transform: translate(-24px, -28px) scale(1.15);
+    }
+  }
+
+  @keyframes loginEcgDraw {
+    0% {
+      stroke-dashoffset: 760;
+      opacity: 0.15;
+    }
+
+    20% {
+      opacity: 1;
+    }
+
+    70% {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+
+    100% {
+      stroke-dashoffset: -760;
+      opacity: 0;
+    }
+  }
+
+  @keyframes loginLogoFloat {
+
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+      transform: translateY(-8px) rotate(-1.2deg);
+    }
+  }
+
+  @keyframes loginFadeSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes loginBtnShine {
+    0% {
+      left: -120%;
+    }
+
+    35%,
+    100% {
+      left: 140%;
+    }
+  }
+
+  @keyframes loginBadgeShineDown {
+    0% {
+      top: -60%;
+      opacity: 0;
+    }
+
+    12% {
+      opacity: 1;
+    }
+
+    55% {
+      top: 130%;
+      opacity: 1;
+    }
+
+    65%,
+    100% {
+      top: 130%;
+      opacity: 0;
+    }
+  }
+
+  body.login-v2 .portal-bullet-item:nth-child(1) .portal-bullet-icon::before {
+    animation: loginBadgeShineDown 7s ease-in-out 0s infinite;
+  }
+
+  body.login-v2 .portal-bullet-item:nth-child(2) .portal-bullet-icon::before {
+    animation: loginBadgeShineDown 7s ease-in-out 0.6s infinite;
+  }
+
+  body.login-v2 .portal-bullet-item:nth-child(3) .portal-bullet-icon::before {
+    animation: loginBadgeShineDown 7s ease-in-out 1.2s infinite;
+  }
+
+  body.login-v2 .login-blob-1 {
+    animation: loginBlobDrift1 12s ease-in-out infinite alternate;
+  }
+
+  body.login-v2 .login-blob-2 {
+    animation: loginBlobDrift2 15s ease-in-out infinite alternate;
+  }
+
+  body.login-v2 .login-blob-3 {
+    animation: loginBlobDrift3 18s ease-in-out infinite alternate;
+  }
+
+  body.login-v2 .login-ecg-path {
+    animation: loginEcgDraw 3.6s ease-in-out infinite;
+  }
+
+  body.login-v2 #btnSubmitLogin:not(:disabled)::after {
+    animation: loginBtnShine 3.2s ease-in-out infinite;
+  }
+
+  /* Staggered Entrance Sequence (90ms steps) */
+  body.login-v2 .portal-right-header {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+  }
+
+  body.login-v2 .brand-logo-img {
+    animation:
+      loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 90ms both,
+      loginLogoFloat 5s ease-in-out 0.65s infinite;
+  }
+
+  body.login-v2 .portal-heading {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+  }
+
+  body.login-v2 .portal-subheading {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 270ms both;
+  }
+
+  body.login-v2 #groupEmail {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 360ms both;
+  }
+
+  body.login-v2 #groupPassword {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 450ms both;
+  }
+
+  body.login-v2 .form-options-row {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 540ms both;
+  }
+
+  body.login-v2 #btnSubmitLogin {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 630ms both;
+  }
+
+  body.login-v2 .new-patient-prompt {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 720ms both;
+  }
+
+  body.login-v2 .portal-right-footer {
+    animation: loginFadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 810ms both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  body.login-v2 .login-blob,
+  body.login-v2 .login-ecg-path,
+  body.login-v2 .brand-logo-img,
+  body.login-v2 .portal-right-header,
+  body.login-v2 .portal-heading,
+  body.login-v2 .portal-subheading,
+  body.login-v2 #groupEmail,
+  body.login-v2 #groupPassword,
+  body.login-v2 .form-options-row,
+  body.login-v2 #btnSubmitLogin,
+  body.login-v2 .new-patient-prompt,
+  body.login-v2 .portal-right-footer {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  body.login-v2 #btnSubmitLogin::after,
+  body.login-v2 .portal-bullet-icon::before {
+    display: none !important;
+    animation: none !important;
+  }
+
+  body.login-v2 .portal-bullet-icon,
+  body.login-v2 #btnSubmitLogin,
+  body.login-v2 .form-input {
+    transition: none !important;
+  }
+
+  body.login-v2 .portal-bullet-item:hover .portal-bullet-icon,
+  body.login-v2 #btnSubmitLogin:hover:not(:disabled) {
+    transform: none !important;
+  }
+}
+
+/* ── Responsive: Under 900px hide hero and make login panel full width ── */
+@media (max-width: 900px) {
+
+  html,
+  body.login-v2 {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    min-height: 100%;
+  }
+
+  body.login-v2 .portal-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  body.login-v2 .portal-left {
+    display: none;
+  }
+
+  body.login-v2 .portal-right {
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    padding: 1.5rem 1.25rem;
+    overflow: hidden;
+  }
+
+  body.login-v2 .portal-form-container {
+    max-width: 400px;
+    margin: auto;
+  }
+}

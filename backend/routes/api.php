@@ -13,3 +13,6 @@ Route::get('/test', function () {
 
 Route::get('/patient/dashboard', [\App\Http\Controllers\PatientDashboardController::class, 'getDashboardData']);
 Route::post('/patient/dashboard', [\App\Http\Controllers\PatientDashboardController::class, 'getDashboardData']);
+Route::get('/patient/appointments', [\App\Http\Controllers\PatientDashboardController::class, 'getAppointmentsList']);
+Route::post('/patient/profile', [\App\Http\Controllers\PatientDashboardController::class, 'updateProfile']);
+Route::post('/patient/change-password', [\App\Http\Controllers\PatientDashboardController::class, 'changePassword']);

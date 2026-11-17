@@ -81,7 +81,8 @@ if ($method === 'GET') {
             ksort($matchedMap);
             $priorList = [];
             foreach ($matchedMap as $cid => $crec) {
-                if ($cid < $rowId && $crec['patient_id'] !== $rowPid) {
+                $crecStatus = strtolower(trim($crec['status'] ?? ''));
+                if ($cid < $rowId && $crec['patient_id'] !== $rowPid && $crecStatus === 'completed') {
                     $timeFormatted = !empty($crec['scheduled_time'])
                         ? date('g:i A', strtotime($crec['scheduled_time']))
                         : '8:00 AM';
@@ -186,12 +187,21 @@ if ($method === 'GET') {
             $filterSql = "AND YEAR(p.created_at) = YEAR(CURDATE())";
         }
 
+        $hasRefNoCol = false;
+        try {
+            $hasRefNoCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'reference_no'")->fetch();
+        } catch (Throwable $ignoreRef) {}
+        $refSelect = $hasRefNoCol ? 'p.reference_no,' : 'NULL AS reference_no,';
+
         $stmt = $pdo->prepare(
-            "SELECT p.id, p.user_id, p.patient_id, p.department, p.full_name, p.gender, p.birthdate, p.age, p.contact_number, p.email,
-                    p.address, p.chief_complaints, p.consultation_nature, p.illness_description,
+            "SELECT p.id, p.user_id, p.patient_id, $refSelect p.department, p.full_name, p.first_name, p.last_name, p.middle_initial,
+                    p.gender, p.birthdate, p.age, p.contact_number, p.email,
+                    p.address, p.with_companion, p.relationship_to_patient, p.appointment_recipient,
+                    p.chief_complaints, p.consultation_nature, p.illness_description,
+                    p.existing_medical_conditions, p.current_medications, p.referral_source,
                     p.patient_type, p.appointment_type, p.consultation_mode, p.appointment_date,
                     p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
-                    p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time,
+                    p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.preferred_time_slot,
                     p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
                     p.reminder_status, p.reminder_sent_at, p.created_at,
                     d.id AS doctor_id, d.status AS doctor_status
@@ -233,12 +243,21 @@ if ($method === 'GET') {
     
     $whereSql = count($whereClauses) > 0 ? "WHERE " . implode(" AND ", $whereClauses) : "";
     
+    $hasRefNoCol = false;
+    try {
+        $hasRefNoCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'reference_no'")->fetch();
+    } catch (Throwable $ignoreRef) {}
+    $refSelect = $hasRefNoCol ? 'p.reference_no,' : 'NULL AS reference_no,';
+
     $stmt = $pdo->prepare(
-        "SELECT p.id, p.user_id, p.patient_id, p.department, p.full_name, p.gender, p.birthdate, p.age, p.contact_number, p.email,
-                p.address, p.chief_complaints, p.consultation_nature, p.illness_description,
+        "SELECT p.id, p.user_id, p.patient_id, $refSelect p.department, p.full_name, p.first_name, p.last_name, p.middle_initial,
+                p.gender, p.birthdate, p.age, p.contact_number, p.email,
+                p.address, p.with_companion, p.relationship_to_patient, p.appointment_recipient,
+                p.chief_complaints, p.consultation_nature, p.illness_description,
+                p.existing_medical_conditions, p.current_medications,
                 p.patient_type, p.appointment_type, p.consultation_mode, p.appointment_date,
                 p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
-                p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.referral_source,
+                p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.preferred_time_slot, p.referral_source,
                 p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
                 p.reminder_status, p.reminder_sent_at, p.created_at,
                 d.id AS doctor_id, d.status AS doctor_status
@@ -290,15 +309,21 @@ function isDeptMatch($d1, $d2): bool {
     $a = strtolower(trim($d1));
     $b = strtolower(trim($d2));
     if ($a === 'triage pending' || $b === 'triage pending' || str_contains($a, 'triage') || str_contains($b, 'triage') || $a === '' || $b === '') return true;
+    if (str_contains($a, 'management') || str_contains($b, 'management')) return true;
     if ($a === $b) return true;
-    if ((str_contains($a, 'general') || str_contains($a, 'general management') || str_contains($a, 'general medical')) && (str_contains($b, 'general') || str_contains($b, 'general management') || str_contains($b, 'general medical'))) return true;
+    if ((str_contains($a, 'general') || str_contains($a, 'general medical')) && (str_contains($b, 'general') || str_contains($b, 'general medical'))) return true;
     if ((str_contains($a, 'psychiatry') || str_contains($a, 'opu')) && (str_contains($b, 'psychiatry') || str_contains($b, 'opu'))) return true;
     if (str_contains($a, 'neuro') && str_contains($b, 'neuro')) return true;
     return false;
 }
 
-// Allow staff full access to triage, check-in, start consult, and cancel regardless of initial registration department
-if ($action !== 'assign_department' && $action !== 'update_department' && $action !== 'ongoing' && $action !== 'start_consultation' && $action !== 'arrived' && $action !== 'check_in' && $action !== 'cancel' && $action !== 'reject') {
+// Allow staff full access to queue workflow actions for records visible in their dashboard
+$unrestrictedStaffActions = [
+    'assign_department', 'update_department', 'assign', 'reschedule_assign',
+    'approve', 'accept', 'completed', 'referral',
+    'ongoing', 'start_consultation', 'arrived', 'check_in', 'cancel', 'reject'
+];
+if (!in_array($action, $unrestrictedStaffActions, true)) {
     if ($role !== 'admin' && !empty($staffDept) && !isDeptMatch($patient['department'], $staffDept)) {
         respondErr("Unauthorized: This patient is registered to another department.", 403);
     }
@@ -350,10 +375,49 @@ if ($action !== 'assign_department' && $action !== 'update_department' && $actio
         ]);
     }
 
+    function findDoctorByName(PDO $pdo, string $doctor): ?array {
+        $stmt = $pdo->prepare(
+            "SELECT id, name, status
+             FROM doctors
+             WHERE name = ?
+                OR REPLACE(name, 'Dr. ', '') = REPLACE(?, 'Dr. ', '')
+                OR TRIM(REPLACE(REPLACE(LOWER(name), 'dr. ', ''), ', md', '')) = TRIM(REPLACE(REPLACE(LOWER(?), 'dr. ', ''), ', md', ''))
+             LIMIT 1"
+        );
+        $stmt->execute([$doctor, $doctor, $doctor]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
     // ── 1. Approve / Accept ──────────────────────────────────────────────
     if ($action === 'approve' || $action === 'accept') {
-        if (!in_array($patient['status'], ['pending', 'for_approval', 'for_processing'])) {
+        $currSt = strtolower(trim($patient['status'] ?? ''));
+        if (!in_array($currSt, ['pending', 'for_approval', 'for_processing', 'for approval'], true)) {
             respondErr("Patient is already {$patient['status']}.");
+        }
+
+        $isInquiry = !empty($patient['inquiry_only'])
+            || strcasecmp(trim($patient['consultation_nature'] ?? ''), 'General Inquiry') === 0
+            || strcasecmp(trim($patient['appointment_type'] ?? ''), 'inquiry') === 0
+            || str_starts_with($patientId, 'INQ-');
+
+        $providedDoctor = trim($body['assigned_doctor'] ?? ($body['doctor'] ?? ''));
+        $effectiveDoctor = trim((string)($patient['assigned_doctor'] ?? ''));
+
+        if ($providedDoctor !== '' && strcasecmp($providedDoctor, 'None') !== 0) {
+            $docRow = findDoctorByName($pdo, $providedDoctor);
+            if (!$docRow) {
+                respondErr("Doctor '$providedDoctor' not found.", 422);
+            }
+            $docSt = strtolower(trim($docRow['status'] ?? ''));
+            if (in_array($docSt, ['leave', 'out', 'on_break', 'emergency'], true)) {
+                respondErr("{$docRow['name']} is currently unavailable ($docSt). Please choose an available physician or reschedule the patient.", 422);
+            }
+            $effectiveDoctor = $docRow['name'];
+        }
+
+        if (!$isInquiry && ($effectiveDoctor === '' || strcasecmp($effectiveDoctor, 'None') === 0)) {
+            respondErr('Please assign an attending physician based on available time slots before approving this appointment.', 422);
         }
 
         $assignedDept = trim($body['department'] ?? '');
@@ -372,18 +436,28 @@ if ($action !== 'assign_department' && $action !== 'update_department' && $actio
 
             $upd = $pdo->prepare("
                 UPDATE patients 
-                SET status = 'approved', department = ?, specialty = ?, updated_at = NOW() 
+                SET status = 'approved',
+                    department = ?,
+                    specialty = ?,
+                    assigned_doctor = CASE WHEN ? <> '' THEN ? ELSE assigned_doctor END,
+                    assigned_date = CASE WHEN ? <> '' AND assigned_date IS NULL THEN CURDATE() ELSE assigned_date END,
+                    updated_at = NOW() 
                 WHERE patient_id = ?
             ");
-            $upd->execute([$cleanDept, $cleanDept . ' Consultation', $patientId]);
+            $upd->execute([$cleanDept, $cleanDept . ' Consultation', $effectiveDoctor, $effectiveDoctor, $effectiveDoctor, $patientId]);
         } else {
             $upd = $pdo->prepare(
-                "UPDATE patients SET status = 'approved', updated_at = NOW() WHERE patient_id = ?"
+                "UPDATE patients
+                 SET status = 'approved',
+                     assigned_doctor = CASE WHEN ? <> '' THEN ? ELSE assigned_doctor END,
+                     assigned_date = CASE WHEN ? <> '' AND assigned_date IS NULL THEN CURDATE() ELSE assigned_date END,
+                     updated_at = NOW()
+                 WHERE patient_id = ?"
             );
-            $upd->execute([$patientId]);
+            $upd->execute([$effectiveDoctor, $effectiveDoctor, $effectiveDoctor, $patientId]);
         }
         addLog($pdo, 'info', 'Patient Approved', $actor,
-               "Patient $patientId ($name) was approved and scheduled for $dept.");
+               "Patient $patientId ($name) was approved and scheduled for $dept" . ($effectiveDoctor ? " with $effectiveDoctor." : "."));
 
         // Dispatch Confirmation Email & SMS (Compliant with Healthcare Privacy Laws)
         $dateFormatted = !empty($patient['appointment_date'])
@@ -478,26 +552,146 @@ if ($action !== 'assign_department' && $action !== 'update_department' && $actio
         $doctor = trim($body['doctor'] ?? '');
         if ($doctor === '') respondErr('doctor name is required.');
 
-        $docCheck = $pdo->prepare(
-            "SELECT name, status FROM doctors WHERE name = ? LIMIT 1"
-        );
-        $docCheck->execute([$doctor]);
-        $doc = $docCheck->fetch();
+        $doc = findDoctorByName($pdo, $doctor);
 
         if (!$doc) respondErr("Doctor '$doctor' not found.");
-        if ($doc['status'] === 'leave') respondErr("$doctor is currently on leave.");
+        $docSt = strtolower(trim($doc['status'] ?? ''));
+        if (in_array($docSt, ['leave', 'out', 'on_break', 'emergency'], true)) {
+            respondErr("{$doc['name']} is currently unavailable ($docSt). Please choose another physician or reschedule the patient.", 422);
+        }
 
+        $canonicalDoc = $doc['name'];
         $upd = $pdo->prepare(
             "UPDATE patients
              SET assigned_doctor = ?, assigned_date = CURDATE(), updated_at = NOW()
              WHERE patient_id = ?"
         );
-        $upd->execute([$doctor, $patientId]);
+        $upd->execute([$canonicalDoc, $patientId]);
 
         addLog($pdo, 'info', 'Doctor Assigned', $actor,
-               "Dr. $doctor assigned to patient $patientId ($name).");
+               "$canonicalDoc assigned to patient $patientId ($name).");
 
-        respondOk(['message' => "$doctor has been assigned to $name."]);
+        respondOk(['message' => "$canonicalDoc has been assigned to $name.", 'assigned_doctor' => $canonicalDoc]);
+    }
+
+    // ── 5B. Reschedule & Assign Physician (After Calling Patient) ────────
+    if ($action === 'reschedule_assign') {
+        $currSt = strtolower(trim($patient['status'] ?? ''));
+        if (in_array($currSt, ['completed', 'rejected', 'cancelled', 'transferred'], true)) {
+            respondErr("Cannot reschedule or reassign patient in '{$patient['status']}' status.", 422);
+        }
+
+        $doctor = trim($body['doctor'] ?? '');
+        $newDate = trim($body['appointment_date'] ?? '');
+        $rawSlot = trim($body['preferred_time_slot'] ?? '');
+        $approveNow = !empty($body['approve_now']);
+
+        if ($doctor === '') respondErr('Attending physician is required.', 422);
+        if ($newDate === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $newDate)) {
+            respondErr('A valid appointment date (YYYY-MM-DD) is required.', 422);
+        }
+        if ((int)date('w', strtotime($newDate)) === 0) {
+            respondErr('Hospital clinics are closed on Sundays. Please pick a Monday to Saturday date.', 422);
+        }
+
+        $doc = findDoctorByName($pdo, $doctor);
+        if (!$doc) respondErr("Doctor '$doctor' not found.", 422);
+        $docSt = strtolower(trim($doc['status'] ?? ''));
+        if (in_array($docSt, ['leave', 'out', 'on_break', 'emergency'], true)) {
+            respondErr("{$doc['name']} is currently unavailable ($docSt). Please select an available physician.", 422);
+        }
+
+        $isMorning = stripos($rawSlot, 'morning') !== false || stripos($rawSlot, '8:00') !== false;
+        $isAfternoon = !$isMorning && (stripos($rawSlot, 'afternoon') !== false || stripos($rawSlot, '1:00') !== false || stripos($rawSlot, '13:00') !== false);
+        if (!$isAfternoon && !$isMorning) {
+            respondErr('Please select either Morning or Afternoon time block.', 422);
+        }
+
+        $slotLabel = $isAfternoon ? 'Afternoon (1:00 PM - 5:00 PM)' : 'Morning (8:00 AM - 12:00 PM)';
+        $scheduledTime = $isAfternoon ? '13:00:00' : '08:00:00';
+        $endTime = $isAfternoon ? '17:00:00' : '12:00:00';
+        $canonicalDoc = $doc['name'];
+
+        $willApprove = $approveNow && in_array($currSt, ['pending', 'for_approval', 'for_processing', 'for approval'], true);
+        if ($willApprove) {
+            $upd = $pdo->prepare(
+                "UPDATE patients
+                 SET assigned_doctor = ?,
+                     assigned_date = CURDATE(),
+                     appointment_date = ?,
+                     preferred_time_slot = ?,
+                     scheduled_time = ?,
+                     status = 'approved',
+                     updated_at = NOW()
+                 WHERE patient_id = ?"
+            );
+            $upd->execute([$canonicalDoc, $newDate, $slotLabel, $scheduledTime, $patientId]);
+        } else {
+            $upd = $pdo->prepare(
+                "UPDATE patients
+                 SET assigned_doctor = ?,
+                     assigned_date = CURDATE(),
+                     appointment_date = ?,
+                     preferred_time_slot = ?,
+                     scheduled_time = ?,
+                     updated_at = NOW()
+                 WHERE patient_id = ?"
+            );
+            $upd->execute([$canonicalDoc, $newDate, $slotLabel, $scheduledTime, $patientId]);
+        }
+
+        $refNo = trim((string)($patient['reference_no'] ?? ''));
+        try {
+            if ($refNo !== '') {
+                $apptUpd = $pdo->prepare(
+                    "UPDATE appointments
+                     SET appointment_date = ?, start_time = ?, end_time = ?, preferred_time_slot = ?
+                     WHERE reference_no = ? OR patient_id = ?"
+                );
+                $apptUpd->execute([$newDate, $scheduledTime, $endTime, $slotLabel, $refNo, $patientId]);
+            } else {
+                $apptUpd = $pdo->prepare(
+                    "UPDATE appointments
+                     SET appointment_date = ?, start_time = ?, end_time = ?, preferred_time_slot = ?
+                     WHERE patient_id = ?"
+                );
+                $apptUpd->execute([$newDate, $scheduledTime, $endTime, $slotLabel, $patientId]);
+            }
+        } catch (\Throwable $ignoreApptUpd) {}
+
+        $logTitle = $willApprove ? 'Schedule Updated & Approved' : 'Schedule & Physician Updated';
+        addLog($pdo, 'info', $logTitle, $actor,
+               "Staff coordinated new schedule for $patientId ($name): $newDate ($slotLabel) with $canonicalDoc" . ($willApprove ? ' [Approved]' : '') . '.');
+
+        if ($willApprove) {
+            $dateFormatted = date('M j, Y', strtotime($newDate));
+            $timeFormatted = date('g:i A', strtotime($scheduledTime));
+            if (!empty($patient['email'])) {
+                try {
+                    require_once __DIR__ . '/services/EmailService.php';
+                    EmailService::sendAppointmentEmail($patient['email'], $name, $dateFormatted, $timeFormatted, $patientId, 'confirmed');
+                } catch (\Throwable $e) {
+                    error_log("[patients.php reschedule_assign] Email error: " . $e->getMessage());
+                }
+            }
+            if (!empty($patient['contact_number'])) {
+                try {
+                    require_once __DIR__ . '/services/SmsService.php';
+                    SmsService::sendConfirmationSms($patient['contact_number'], $dateFormatted, $timeFormatted, $patientId);
+                } catch (\Throwable $e) {
+                    error_log("[patients.php reschedule_assign] SMS error: " . $e->getMessage());
+                }
+            }
+        }
+
+        respondOk([
+            'message' => $willApprove
+                ? "Schedule updated to $newDate ($slotLabel), assigned $canonicalDoc, and appointment approved."
+                : "Schedule updated to $newDate ($slotLabel) with $canonicalDoc.",
+            'assigned_doctor'     => $canonicalDoc,
+            'appointment_date'    => $newDate,
+            'preferred_time_slot' => $slotLabel
+        ]);
     }
 
     // ── 6. No-Show ────────────────────────────────────────────────────────
@@ -657,16 +851,22 @@ if ($action !== 'assign_department' && $action !== 'update_department' && $actio
 
         $ins = $pdo->prepare(
             "INSERT INTO patients (
-                patient_id, department, full_name, gender, birthdate, age, contact_number, email, address,
-                with_companion, chief_complaints, consultation_nature, illness_description,
+                patient_id, user_id, department, full_name, first_name, last_name, middle_initial,
+                gender, birthdate, age, contact_number, email, address,
+                with_companion, relationship_to_patient, appointment_recipient,
+                chief_complaints, consultation_nature, illness_description,
+                existing_medical_conditions, current_medications,
                 patient_type, appointment_type, consultation_mode, appointment_date,
-                referral_source, status, assigned_doctor, unscheduled_walkin, hrn, specialty, scheduled_time,
+                referral_source, status, assigned_doctor, unscheduled_walkin, hrn, specialty, scheduled_time, preferred_time_slot,
                 active_medications, next_visit_date, medical_history_diagnosis, medical_history_treatment, medical_history_prescription
             ) SELECT
-                ?, ?, full_name, gender, birthdate, age, contact_number, email, address,
-                with_companion, chief_complaints, consultation_nature, illness_description,
-                patient_type, appointment_type, consultation_mode, CURDATE(),
-                ?, 'pending', NULL, unscheduled_walkin, hrn, specialty, scheduled_time,
+                ?, user_id, ?, full_name, first_name, last_name, middle_initial,
+                gender, birthdate, age, contact_number, email, address,
+                with_companion, relationship_to_patient, appointment_recipient,
+                chief_complaints, consultation_nature, illness_description,
+                existing_medical_conditions, current_medications,
+                patient_type, appointment_type, consultation_mode, COALESCE(appointment_date, CURDATE()),
+                ?, 'for_approval', NULL, unscheduled_walkin, hrn, specialty, scheduled_time, preferred_time_slot,
                 active_medications, next_visit_date, medical_history_diagnosis, medical_history_treatment, medical_history_prescription
             FROM patients WHERE patient_id = ?"
         );

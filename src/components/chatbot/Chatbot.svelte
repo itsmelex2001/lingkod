@@ -10,6 +10,9 @@
   let activeBotMsgId = "initial-welcome";
   let highlightedMsgId = null;
   let chatBodyRef;
+  let launcherBtnRef;
+  let closeBtnRef;
+  let langBtnRef;
 
   const assistants = {
     girl: {
@@ -570,37 +573,64 @@
     }
   }
 
-  function toggleChat() {
+  async function toggleChat() {
     isOpen = !isOpen;
+    await tick();
     if (isOpen) {
       scrollToBottom();
+      closeBtnRef?.focus();
+    } else {
+      langMenuOpen = false;
+      launcherBtnRef?.focus();
     }
   }
+
+  async function handleKeydown(event) {
+    if (event.key !== "Escape" || !isOpen) return;
+    if (langMenuOpen) {
+      langMenuOpen = false;
+      await tick();
+      langBtnRef?.focus();
+      return;
+    }
+    await toggleChat();
+  }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end font-sans antialiased">
   {#if !isOpen}
     <button
+      bind:this={launcherBtnRef}
       type="button"
       on:click={toggleChat}
-      class="flex items-center gap-2 rounded-lg bg-[#0a8d19] px-3.5 py-2 text-white shadow-md transition-colors duration-150 hover:bg-[#087514] focus:outline-none"
+      class="flex min-h-[48px] items-center gap-3 rounded-xl border border-[#14532d]/15 bg-white px-3.5 py-2 text-left text-gray-900 shadow-lg transition-colors duration-150 hover:border-[#166534] hover:bg-[#f0fdf4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] focus-visible:ring-offset-2 motion-reduce:transition-none"
       aria-label={uiText[lang].openAria}
     >
-      <span class="h-2 w-2 rounded-full bg-white"></span>
-      <span class="text-xs font-semibold tracking-tight">{uiText[lang].badgeTitle}</span>
+      <img
+        src={assistants[assistant].avatar}
+        alt={assistants[assistant].name}
+        class="h-9 w-9 shrink-0 rounded-full border border-[#bbf7d0] bg-[#f0fdf4] object-cover"
+      />
+      <span class="flex flex-col">
+        <span class="text-xs font-bold leading-tight text-[#14532d]">{assistants[assistant].name} &middot; {uiText[lang].badgeTitle}</span>
+        <span class="text-[11px] font-medium leading-tight text-gray-600">{lang === "TL" ? "Magtanong tungkol sa LINGKOD" : "Ask LINGKOD FAQ & Triage"}</span>
+      </span>
     </button>
   {:else}
     <div
-      class="relative flex h-[555px] max-h-[calc(100vh-3rem)] w-[360px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[18px] bg-white text-gray-900 shadow-[0_12px_36px_rgba(0,0,0,0.22)]"
+      class="relative flex h-[555px] max-h-[calc(100vh-3rem)] w-[360px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[18px] border border-[#e5e7eb] bg-[#f9fafb] text-gray-900 shadow-[0_12px_36px_rgba(0,0,0,0.22)]"
       style="background-image: linear-gradient(to bottom, #ffffff 0%, #ffffff 63%, rgba(255,255,255,0.92) 70%, rgba(255,255,255,0.25) 82%, rgba(255,255,255,0) 100%), url('/sdn/public/assets/bg_login.jpg'); background-repeat: no-repeat; background-position: center top, center bottom; background-size: 100% 100%, 100% 190px;"
       role="region"
       aria-label="LINGKOD Chatbot"
     >
-      <header class="relative flex shrink-0 flex-col items-center bg-[#0a8d19] px-[18px] pt-[14px] pb-[11px] text-white">
+      <header class="relative flex shrink-0 flex-col items-center bg-[#14532d] px-[18px] pt-[14px] pb-[11px] text-white">
         <button
+          bind:this={closeBtnRef}
           type="button"
           on:click={toggleChat}
-          class="absolute top-[10px] right-[12px] flex h-[26px] w-[26px] items-center justify-center text-white transition-opacity hover:opacity-80 focus:outline-none"
+          class="absolute top-[6px] right-[6px] flex h-11 w-11 items-center justify-center rounded-lg text-white transition-opacity hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none"
           aria-label={uiText[lang].closeAria}
         >
           <svg
@@ -620,7 +650,7 @@
         <button
           type="button"
           on:click={toggleAssistant}
-          class="flex flex-col items-center focus:outline-none"
+          class="flex flex-col items-center rounded-lg px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           title="Click to switch between Nurse Mika & Dr. Leo"
         >
           <div class="mb-0.5 flex h-[44px] items-center justify-center">
@@ -656,38 +686,44 @@
 
           <div class="absolute right-0 top-1/2 -translate-y-1/2">
             <button
+              bind:this={langBtnRef}
               type="button"
               on:click={() => (langMenuOpen = !langMenuOpen)}
-              class="inline-flex items-center gap-[3px] px-1 py-0.5 text-[11.5px] font-bold leading-none text-white focus:outline-none"
+              aria-expanded={langMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Switch language"
+              class="inline-flex min-h-[36px] items-center gap-[3px] rounded px-1.5 py-1 text-xs font-bold leading-none text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               <span>{lang}</span>
-              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
 
             {#if langMenuOpen}
-              <div class="absolute right-0 top-[calc(100%+5px)] z-50 min-w-[112px] overflow-hidden rounded-md border border-gray-300 bg-white shadow-md">
+              <div role="menu" class="absolute right-0 top-[calc(100%+5px)] z-50 min-w-[124px] overflow-hidden rounded-md border border-gray-300 bg-white shadow-md">
                 <button
                   type="button"
+                  role="menuitem"
                   on:click={() => {
                     langMenuOpen = false;
                     switchLang("EN");
                   }}
-                  class="block w-full px-3 py-1.5 text-left text-[11.5px] {lang === 'EN'
-                    ? 'bg-emerald-50 font-bold text-[#0a8d19]'
+                  class="block min-h-[36px] w-full px-3 py-2 text-left text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#166534] {lang === 'EN'
+                    ? 'bg-emerald-50 font-bold text-[#14532d]'
                     : 'font-medium text-gray-800 hover:bg-emerald-50/60'}"
                 >
                   EN (English)
                 </button>
                 <button
                   type="button"
+                  role="menuitem"
                   on:click={() => {
                     langMenuOpen = false;
                     switchLang("TL");
                   }}
-                  class="block w-full px-3 py-1.5 text-left text-[11.5px] {lang === 'TL'
-                    ? 'bg-emerald-50 font-bold text-[#0a8d19]'
+                  class="block min-h-[36px] w-full px-3 py-2 text-left text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#166534] {lang === 'TL'
+                    ? 'bg-emerald-50 font-bold text-[#14532d]'
                     : 'font-medium text-gray-800 hover:bg-emerald-50/60'}"
                 >
                   TL (Tagalog)
@@ -713,13 +749,13 @@
                 />
               </div>
 
-              <div class="flex max-w-[215px] flex-col items-start">
+              <div class="flex max-w-[225px] flex-col items-start">
                 <div
-                  class="rounded-[6px] bg-[#c5dfb8] px-[13px] py-[10px] text-[10.5px] leading-[1.35] text-gray-900 {highlightedMsgId === msg.id ? 'outline outline-2 outline-[#0a8d19]' : ''}"
+                  class="rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2.5 text-xs leading-relaxed text-gray-900 {highlightedMsgId === msg.id ? 'outline outline-2 outline-[#166534]' : ''}"
                 >
                   {@html msg.text}
                 </div>
-                <span class="mt-1 self-end text-[8.5px] text-gray-900">
+                <span class="mt-1 self-end text-[11px] text-gray-700">
                   {msg.time}
                 </span>
               </div>
@@ -728,28 +764,29 @@
             {#if msg.isInitial && showingMainTopics}
               <div
                 data-topics-list
-                class="mt-1 mr-1 ml-auto flex w-[210px] shrink-0 flex-col items-start"
+                class="mt-1 mr-1 ml-auto flex w-[225px] shrink-0 flex-col items-start"
               >
-                <div class="mb-2 inline-block rounded-[5px] bg-[#c4c4c4] px-2.5 py-1.5 text-[9.5px] font-bold uppercase leading-none text-gray-900">
+                <div class="mb-2 inline-block rounded bg-[#e5e7eb] px-2.5 py-1.5 text-[11px] font-bold uppercase leading-none text-gray-900">
                   {uiText[lang].chooseTopic}
                 </div>
 
-                <div class="flex w-full flex-col gap-[7px]">
+                <div class="flex w-full flex-col gap-2">
                   {#each topics[lang] as topic}
                     <button
                       type="button"
                       on:click={() => handleSelectQuestion(topic)}
-                      class="group flex w-full items-center justify-between gap-2 rounded-[6px] border border-gray-400 bg-white/95 px-2.5 py-[7px] text-left text-[10px] leading-[1.3] text-gray-900 transition-colors hover:border-[#0a8d19] hover:bg-white focus:outline-none"
+                      class="group flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white/95 px-3 py-2 text-left text-xs leading-snug text-gray-900 transition-colors hover:border-[#166534] hover:bg-[#f0fdf4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] motion-reduce:transition-none"
                     >
                       <span class="flex-1">{topic}</span>
                       <svg
-                        class="h-3 w-3 shrink-0 text-gray-500 transition-transform group-hover:translate-x-0.5 group-hover:text-[#0a8d19]"
+                        class="h-3.5 w-3.5 shrink-0 text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-[#166534] motion-reduce:transition-none"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
                         stroke-width="1.8"
                         stroke-linecap="round"
                         stroke-linejoin="round"
+                        aria-hidden="true"
                       >
                         <polyline points="9 18 15 12 9 6" />
                       </svg>
@@ -760,26 +797,27 @@
             {/if}
 
             {#if !msg.isInitial && !showingMainTopics && msg.id === activeBotMsgId && msg.followUps && msg.followUps.length > 0}
-              <div class="mt-0.5 mr-auto ml-[46px] flex w-[215px] shrink-0 flex-col items-start">
-                <div class="mb-2 inline-block rounded-[5px] bg-[#c4c4c4] px-2.5 py-1.5 text-[9.5px] font-bold uppercase leading-none text-gray-900">
+              <div class="mt-0.5 mr-auto ml-[46px] flex w-[225px] shrink-0 flex-col items-start">
+                <div class="mb-2 inline-block rounded bg-[#e5e7eb] px-2.5 py-1.5 text-[11px] font-bold uppercase leading-none text-gray-900">
                   {uiText[lang].followUpTitle}
                 </div>
-                <div class="flex w-full flex-col gap-[7px]">
+                <div class="flex w-full flex-col gap-2">
                   {#each msg.followUps as chip}
                     <button
                       type="button"
                       on:click={() => handleSelectQuestion(chip)}
-                      class="group flex w-full items-center justify-between gap-2 rounded-[6px] border border-gray-400 bg-white/95 px-2.5 py-[7px] text-left text-[10px] leading-[1.3] text-gray-900 transition-colors hover:border-[#0a8d19] hover:bg-white focus:outline-none"
+                      class="group flex min-h-[44px] w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white/95 px-3 py-2 text-left text-xs leading-snug text-gray-900 transition-colors hover:border-[#166534] hover:bg-[#f0fdf4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] motion-reduce:transition-none"
                     >
                       <span class="flex-1">{chip}</span>
                       <svg
-                        class="h-3 w-3 shrink-0 text-gray-500 transition-transform group-hover:translate-x-0.5 group-hover:text-[#0a8d19]"
+                        class="h-3.5 w-3.5 shrink-0 text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-[#166534] motion-reduce:transition-none"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
                         stroke-width="1.8"
                         stroke-linecap="round"
                         stroke-linejoin="round"
+                        aria-hidden="true"
                       >
                         <polyline points="9 18 15 12 9 6" />
                       </svg>
@@ -790,7 +828,7 @@
                 <button
                   type="button"
                   on:click={handleBackToTopics}
-                  class="mt-[7px] w-full rounded-[6px] border border-[#0a8d19] bg-[#e8f5e9]/95 px-2.5 py-1.5 text-center text-[9.5px] font-bold leading-tight text-[#0a8d19] transition-colors hover:bg-[#0a8d19] hover:text-white focus:outline-none"
+                  class="mt-2 min-h-[44px] w-full rounded-lg border border-[#166534] bg-[#f0fdf4] px-3 py-2 text-center text-xs font-bold leading-tight text-[#14532d] transition-colors hover:bg-[#166534] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] motion-reduce:transition-none"
                 >
                   {uiText[lang].backToTopics}
                 </button>
@@ -798,10 +836,10 @@
             {/if}
           {:else}
             <div class="flex flex-col items-end">
-              <div class="max-w-[210px] rounded-[6px] bg-[#0a8d19] px-3 py-2 text-[10.5px] font-medium leading-[1.35] text-white">
+              <div class="max-w-[220px] rounded-lg bg-[#166534] px-3 py-2 text-xs font-medium leading-relaxed text-white">
                 {msg.text}
               </div>
-              <span class="mt-1 text-[8.5px] text-gray-900">
+              <span class="mt-1 text-[11px] text-gray-700">
                 {msg.time}
               </span>
             </div>
@@ -810,10 +848,10 @@
 
         {#if isTyping}
           <div class="flex items-center pl-[46px]">
-            <div class="inline-flex items-center gap-1 rounded-[6px] bg-[#c5dfb8] px-3 py-2">
-              <span class="h-1 w-1 animate-bounce rounded-full bg-gray-900"></span>
-              <span class="h-1 w-1 animate-bounce rounded-full bg-gray-900 [animation-delay:0.15s]"></span>
-              <span class="h-1 w-1 animate-bounce rounded-full bg-gray-900 [animation-delay:0.3s]"></span>
+            <div class="inline-flex items-center gap-1 rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2">
+              <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-[#14532d] motion-reduce:animate-none"></span>
+              <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-[#14532d] [animation-delay:0.15s] motion-reduce:animate-none"></span>
+              <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-[#14532d] [animation-delay:0.3s] motion-reduce:animate-none"></span>
             </div>
           </div>
         {/if}

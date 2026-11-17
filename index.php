@@ -47,8 +47,6 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
     <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=<?= time() ?>">
     <link rel="stylesheet" href="/sdn/public/css/landing.css?v=<?= time() ?>">
-    <!-- Load Svelte App CSS -->
-    <link rel="stylesheet" href="/sdn/dist/assets/main.css?v=<?= time() ?>">
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <!-- AOS Library for Scroll Animations -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -94,10 +92,6 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
       }
       /* Hide wayfinding grid on Location page based on user request */
       .wayfinding-grid, [class*="wayfinding-grid"] {
-        display: none !important;
-      }
-      /* Hide old Svelte containers before inline replacement */
-      .hero-container, #services, #about, #location, footer.premium-footer, .fab-container, .chat-window {
         display: none !important;
       }
       /* Hide browser scrollbar to eliminate right-side white line while keeping scrolling active */
@@ -215,15 +209,6 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
     <?php include 'chatbot-inline.php'; ?>
     <?php include __DIR__ . '/pages/patient-booking-modal.php'; ?>
     <link rel="stylesheet" href="/sdn/public/css/mobile-refine.css?v=<?= time() ?>">
-
-    <!-- Svelte Component Mount Point -->
-    <div id="app"></div>
-
-    <!-- Compiled Svelte Assets with Cache-busting -->
-    <script type="module" crossorigin src="/sdn/dist/assets/main.js?v=<?= time() ?>"></script>
-    <link rel="stylesheet" crossorigin href="/sdn/dist/assets/main.css?v=<?= time() ?>">
-
-
 
     <script src="/sdn/public/js/utils.js"></script>
     <script src="/sdn/public/js/navigation.js?v=<?= time() ?>"></script>

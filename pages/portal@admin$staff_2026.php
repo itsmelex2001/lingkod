@@ -135,10 +135,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       body, body * {
         user-select: none;
         -webkit-user-select: none;
+        caret-color: transparent;
       }
       input, textarea, select {
         user-select: text;
         -webkit-user-select: text;
+        caret-color: auto;
       }
       html, body {
         margin: 0;
@@ -154,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 2.5rem 6vw;
+        padding: 1rem;
       }
       .bg-video {
         position: absolute;
@@ -177,11 +179,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       .login-layout {
         position: relative;
         z-index: 2;
-        width: min(1040px, 100%);
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 420px;
-        gap: clamp(2rem, 6vw, 5.5rem);
-        align-items: center;
+        width: 100%;
+        max-width: 28rem;
+        display: flex;
+        justify-content: center;
       }
       .brand {
         color: #f4faf6;
@@ -257,24 +258,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
       .panel {
         width: 100%;
-        padding: 1.5rem 1.6rem 1.4rem;
-        border-radius: 18px;
-        color: #123322;
-        background: linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, rgba(226, 240, 230, 0.52) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.65),
-          0 20px 44px rgba(6, 22, 12, 0.22);
-        backdrop-filter: blur(20px) saturate(140%);
-        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        padding: 1.75rem 1.85rem 1.5rem;
+        border-radius: 1rem;
+        color: #ffffff;
+        background: rgba(8, 32, 18, 0.48);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+        backdrop-filter: blur(24px) saturate(140%);
+        -webkit-backdrop-filter: blur(24px) saturate(140%);
+      }
+      .card-brand-top {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 0.4rem;
+      }
+      .card-brand-top img {
+        height: 88px;
+        width: auto;
+        max-width: 240px;
+        object-fit: contain;
+        display: block;
+        filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.25));
       }
       .panel-head {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 0.85rem;
-        margin-bottom: 1.25rem;
-        padding-bottom: 1.15rem;
-        border-bottom: 1px solid rgba(18, 51, 34, 0.12);
+        justify-content: center;
+        text-align: center;
+        gap: 0.2rem;
+        margin-bottom: 1.2rem;
+        padding-bottom: 0.95rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       }
       .panel-seal {
         width: 48px;
@@ -284,23 +299,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
       .panel-head h2 {
         margin: 0;
-        font-size: 1.2rem;
-        font-weight: 700;
+        font-size: 1.25rem;
+        font-weight: 600;
         letter-spacing: -0.02em;
-        color: #0d4620;
+        color: #ffffff;
       }
       .panel-head p {
         margin: 0.15rem 0 0;
         font-size: 0.82rem;
-        color: #3c5346;
+        color: rgba(229, 231, 235, 0.85);
       }
       .error-alert {
         display: flex;
         align-items: flex-start;
         gap: 0.5rem;
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #991b1b;
+        background: rgba(220, 38, 38, 0.18);
+        border: 1px solid rgba(248, 113, 113, 0.35);
+        color: #fecaca;
         padding: 0.75rem 0.85rem;
         border-radius: 10px;
         margin-bottom: 1rem;
@@ -315,7 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: #274734;
+        color: rgba(243, 244, 246, 0.9);
       }
       .input-wrap { position: relative; }
       .input-wrap svg.field-icon {
@@ -323,26 +338,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         left: 12px;
         top: 50%;
         transform: translateY(-50%);
-        color: #6d8478;
+        color: rgba(229, 231, 235, 0.75);
         pointer-events: none;
       }
       input[type="text"], input[type="password"] {
         width: 100%;
         height: 46px;
         padding: 0 2.7rem;
-        border: 1px solid #c8d8cf;
+        border: 1px solid rgba(255, 255, 255, 0.22);
         border-radius: 10px;
-        background: #ffffff;
-        color: #163024;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
         font: 500 0.94rem 'Inter', sans-serif;
         outline: none;
-        box-shadow: inset 0 1px 2px rgba(16, 40, 24, 0.04);
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        box-shadow: none;
+        transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
       }
-      input::placeholder { color: #8b9c92; font-weight: 400; }
+      input::placeholder { color: #e5e7eb; font-weight: 400; }
       input:focus {
-        border-color: #15803d;
-        box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.18);
+        border-color: rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.14);
       }
       input[type="password"]::-ms-reveal,
       input[type="password"]::-ms-clear {
@@ -361,13 +377,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         border: none;
         border-radius: 8px;
         background: transparent;
-        color: #5d7266;
+        color: rgba(229, 231, 235, 0.75);
         cursor: pointer;
         display: grid;
         place-items: center;
         padding: 0;
       }
-      .btn-toggle-pass:hover { background: #eef5f0; color: #0d6b2e; }
+      .btn-toggle-pass:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
       .btn-submit {
         width: 100%;
         height: 48px;
@@ -392,24 +408,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         margin: 1.1rem 0 0;
         font-size: 0.78rem;
         font-weight: 600;
-        color: #123322;
+        color: rgba(243, 244, 246, 0.9);
       }
       .secure-pill {
         display: flex;
         align-items: center;
         gap: 0.4rem;
         font-size: 0.72rem;
-        color: #475569;
+        color: rgba(209, 213, 219, 0.78);
         margin-top: 0.5rem;
         justify-content: center;
       }
       @media (max-width: 860px) {
         html, body { overflow: auto; }
-        .login-shell { align-items: flex-start; padding: 1.5rem 1rem 2rem; }
-        .login-layout { grid-template-columns: 1fr; gap: 1.5rem; }
-        .brand { max-width: none; }
-        .brand h1 { font-size: 1.7rem; }
-        .brand-points { display: none; }
+        .login-shell { align-items: center; padding: 1rem; }
       }
     </style>
   </head>
@@ -421,34 +433,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="veil"></div>
 
       <div class="login-layout">
-        <section class="brand">
-          <div class="brand-mark">
+        <section class="panel" aria-label="Sign in">
+          <div class="card-brand-top">
             <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="LINGKOD" />
           </div>
-          <h1>Hospital Personnel Portal</h1>
-          <p>Secure operations management portal for Mariveles Mental Wellness and General Hospital authorized clinical and administrative personnel.</p>
-          <ul class="brand-points">
-            <li>
-              <span class="point-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              </span>
-              Clinical appointments, queues & department schedules
-            </li>
-            <li>
-              <span class="point-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              </span>
-              Protected medical staff & administrative operations
-            </li>
-          </ul>
-        </section>
-
-        <section class="panel" aria-label="Sign in">
           <div class="panel-head">
-            <img src="/sdn/public/assets/mmwgh_logo.png" alt="MMWGH" class="panel-seal" />
             <div>
-              <h2>Personnel Sign In</h2>
-              <p>Staff & Administrator Authentication</p>
+              <h2>Staff &amp; Administrator Access</h2>
+              <p>Hospital Personnel Portal</p>
             </div>
           </div>
 

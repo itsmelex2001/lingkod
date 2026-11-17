@@ -77,11 +77,11 @@ function renderHealthItem(type, data) {
     }
     if (meta) {
         if (type === 'db') {
-            meta.textContent = status === 'online' ? `Operational &bull; ${data.latency_ms} ms ping` : `Service Error`;
+            meta.textContent = status === 'online' ? 'Operational' : 'Service Error';
         } else if (type === 'smtp') {
             meta.textContent = data.message || 'Config status';
         } else if (type === 'disk') {
-            meta.textContent = `${data.free_gb} GB free drive capacity`;
+            meta.textContent = status === 'online' ? 'Healthy' : 'Low capacity';
         }
     }
 }

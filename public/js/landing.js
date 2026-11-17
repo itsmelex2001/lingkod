@@ -16,6 +16,13 @@
     } catch (e) {}
 
     const splashAlreadySeen = sessionStorage.getItem('linkod_splash_shown');
+    let isInternalReferrer = false;
+    try {
+      if (document.referrer) {
+        const refUrl = new URL(document.referrer);
+        isInternalReferrer = refUrl.origin === window.location.origin && refUrl.pathname.startsWith('/sdn/') && refUrl.pathname !== window.location.pathname;
+      }
+    } catch (e) {}
 
     function triggerChatbotPop() {
       const fab = document.querySelector('.fab-container');
@@ -37,7 +44,8 @@
       }
     }
 
-    if (splashAlreadySeen && !isReload && !window.location.search.includes('splash=1')) {
+    if ((splashAlreadySeen || isInternalReferrer) && !isReload && !window.location.search.includes('splash=1')) {
+      sessionStorage.setItem('linkod_splash_shown', 'true');
       splash.style.display = 'none';
       if (document.body) {
         document.body.classList.remove('splash-active');

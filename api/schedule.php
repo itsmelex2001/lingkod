@@ -15,6 +15,7 @@ $actor  = $_SESSION['user'] ?? null;
 $role   = $_SESSION['role'] ?? 'public';
 
   if ($method === 'GET') {
+      $fetchAll = isset($_GET['all']) && $_GET['all'] == '1';
       // Dynamically fetch department for staff
       $staffDept = '';
       if ($role === 'staff' && !empty($_SESSION['user'])) {
@@ -23,9 +24,13 @@ $role   = $_SESSION['role'] ?? 'public';
           $staffDept = $stmtDept->fetchColumn();
       }
 
-      if ($role === 'admin' || $role === 'public' || empty($staffDept)) {
+      $cols = "id, name, department, specialization, status, total_slots, profile_image, schedule_date, schedule_start, schedule_end,
+               TIME_FORMAT(schedule_start, '%h:%i %p') AS schedule_start_fmt,
+               TIME_FORMAT(schedule_end, '%h:%i %p') AS schedule_end_fmt";
+
+      if ($fetchAll || $role === 'admin' || $role === 'public' || empty($staffDept)) {
           $stmt = $pdo->query(
-              "SELECT id, name, department, specialization, status, schedule_date, schedule_start, schedule_end
+              "SELECT $cols
                FROM doctors
                ORDER BY department, name"
           );
@@ -44,7 +49,7 @@ $role   = $_SESSION['role'] ?? 'public';
               $params = [];
           }
           $stmt = $pdo->prepare(
-              "SELECT id, name, department, specialization, status, schedule_date, schedule_start, schedule_end
+              "SELECT $cols
                FROM doctors
                WHERE $whereDept
                ORDER BY department, name"

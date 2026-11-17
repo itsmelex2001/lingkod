@@ -1,0 +1,13 @@
+{
+  "name": "ponytail",
+  "displayName": "Ponytail",
+  "version": "5.3.3",
+  "description": "Lazy senior dev mode. Forces the simplest, shortest solution that actually works: YAGNI, stdlib first, no unrequested abstractions.",
+  "logo": "assets/logo.png",
+  "repository": "https://github.com/DietrichGebert/ponytail",
+  "suggestedPrompts": [
+    "Review my latest changes with /ponytail-review",
+    "Audit this file for bloat and unnecessary complexity with /ponytail-audit",
+    "Find dead code and over-engineering with /ponytail-debt"
+  ]
+}

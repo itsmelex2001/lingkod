@@ -48,6 +48,7 @@ class EmailService
             ? PHPMailer::ENCRYPTION_SMTPS
             : PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = (int)($_ENV['SMTP_PORT'] ?? 587);
+        $mail->Timeout    = 5;
         $mail->CharSet    = 'UTF-8';
 
         $fromEmail = $_ENV['SMTP_FROM_EMAIL'] ?? ($mail->Username ?: 'no-reply@mmwgh.gov.ph');

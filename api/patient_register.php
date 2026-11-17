@@ -16,6 +16,7 @@ ini_set('log_errors', 1);
 
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/patient_otp.php';
 
 // Load environment variables from .env
 $envFile = __DIR__ . '/../.env';
@@ -73,10 +74,7 @@ $isDependent   = ($bookingFor === 'Someone Else / Dependent' || $bookingFor === 
 $relationshipToPatient = trim($input['relationship_to_patient'] ?? '');
 $withCompanion = $isDependent ? 1 : (!empty($input['with_companion']) && in_array(strtolower((string)$input['with_companion']), ['1', 'true', 'yes'], true) ? 1 : 0);
 
-// ── 2. Extract & Sanitize Account Credentials (Phase 2) ───────────────────
-$username        = trim($input['username'] ?? '');
-$password        = (string)($input['password'] ?? '');
-$confirmPassword = (string)($input['confirm_password'] ?? '');
+// ── 2. Username is strictly system-generated below from email local part ──
 
 // ── 3. Strict Validation ──────────────────────────────────────────────────
 $errors = [];
@@ -136,21 +134,6 @@ if ($isDependent && $relationshipToPatient === '') {
     $errors[] = 'Please select your relationship to the patient.';
 }
 
-if ($username === '') {
-    // If username is not explicitly provided, use the local part of email or email itself
-    $username = $email;
-} elseif (strlen($username) < 3) {
-    $errors[] = 'Username must be at least 3 characters long.';
-}
-
-if (strlen($password) < 8) {
-    $errors[] = 'Password must be at least 8 characters long.';
-}
-
-if ($password !== $confirmPassword) {
-    $errors[] = 'Password confirmation does not match.';
-}
-
 if (!empty($errors)) {
     http_response_code(422);
     echo json_encode([
@@ -167,7 +150,6 @@ try {
         SELECT id, patient_id, email, username, contact_number, is_verified
         FROM patients
         WHERE LOWER(email) = :email
-           OR (username IS NOT NULL AND username <> '' AND username = :username)
            OR (
                 contact_number IS NOT NULL AND contact_number <> ''
                 AND RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(contact_number, '+', ''), ' ', ''), '-', ''), '(', ''), ')', ''), 10) = :phone
@@ -175,13 +157,13 @@ try {
     ");
     $phoneDigits = preg_replace('/\D+/', '', $contactNumber);
     $phoneTail = substr($phoneDigits, -10);
-    $checkStmt->execute([':email' => $email, ':username' => $username, ':phone' => $phoneTail]);
+    $checkStmt->execute([':email' => $email, ':phone' => $phoneTail]);
     $matches = $checkStmt->fetchAll(PDO::FETCH_ASSOC);
 
     $emailHit = null;
     $phoneHit = null;
     foreach ($matches as $row) {
-        $sameEmail = strtolower((string)$row['email']) === $email || (string)$row['username'] === $username;
+        $sameEmail = strtolower((string)$row['email']) === $email;
         $storedDigits = preg_replace('/\D+/', '', (string)($row['contact_number'] ?? ''));
         $samePhone = $phoneTail !== '' && substr($storedDigits, -10) === $phoneTail;
         if ($sameEmail && !$emailHit) $emailHit = $row;
@@ -227,8 +209,28 @@ try {
         $existingId = null;
     }
 
-    // ── 5. Hash Password & Generate Secure Token ──────────────────────────
-    $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 11]);
+    // ── 5. Generate System Username (.lingkod), Temp Password & Token ──────
+    $localPart = preg_replace('/[^a-z0-9._-]/', '', strtolower((string)strstr($email, '@', true)));
+    if ($localPart === '') $localPart = 'patient';
+    $baseUsername = $localPart . '.lingkod';
+    $username = $baseUsername;
+    $uCheck = $pdo->prepare("SELECT id FROM patients WHERE LOWER(username) = ? AND (? IS NULL OR id <> ?) LIMIT 1");
+    for ($attempt = 0; $attempt < 15; $attempt++) {
+        $uCheck->execute([strtolower($username), $existingId, $existingId]);
+        if (!$uCheck->fetchColumn()) break;
+        $username = $baseUsername . random_int(0, 9);
+        if ($attempt >= 10) {
+            $username = $baseUsername . random_int(10, 99);
+        }
+    }
+
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    $maxIdx = strlen($chars) - 1;
+    $tempPassword = '';
+    for ($i = 0; $i < 12; $i++) {
+        $tempPassword .= $chars[random_int(0, $maxIdx)];
+    }
+    $passwordHash = password_hash($tempPassword, PASSWORD_BCRYPT, ['cost' => 11]);
     $token = bin2hex(random_bytes(32)); // 64 hex characters cryptographically secure
     $tokenExpiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
@@ -322,20 +324,41 @@ try {
         $recordId = $pdo->lastInsertId();
     }
 
-    // ── 6. Construct Localhost Verification URL ───────────────────────────
+    // ── 6. Construct Localhost Verification URL & Flush Fast Response ─────
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $verificationUrl = "{$protocol}://{$host}/sdn/api/verify_email.php?token={$token}";
 
-    // ── 7. Send Verification Email via PHPMailer ──────────────────────────
+    $domain = substr(strrchr($email, "@"), 1);
+    $webmailUrl = 'https://mail.google.com';
+    $providerName = 'Gmail';
+    if ($domain === 'yahoo.com' || str_ends_with($domain, '.yahoo.com')) {
+        $webmailUrl = 'https://mail.yahoo.com';
+        $providerName = 'Yahoo Mail';
+    } elseif (in_array($domain, ['outlook.com', 'hotmail.com', 'live.com'], true)) {
+        $webmailUrl = 'https://outlook.live.com';
+        $providerName = 'Outlook';
+    }
+
+    flushJsonAndContinue([
+        'success'       => true,
+        'message'       => "Registration submitted successfully! Please check your {$providerName} inbox to verify your account.",
+        'patient_id'    => $patientId,
+        'full_name'     => $fullName,
+        'email'         => $email,
+        'email_sent'    => true,
+        'email_domain'  => $domain,
+        'provider_name' => $providerName,
+        'webmail_url'   => $webmailUrl
+    ]);
+
+    // ── 7. Send Verification Email via PHPMailer (After Response Flushed) ─
     $emailSent = false;
     $emailError = null;
 
     if (class_exists(PHPMailer::class)) {
         $mail = new PHPMailer(true);
         try {
-            // Server settings
-            // Reads SMTP configuration from .env for Gmail, Outlook, or custom SMTP relays
             $smtpHost   = !empty($_ENV['SMTP_HOST']) ? $_ENV['SMTP_HOST'] : 'smtp.gmail.com';
             $smtpPort   = !empty($_ENV['SMTP_PORT']) ? (int)$_ENV['SMTP_PORT'] : 587;
             $smtpUser   = trim($_ENV['SMTP_USER'] ?? '');
@@ -344,6 +367,7 @@ try {
 
             if (!empty($smtpUser) && !empty($smtpPass)) {
                 $mail->isSMTP();
+                $mail->Timeout    = 8;
                 $mail->Host       = $smtpHost;
                 $mail->SMTPAuth   = true;
                 $mail->Username   = $smtpUser;
@@ -383,11 +407,14 @@ try {
 
             $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
             $safePatientId = htmlspecialchars($patientId, ENT_QUOTES, 'UTF-8');
+            $safeEmail = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
+            $safeUsername = htmlspecialchars($username, ENT_QUOTES, 'UTF-8');
+            $safeTempPassword = htmlspecialchars($tempPassword, ENT_QUOTES, 'UTF-8');
             $year = date('Y');
 
             // Content
             $mail->isHTML(true);
-            $mail->Subject = 'Verify Your MMWGH LINGKOD Patient Account';
+            $mail->Subject = 'Your MMWGH LINGKOD Patient Portal Credentials';
 
             $mail->Body = "
             <!DOCTYPE html>
@@ -417,8 +444,14 @@ try {
                   <td style='padding:32px 36px 28px; background:#ffffff;'>
                     <div style='font-size:15px; font-weight:700; color:#15803d; margin:0 0 16px;'>{$safePatientId}</div>
                     <div style='font-size:20px; font-weight:700; color:#111827; margin:0 0 14px;'>Hello, {$safeName}!</div>
-                    <p style='margin:0 0 14px; font-size:15px; line-height:1.55; color:#374151;'>Thank you for registering with the MMWGH LINGKOD Patient Portal.</p>
-                    <p style='margin:0 0 24px; font-size:15px; line-height:1.55; color:#374151;'>To complete your registration and activate your patient account, please click the button below:</p>
+                    <p style='margin:0 0 14px; font-size:15px; line-height:1.55; color:#374151;'>Thank you for registering with the MMWGH LINGKOD Patient Portal. Below are your system-generated login credentials:</p>
+                    <div style='background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px 18px; margin:0 0 20px;'>
+                      <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>Username</div>
+                      <div style='font-size:15px; color:#111827; font-weight:700; font-family:monospace; margin:2px 0 12px;'>{$safeUsername}</div>
+                      <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>Temporary Password</div>
+                      <div style='font-size:16px; color:#14532d; font-weight:800; font-family:monospace; margin-top:2px;'>{$safeTempPassword}</div>
+                    </div>
+                    <p style='margin:0 0 24px; font-size:14px; line-height:1.55; color:#374151;'>You will be asked to enter a 6-digit email OTP on your first sign-in (or click the verification button below). We recommend changing your temporary password after signing in.</p>
                     <div style='text-align:center; margin:8px 0 24px;'>
                       <a href='{$verificationUrl}' target='_blank' style='display:inline-block; background:#15803d; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:14px 34px; border-radius:999px;'>Verify My Account</a>
                     </div>
@@ -431,7 +464,7 @@ try {
             </html>
             ";
 
-            $mail->AltBody = "Hello {$fullName},\n\nPlease verify your MMWGH LINGKOD Patient Account by visiting the link below:\n\n{$verificationUrl}\n\nPatient ID: {$patientId}\nThis link expires in 24 hours.\n\nSign in to Patient Portal: {$loginPortalUrl}";
+            $mail->AltBody = "Hello {$fullName},\n\nYour MMWGH LINGKOD Patient Portal credentials:\nPatient ID: {$patientId}\nUsername: {$username}\nEmail: {$email}\nTemporary Password: {$tempPassword}\n\nVerify your account: {$verificationUrl}\n\nSign in (an email OTP will be required if not yet verified): {$loginPortalUrl}";
 
             // Suppress unhandled socket warnings if local MTA is unavailable
             @$mail->send();
@@ -459,31 +492,6 @@ try {
         $emailSent ? 'YES' : 'NO (' . ($emailError ?? 'none') . ')'
     );
     @file_put_contents($logDir . '/sent_verification_emails.log', $logEntry, FILE_APPEND);
-
-    // Determine user's webmail URL for one-click redirect (e.g. Gmail)
-    $domain = substr(strrchr($email, "@"), 1);
-    $webmailUrl = 'https://mail.google.com';
-    $providerName = 'Gmail';
-    if ($domain === 'yahoo.com' || str_ends_with($domain, '.yahoo.com')) {
-        $webmailUrl = 'https://mail.yahoo.com';
-        $providerName = 'Yahoo Mail';
-    } elseif (in_array($domain, ['outlook.com', 'hotmail.com', 'live.com'], true)) {
-        $webmailUrl = 'https://outlook.live.com';
-        $providerName = 'Outlook';
-    }
-
-    // Return JSON response
-    echo json_encode([
-        'success'           => true,
-        'message'           => "Registration submitted successfully! Please check your {$providerName} inbox to verify your account.",
-        'patient_id'        => $patientId,
-        'full_name'         => $fullName,
-        'email'             => $email,
-        'email_sent'        => $emailSent,
-        'email_domain'      => $domain,
-        'provider_name'     => $providerName,
-        'webmail_url'       => $webmailUrl
-    ]);
 } catch (PDOException $e) {
     http_response_code(500);
     error_log("Registration database error: " . $e->getMessage());

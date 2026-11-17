@@ -11,6 +11,8 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/patient_remember.php';
+require_once __DIR__ . '/config/patient_otp.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -24,12 +26,13 @@ if (!is_array($input)) {
     $input = $_POST;
 }
 
-$email = trim($input['email'] ?? ($input['username'] ?? ''));
+$username = trim($input['username'] ?? ($input['email'] ?? ''));
 $password = (string)($input['password'] ?? '');
+$remember = !empty($input['remember']);
 
-if ($email === '' || $password === '') {
+if ($username === '' || $password === '') {
     http_response_code(422);
-    echo json_encode(['success' => false, 'message' => 'Email and password are required.']);
+    echo json_encode(['success' => false, 'message' => 'Username and password are required.']);
     exit;
 }
 
@@ -37,17 +40,17 @@ try {
     $stmt = $pdo->prepare("
         SELECT id, patient_id, full_name, email, username, password, is_verified, status
         FROM patients
-        WHERE (email = :login1 OR (username IS NOT NULL AND username = :login2))
+        WHERE username = :username
         LIMIT 1
     ");
-    $stmt->execute([':login1' => $email, ':login2' => $email]);
+    $stmt->execute([':username' => $username]);
     $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$patient || empty($patient['password'])) {
         http_response_code(401);
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid email or password.'
+            'message' => 'Invalid username or password.'
         ]);
         exit;
     }
@@ -56,46 +59,48 @@ try {
         http_response_code(401);
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid email or password.'
+            'message' => 'Invalid username or password.'
         ]);
         exit;
     }
 
-    // Check verification status
+    // Check verification status: require 6-digit email OTP on first sign-in
     if ((int)$patient['is_verified'] !== 1) {
-        http_response_code(403);
-        echo json_encode([
-            'success'     => false,
-            'unverified'  => true,
-            'message'     => 'Your account is not verified yet. Please check your email to activate your account.'
+        if (empty($patient['email']) || !filter_var($patient['email'], FILTER_VALIDATE_EMAIL)) {
+            http_response_code(403);
+            echo json_encode([
+                'success'    => false,
+                'unverified' => true,
+                'message'    => 'Your account is not verified yet and has no valid email on file.'
+            ]);
+            exit;
+        }
+
+        ensurePatientOtpColumns($pdo);
+        $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
+        $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+        $pdo->prepare("UPDATE patients SET otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
+            ->execute([$otpHash, $otpExpires, $patient['id']]);
+
+        $_SESSION['pending_otp_patient_id'] = (int)$patient['id'];
+        $_SESSION['pending_otp_remember']   = $remember ? 1 : 0;
+        $_SESSION['pending_otp_sent_at']    = time();
+
+        flushJsonAndContinue([
+            'success'      => false,
+            'otp_required' => true,
+            'email_sent'   => true,
+            'masked_email' => maskEmail($patient['email']),
+            'message'      => 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
         ]);
+
+        sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp);
         exit;
     }
 
-    // Login successful
-    // Find or create linked user in users table
-    $userId = null;
-    try {
-        $uStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR patient_id = ? LIMIT 1");
-        $uStmt->execute([$patient['email'], $patient['id']]);
-        $userId = $uStmt->fetchColumn() ?: null;
-        if (!$userId) {
-            $insU = $pdo->prepare("INSERT INTO users (username, email, password, role, status, patient_id) VALUES (?, ?, ?, 'patient', 'active', ?)");
-            $insU->execute([$patient['username'] ?: $patient['patient_id'], $patient['email'], $patient['password'], $patient['id']]);
-            $userId = $pdo->lastInsertId();
-        }
-        $pdo->prepare("UPDATE patients SET user_id = ? WHERE id = ? AND user_id IS NULL")->execute([$userId, $patient['id']]);
-    } catch (Throwable $ignoreUser) {}
-
-    $_SESSION['patient_logged_in'] = true;
-    $_SESSION['patient_id']        = $patient['patient_id'];
-    $_SESSION['patient_db_id']     = $patient['id'];
-    $_SESSION['patient_name']      = $patient['full_name'];
-    $_SESSION['patient_email']     = $patient['email'];
-    $_SESSION['user_id']           = $userId;
-    $_SESSION['patient_user_id']   = $userId;
-    $_SESSION['user_role']         = 'patient';
-    $_SESSION['role']              = 'patient';
+    completePatientLogin($pdo, $patient, $remember);
 
     echo json_encode([
         'success'    => true,

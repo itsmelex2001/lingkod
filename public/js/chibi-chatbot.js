@@ -30,7 +30,7 @@
     girl: {
       name: { EN: "Nurse Mika", TL: "Nurse Mika" },
       role: { EN: "LINGKOD ASSISTANT", TL: "LINGKOD ASSISTANT" },
-      avatar: "/sdn/public/assets/chibi_girl_avatar.png",
+      avatar: "/sdn/public/assets/chibi_girl_full.png",
       welcome: {
         EN: "Hello! I am Nurse Mika, your LINGKOD assistant. How can I help you today?",
         TL: "Kumusta! Ako si Nurse Mika, inyong LINGKOD assistant. Paano ko kayo matutulungan ngayon?"
@@ -39,7 +39,7 @@
     boy: {
       name: { EN: "Dr. Leo", TL: "Dr. Leo" },
       role: { EN: "LINGKOD ASSISTANT", TL: "LINGKOD ASSISTANT" },
-      avatar: "/sdn/public/assets/chibi_boy_avatar.png",
+      avatar: "/sdn/public/assets/chibi_boy_full.png",
       welcome: {
         EN: "Hello! I am Nurse Mika, your LINGKOD assistant. How can I help you today?",
         TL: "Kumusta! Ako si Dr. Leo, inyong LINGKOD assistant. Paano ko kayo matutulungan ngayon?"
@@ -456,7 +456,7 @@
             </svg>
           </button>
 
-          <div class="chibi-header-top" id="headerInfoToggle" title="Click to switch between Nurse Mika & Dr. Leo">
+          <div class="chibi-header-top" id="headerInfoToggle">
             <div class="chibi-header-icon-wrap" id="chibiHeaderIconWrap">
               ${HEADER_ICONS[chatAssistant]}
             </div>
@@ -533,7 +533,7 @@
       if (langMenu) langMenu.setAttribute('hidden', '');
       switchLanguage('TL');
     });
-    if (headerInfo) headerInfo.addEventListener('click', toggleHeaderAssistant);
+    // Header assistant switching disabled per design
 
     if (document.body && document.body.classList.contains('splash-active')) {
       const widget = document.getElementById('chibiWidget');

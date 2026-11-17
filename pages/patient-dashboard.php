@@ -1,10 +1,17 @@
 <?php
 /**
  * pages/patient-dashboard.php
- * MMWGH LINGKOD — Patient Portal
+ * MMWGH LINGKOD â€” Patient Portal
  */
 
 session_start();
+if (empty($_SESSION['patient_logged_in']) && !empty($_COOKIE['lingkod_patient_remember'])) {
+    require_once __DIR__ . '/../api/config/db.php';
+    require_once __DIR__ . '/../api/config/patient_remember.php';
+    if (isset($pdo)) {
+        tryAutoLoginPatientFromCookie($pdo);
+    }
+}
 if (empty($_SESSION['patient_logged_in']) && empty($_SESSION['patient_id'])) {
     if (isset($_GET['demo']) || !file_exists(__DIR__ . '/patient-login.php')) {
         $_SESSION['patient_logged_in'] = true;
@@ -95,7 +102,7 @@ $initials  = count($nameParts) >= 2
         overflow: hidden;
       }
 
-      /* ── Sidebar ── */
+      /* â”€â”€ Sidebar â”€â”€ */
       .sidebar {
         width: 268px;
         height: 100vh;
@@ -246,7 +253,7 @@ $initials  = count($nameParts) >= 2
         line-height: 1.35;
       }
 
-      /* ── Main Content Area ── */
+      /* â”€â”€ Main Content Area â”€â”€ */
       .main-content {
         flex: 1;
         display: flex;
@@ -258,7 +265,7 @@ $initials  = count($nameParts) >= 2
         background-color: var(--bg-page);
       }
 
-      /* ── Topbar ── */
+      /* â”€â”€ Topbar â”€â”€ */
       .topbar {
         height: 70px;
         display: flex;
@@ -564,7 +571,7 @@ $initials  = count($nameParts) >= 2
         color: #b91c1c;
       }
 
-      /* ── Canvas ── */
+      /* â”€â”€ Canvas â”€â”€ */
       .dashboard-canvas {
         padding: 1.8rem 2.4rem 3.2rem;
         max-width: 1240px;
@@ -584,7 +591,7 @@ $initials  = count($nameParts) >= 2
         display: flex;
       }
 
-      /* ── Hero Banner ── */
+      /* â”€â”€ Hero Banner â”€â”€ */
       .hero-banner {
         background: linear-gradient(125deg, #15803d 0%, #0f6930 55%, #07471f 100%);
         border-radius: 18px;
@@ -619,12 +626,11 @@ $initials  = count($nameParts) >= 2
       .hero-eyebrow {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
         font-size: 0.76rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: #bbf7d0;
+        color: #ffffff;
       }
       .hero-banner h1 {
         font-family: 'Outfit', sans-serif;
@@ -683,7 +689,7 @@ $initials  = count($nameParts) >= 2
         background: rgba(255, 255, 255, 0.24);
       }
 
-      /* ── 3 KPI Stat Cards ── */
+      /* â”€â”€ 3 KPI Stat Cards â”€â”€ */
       .metrics-row {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -751,7 +757,7 @@ $initials  = count($nameParts) >= 2
         font-weight: 500;
       }
 
-      /* ── Department Quick Booking Cards ── */
+      /* â”€â”€ Department Quick Booking Cards â”€â”€ */
       .dept-cards-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -820,7 +826,7 @@ $initials  = count($nameParts) >= 2
         color: var(--brand-green);
       }
 
-      /* ── Content Grid ── */
+      /* â”€â”€ Content Grid â”€â”€ */
       .content-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -877,7 +883,7 @@ $initials  = count($nameParts) >= 2
         text-decoration: underline;
       }
 
-      /* ── Appointment & Medication Cards ── */
+      /* â”€â”€ Appointment & Medication Cards â”€â”€ */
       .card-item-list {
         display: flex;
         flex-direction: column;
@@ -1039,7 +1045,7 @@ $initials  = count($nameParts) >= 2
         background: var(--brand-green-light);
       }
 
-      /* ── Appointments Date Range Filter Controls ── */
+      /* â”€â”€ Appointments Date Range Filter Controls â”€â”€ */
       .toolbar-controls {
         display: flex;
         align-items: center;
@@ -1140,7 +1146,7 @@ $initials  = count($nameParts) >= 2
         100% { transform: rotate(360deg); }
       }
 
-      /* ── View Header & Filter Pills ── */
+      /* â”€â”€ View Header & Filter Pills â”€â”€ */
       .view-header {
         display: flex;
         align-items: center;
@@ -1236,7 +1242,7 @@ $initials  = count($nameParts) >= 2
         border-color: var(--brand-green);
       }
 
-      /* ── Settings View ── */
+      /* â”€â”€ Settings View â”€â”€ */
       .settings-card {
         background: #ffffff;
         border: 1px solid var(--border-color);
@@ -1351,7 +1357,7 @@ $initials  = count($nameParts) >= 2
         transform: translateX(-20px);
       }
 
-      /* ── Empty State Styling ── */
+      /* â”€â”€ Empty State Styling â”€â”€ */
       .empty-state-box {
         display: flex;
         flex-direction: column;
@@ -1412,7 +1418,7 @@ $initials  = count($nameParts) >= 2
         justify-content: center;
       }
 
-      /* ── Modals ── */
+      /* â”€â”€ Modals â”€â”€ */
       .modal-backdrop {
         position: fixed;
         inset: 0;
@@ -1538,12 +1544,14 @@ $initials  = count($nameParts) >= 2
         .metrics-row, .med-specs-grid, .settings-grid { grid-template-columns: 1fr; }
       }
     </style>
+      <link rel="stylesheet" href="/sdn/assets/css/dashboard-mobile.css?v=<?= time() ?>" />
   </head>
   <body>
 
     <div class="app-layout" id="standalone-dashboard">
+      <div class="mobile-sidebar-backdrop" id="mobileSidebarBackdrop"></div>
 
-      <!-- ── Left Sidebar ── -->
+      <!-- â”€â”€ Left Sidebar â”€â”€ -->
       <aside class="sidebar">
         <div>
           <div class="sidebar-brand">
@@ -1578,9 +1586,9 @@ $initials  = count($nameParts) >= 2
           <div class="sidebar-help-card">
             <div class="sidebar-help-title">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-              <span>Outpatient Triage Desk</span>
+              <span>Patient Assistance Desk</span>
             </div>
-            <div class="sidebar-help-sub">Mon – Sat &bull; 8:00 AM to 5:00 PM<br>Bring your Patient ID on clinic day.</div>
+            <div class="sidebar-help-sub">Mon &ndash; Sat &bull; 8:00 AM to 5:00 PM<br>Please bring your Patient ID on your clinic visit.</div>
           </div>
 
           <a class="nav-link" id="nav-settings" onclick="switchView('settings', this)">
@@ -1592,19 +1600,24 @@ $initials  = count($nameParts) >= 2
         </div>
       </aside>
 
-      <!-- ── Right Main Area ── -->
+      <!-- â”€â”€ Right Main Area â”€â”€ -->
       <main class="main-content">
 
         <!-- Top Bar -->
         <header class="topbar">
           <div class="topbar-left">
-            <span class="topbar-id-chip" id="topPatientIdChip">ID: <?= htmlspecialchars($patientId ?: 'Verified') ?></span>
+            <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open navigation menu" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+            <a href="#view-dashboard" class="mobile-topbar-brand" onclick="switchView('dashboard'); return false;">
+              <img src="/sdn/public/assets/v3_lingkod_logo_green.png" alt="LINGKOD" class="mobile-topbar-logo" />
+              <span class="mobile-topbar-title">LINGKOD</span>
+            </a>
+            <span class="topbar-id-chip" id="topPatientIdChip">Patient ID: <?= htmlspecialchars($patientId ?: 'Verified') ?></span>
           </div>
 
           <div class="topbar-right">
             <!-- Notifications -->
             <div class="notif-container" id="notifContainer">
-              <button class="btn-top-icon" id="notifBellBtn" title="Notifications" onclick="toggleNotifDropdown(event)">
+              <button class="btn-top-icon" id="notifBellBtn" title="Notifications" aria-label="Notifications" onclick="toggleNotifDropdown(event)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                 <span class="notif-badge hidden" id="notifBadge">0</span>
               </button>
@@ -1628,7 +1641,7 @@ $initials  = count($nameParts) >= 2
 
             <!-- Profile Menu -->
             <div class="profile-container" id="profileContainer">
-              <button type="button" class="user-avatar-btn" onclick="toggleProfileDropdown(event)">
+              <button type="button" class="user-avatar-btn" aria-label="Account menu" onclick="toggleProfileDropdown(event)">
                 <div class="user-avatar-circle" id="topAvatarInitials"><?= htmlspecialchars($initials) ?></div>
                 <span class="user-avatar-name" id="topAvatarName"><?= htmlspecialchars($firstName) ?></span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -1655,18 +1668,22 @@ $initials  = count($nameParts) >= 2
         <!-- Dynamic Views Canvas -->
         <div class="dashboard-canvas">
 
-          <!-- ═════ VIEW 1: DASHBOARD ═════ -->
+          <!-- â•â•â•â•â• VIEW 1: DASHBOARD â•â•â•â•â• -->
           <section id="view-dashboard" class="view-section active">
 
             <!-- Welcome Hero Banner -->
             <div class="hero-banner">
               <div class="hero-banner-left">
                 <div class="hero-eyebrow">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-                  <span>Outpatient Care &amp; Telemedicine</span>
+                  <span>Patient Portal</span>
                 </div>
                 <h1 id="heroGreeting">Good morning, <?= htmlspecialchars($firstName) ?></h1>
                 <p data-i18n="hero_sub">Manage your hospital appointments and book consultations across MMWGH departments.</p>
+                <button type="button" class="mobile-hero-id-chip" id="mobileHeroIdChip" aria-label="Copy Patient ID">
+                  <span id="mobileHeroIdText">ID: <?= htmlspecialchars($patientId ?: 'Verified') ?></span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span id="mobileHeroIdCopyLabel" style="opacity:0.85;">Copy</span>
+                </button>
               </div>
               <div class="hero-actions">
                 <a href="/sdn/pages/patient-book-appointment.php" class="btn-hero-white">
@@ -1687,6 +1704,7 @@ $initials  = count($nameParts) >= 2
                   <div class="metric-lbl" data-i18n="next_appt">Next Appointment</div>
                   <div class="metric-value" id="nextApptDate">None</div>
                   <div class="metric-sub" id="nextApptTime">No upcoming visit</div>
+                  <div class="mobile-next-appt-status" id="mobileNextApptStatus"></div>
                 </div>
                 <div class="metric-icon-box green">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -1735,7 +1753,7 @@ $initials  = count($nameParts) >= 2
             </div>
           </section>
 
-          <!-- ═════ VIEW 2: APPOINTMENTS ═════ -->
+          <!-- â•â•â•â•â• VIEW 2: APPOINTMENTS â•â•â•â•â• -->
           <section id="view-appointments" class="view-section">
             <div class="view-header">
               <div>
@@ -1786,7 +1804,7 @@ $initials  = count($nameParts) >= 2
             </div>
           </section>
 
-          <!-- ═════ VIEW 3: SETTINGS ═════ -->
+          <!-- â•â•â•â•â• VIEW 3: SETTINGS â•â•â•â•â• -->
           <section id="view-settings" class="view-section">
             <div class="view-header">
               <div>
@@ -1874,9 +1892,32 @@ $initials  = count($nameParts) >= 2
 
         </div>
       </main>
+
+      <!-- Mobile Bottom Navigation -->
+      <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <button type="button" class="mobile-nav-item active" data-view="dashboard" aria-current="page">
+          <span class="mobile-nav-icon-wrap" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+          </span>
+          <span>Dashboard</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-view="appointments">
+          <span class="mobile-nav-icon-wrap" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span class="mobile-nav-badge is-empty" id="mobileApptCount">0</span>
+          </span>
+          <span>Appointments</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-view="settings">
+          <span class="mobile-nav-icon-wrap" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </span>
+          <span>Settings</span>
+        </button>
+      </nav>
     </div>
 
-    <!-- ── Reschedule Modal ── -->
+    <!-- â”€â”€ Reschedule Modal â”€â”€ -->
     <div id="rescheduleModal" class="modal-backdrop">
       <div class="modal-dialog">
         <div class="modal-top">
@@ -1892,10 +1933,10 @@ $initials  = count($nameParts) >= 2
           <div class="settings-field" style="margin-bottom:14px;">
             <label for="rescheduleTime">Clinic Session</label>
             <select id="rescheduleTime" class="settings-select">
-              <option value="08:00:00">08:00 AM – 10:00 AM</option>
-              <option value="10:00:00">10:00 AM – 12:00 PM</option>
-              <option value="13:00:00">01:00 PM – 03:00 PM</option>
-              <option value="15:00:00">03:00 PM – 05:00 PM</option>
+              <option value="08:00:00">08:00 AM &ndash; 10:00 AM</option>
+              <option value="10:00:00">10:00 AM &ndash; 12:00 PM</option>
+              <option value="13:00:00">01:00 PM &ndash; 03:00 PM</option>
+              <option value="15:00:00">03:00 PM &ndash; 05:00 PM</option>
             </select>
           </div>
           <p id="rescheduleError" style="display:none; color:#b91c1c; font-size:0.84rem; margin-bottom:10px;"></p>
@@ -1906,7 +1947,7 @@ $initials  = count($nameParts) >= 2
 
 
 
-    <!-- ── Change Password Modal ── -->
+    <!-- â”€â”€ Change Password Modal â”€â”€ -->
     <div id="passwordModal" class="modal-backdrop">
       <div class="modal-dialog" style="max-width:440px;">
         <div class="modal-top">
@@ -2052,8 +2093,12 @@ $initials  = count($nameParts) >= 2
       }
 
       function getGreetingPrefix() {
-        if (currentLang === 'tl') return 'Magandang araw';
         const hr = new Date().getHours();
+        if (currentLang === 'tl') {
+          if (hr < 12) return 'Magandang umaga';
+          if (hr < 18) return 'Magandang hapon';
+          return 'Magandang gabi';
+        }
         if (hr < 12) return 'Good morning';
         if (hr < 18) return 'Good afternoon';
         return 'Good evening';
@@ -2151,7 +2196,7 @@ $initials  = count($nameParts) >= 2
           const codeInput = document.getElementById('setPatientCode');
           if (codeInput) codeInput.value = prof.patient_id || '';
           const topChip = document.getElementById('topPatientIdChip');
-          if (topChip) topChip.textContent = `ID: ${prof.patient_id || 'Verified'}`;
+          if (topChip) topChip.textContent = `Patient ID: ${prof.patient_id || 'Verified'}`;
         }
 
         // Sidebar counts
@@ -2166,7 +2211,7 @@ $initials  = count($nameParts) >= 2
         const nextDate = document.getElementById('nextApptDate');
         const nextTime = document.getElementById('nextApptTime');
         if (nextDate) nextDate.textContent = next ? next.date : 'No Visit';
-        if (nextTime) nextTime.textContent = next ? `${next.time_label} • ${next.department}` : 'Book a consultation below';
+        if (nextTime) nextTime.textContent = next ? `${next.time_label} \u00B7 ${next.department}` : 'Book a consultation below';
 
         const upVal = document.getElementById('upcomingVisitsVal');
         if (upVal) upVal.textContent = upcoming.length;
@@ -2189,13 +2234,7 @@ $initials  = count($nameParts) >= 2
       }
 
       function renderAppointmentViews() {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const activeStatuses = ['approved', 'confirmed', 'ongoing', 'arrived', 'for_approval', 'for approval', 'pending', 'for_processing'];
-        const upcoming = (portalData.upcoming || []).filter(item => {
-          const d = item.date_raw || item.date_iso || '';
-          const st = (item.status_raw || '').toLowerCase();
-          return !d || d >= todayStr || activeStatuses.includes(st);
-        });
+        const upcoming = portalData.upcoming || [];
         const dash = document.getElementById('dashUpcomingList');
         if (dash) {
           dash.innerHTML = upcoming.length
@@ -2408,6 +2447,15 @@ $initials  = count($nameParts) >= 2
         </div>`;
       }
 
+      function persistNotificationAction(action, ids) {
+        if (!ids || !ids.length) return;
+        fetch('/sdn/api/patient_dashboard_data.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, ids })
+        }).catch(() => {});
+      }
+
       function renderNotifications() {
         const listEl = document.getElementById('notifList');
         if (!listEl) return;
@@ -2417,17 +2465,20 @@ $initials  = count($nameParts) >= 2
           updateNotifCount(0);
           return;
         }
-        listEl.innerHTML = items.map(n => `
-          <div class="notif-item unread" onclick="handleNotifClick('${escapeHtml(n.view || 'appointments')}', this)">
-            <div class="notif-dot ${n.warn ? 'warn' : ''}"></div>
+        listEl.innerHTML = items.map(n => {
+          const isRead = Boolean(n.is_read);
+          return `
+          <div class="notif-item ${isRead ? '' : 'unread'}" onclick="handleNotifClick('${escapeHtml(n.view || 'appointments')}', this, '${escapeHtml(n.id || '')}')">
+            <div class="notif-dot ${n.warn ? 'warn' : ''} ${isRead ? 'read' : ''}"></div>
             <div class="notif-content">
               <div class="notif-item-title">${escapeHtml(n.title)}</div>
               <div class="notif-item-text">${escapeHtml(n.text)}</div>
               <div class="notif-item-time">${escapeHtml(n.time)}</div>
             </div>
           </div>
-        `).join('');
-        updateNotifCount(items.length);
+        `;
+        }).join('');
+        updateNotifCount(items.filter(n => !n.is_read).length);
       }
 
       function toggleNotifDropdown(event) {
@@ -2447,12 +2498,17 @@ $initials  = count($nameParts) >= 2
         if (pd) pd.classList.remove('show');
       }
 
-      function handleNotifClick(viewName, itemEl) {
+      function handleNotifClick(viewName, itemEl, notifId) {
         if (itemEl && itemEl.classList.contains('unread')) {
           itemEl.classList.remove('unread');
           const dot = itemEl.querySelector('.notif-dot');
           if (dot) dot.classList.add('read');
           updateNotifCount();
+        }
+        if (notifId && Array.isArray(portalData.notifications)) {
+          const target = portalData.notifications.find(n => n.id === notifId);
+          if (target) target.is_read = true;
+          persistNotificationAction('mark_notifications_read', [notifId]);
         }
         document.getElementById('notifDropdown').classList.remove('show');
         switchView(viewName);
@@ -2466,13 +2522,21 @@ $initials  = count($nameParts) >= 2
           if (dot) dot.classList.add('read');
         });
         updateNotifCount(0);
+        const ids = (portalData.notifications || []).map(n => {
+          n.is_read = true;
+          return n.id;
+        }).filter(Boolean);
+        persistNotificationAction('mark_notifications_read', ids);
       }
 
       function clearAllNotifs(event) {
         if (event) event.stopPropagation();
+        const ids = (portalData.notifications || []).map(n => n.id).filter(Boolean);
+        portalData.notifications = [];
         const list = document.getElementById('notifList');
         list.innerHTML = '<div style="padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">No new notifications</div>';
         updateNotifCount(0);
+        persistNotificationAction('clear_notifications', ids);
       }
 
       function updateNotifCount(forcedCount) {
@@ -2790,5 +2854,7 @@ $initials  = count($nameParts) >= 2
         }
       });
     </script>
+      <script src="/sdn/assets/js/dashboard-mobile.js?v=<?= time() ?>"></script>
   </body>
 </html>
+
