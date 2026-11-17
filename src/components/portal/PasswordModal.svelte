@@ -27,8 +27,13 @@
       error = 'Please enter your current password.';
       return;
     }
-    if (newPassword.length < 8) {
-      error = 'New password must be at least 8 characters.';
+    const isStrong = newPassword.length >= 8
+      && /[A-Z]/.test(newPassword)
+      && /[a-z]/.test(newPassword)
+      && /[0-9]/.test(newPassword)
+      && /[^A-Za-z0-9]/.test(newPassword);
+    if (!isStrong) {
+      error = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
       return;
     }
     if (newPassword !== confirmPassword) {

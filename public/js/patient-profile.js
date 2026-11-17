@@ -371,7 +371,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   window.submitHistoryRecord = async () => {
     const btn = document.querySelector('#historyModal .btn-modal-confirm');
-    btn.disabled = true; btn.textContent = 'Saving...';
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle;margin-right:6px;" aria-hidden="true"><path d="M12 2a10 10 0 0 1 10 10" opacity="0.9"/><circle cx="12" cy="12" r="10" opacity="0.25"/><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.75s" repeatCount="indefinite"/></svg>Saving...';
     
     const payload = {
       patient_id: patientId,

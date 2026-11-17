@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'consultation') renderConsultations();
     if (viewName === 'records') renderRecords();
     if (viewName === 'schedules') renderDoctorSchedules();
+    if (viewName !== 'settings' && typeof stopStaffQrScanner === 'function') stopStaffQrScanner();
   }
   window.switchView = switchView;
 
@@ -1307,10 +1308,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const pendingAssignPromises = new Map();
 
   async function executeApprove(patientId, department, assignedDoctor, triggerBtn) {
-    const origText = triggerBtn ? triggerBtn.textContent : '';
     if (triggerBtn) {
       triggerBtn.disabled = true;
-      triggerBtn.textContent = 'Approving...';
     }
     try {
       const payload = { action: 'approve', patient_id: patientId, department: department };
@@ -1324,8 +1323,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }).then(r => r.json());
 
       if (res.success) {
+        const local = (allPatients || []).find(item => item.patient_id === patientId);
+        if (local) {
+          local.status = 'approved';
+          if (department) local.department = department;
+          if (assignedDoctor && assignedDoctor !== 'None') local.assigned_doctor = assignedDoctor;
+        }
+        renderOverview();
+        renderConsultations();
+        renderRecords();
         showToast('Appointment confirmed. The patient now sees Confirmed.');
-        await loadData();
+        loadData();
       } else {
         showToast(res.message || 'Could not confirm appointment.', 3200, 'error');
       }
@@ -1334,7 +1342,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       if (triggerBtn && triggerBtn.isConnected) {
         triggerBtn.disabled = false;
-        triggerBtn.textContent = origText;
       }
     }
   }
@@ -3604,6 +3611,49 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ── 14. Account Settings (Profile & Password) ──
+  let pendingStaffAvatarData = null;
+  let pendingStaffAvatarRemove = false;
+  const staffAvatarInput = document.getElementById('staffSettingsAvatarInput');
+  const staffAvatarPreview = document.getElementById('staffSettingsAvatarPreview');
+  const staffAvatarRemoveBtn = document.getElementById('staffSettingsAvatarRemoveBtn');
+
+  if (staffAvatarInput && staffAvatarPreview) {
+    staffAvatarInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+        showToast('Please select a PNG, JPG, or WEBP image.');
+        staffAvatarInput.value = '';
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be 5MB or less.');
+        staffAvatarInput.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingStaffAvatarData = reader.result;
+        pendingStaffAvatarRemove = false;
+        staffAvatarPreview.innerHTML = `<img src="${pendingStaffAvatarData}" alt="Preview" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
+        if (staffAvatarRemoveBtn) staffAvatarRemoveBtn.style.display = 'inline-flex';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (staffAvatarRemoveBtn && staffAvatarPreview) {
+    staffAvatarRemoveBtn.addEventListener('click', () => {
+      pendingStaffAvatarData = null;
+      pendingStaffAvatarRemove = true;
+      if (staffAvatarInput) staffAvatarInput.value = '';
+      const nameVal = (document.getElementById('settingsFullName')?.value || 'ST').trim();
+      const initials = nameVal.split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || 'ST';
+      staffAvatarPreview.textContent = initials;
+      staffAvatarRemoveBtn.style.display = 'none';
+    });
+  }
+
   const btnSaveProfile = document.getElementById('btnSaveProfile');
   if (btnSaveProfile) {
     btnSaveProfile.addEventListener('click', async () => {
@@ -3613,20 +3663,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       try {
+        const payload = {
+          action: 'update_profile',
+          user_id: window.STAFF_USER_ID,
+          full_name: name
+        };
+        if (pendingStaffAvatarData) payload.image_data = pendingStaffAvatarData;
+        if (pendingStaffAvatarRemove) payload.remove_image = true;
+
         const res = await fetch('/sdn/api/staff.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'update_profile',
-            user_id: window.STAFF_USER_ID,
-            full_name: name
-          })
+          body: JSON.stringify(payload)
         }).then(r => r.json());
 
         if (res.success) {
           showToast('Profile saved.');
+          pendingStaffAvatarData = null;
+          pendingStaffAvatarRemove = false;
           const headerName = document.getElementById('headerStaffName');
           if (headerName) headerName.textContent = name;
+          const headerCircle = document.getElementById('staffHeaderAvatarCircle');
+          const imgUrl = res.profile_image || res.data?.profile_image || null;
+          if (headerCircle) {
+            if (imgUrl) {
+              headerCircle.innerHTML = `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />`;
+            } else if (payload.remove_image) {
+              const initials = name.split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || 'ST';
+              headerCircle.textContent = initials;
+            }
+          }
         } else {
           showToast(res.message || 'Error updating profile.');
         }
@@ -3674,6 +3740,156 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // ── 14b. Patient QR ID Scanner ──
+  let staffQrInstance = null;
+  let staffQrScanning = false;
+
+  const btnStartQrScan = document.getElementById('btnStartQrScan');
+  const btnStopQrScan = document.getElementById('btnStopQrScan');
+  const manualQrInput = document.getElementById('manualQrPatientId');
+  const btnManualQrLookup = document.getElementById('btnManualQrLookup');
+  const staffQrReaderEl = document.getElementById('staffQrReader');
+  const staffQrStatusEl = document.getElementById('staffQrStatus');
+  const staffQrResultEl = document.getElementById('staffQrResultCard');
+
+  function setQrStatus(msg, isError) {
+    if (!staffQrStatusEl) return;
+    staffQrStatusEl.textContent = msg || '';
+    staffQrStatusEl.style.color = isError ? '#dc2626' : '#64748b';
+  }
+
+  function renderScannedPatientCard(p) {
+    if (!staffQrResultEl) return;
+    const name = p.full_name || 'Unknown Patient';
+    const pid = p.patient_id || p.id || 'N/A';
+    const parts = name.trim().split(/\s+/);
+    const initials = parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase();
+
+    const avatarHtml = p.profile_image
+      ? `<img src="${escapeHtml(p.profile_image)}" alt="${escapeHtml(name)}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #d1fae5;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div style="display:none;width:72px;height:72px;border-radius:50%;background:#10b981;color:#fff;font-weight:700;font-size:22px;align-items:center;justify-content:center;flex-shrink:0;">${escapeHtml(initials)}</div>`
+      : `<div style="display:flex;width:72px;height:72px;border-radius:50%;background:#10b981;color:#fff;font-weight:700;font-size:22px;align-items:center;justify-content:center;flex-shrink:0;">${escapeHtml(initials)}</div>`;
+
+    const genderAge = [p.gender, p.age ? `${p.age} yrs old` : ''].filter(Boolean).join(', ') || '—';
+
+    staffQrResultEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid #e2e8f0;margin-bottom:16px;flex-wrap:wrap;">
+        ${avatarHtml}
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:18px;font-weight:700;color:#0f172a;">${escapeHtml(name)}</div>
+          <div style="display:inline-block;margin-top:4px;padding:3px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:600;border:1px solid #e2e8f0;">Patient ID: ${escapeHtml(String(pid))}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;">Latest Status</span>
+          <div>${renderOverviewStatusPill(p.status || 'pending')}</div>
+          ${p.department ? `<div style="font-size:12px;color:#475569;font-weight:500;">${escapeHtml(p.department)}</div>` : ''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 20px;font-size:13px;">
+        <div><div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Gender &amp; Age</div><div style="color:#0f172a;font-weight:500;margin-top:2px;">${escapeHtml(genderAge)}</div></div>
+        <div><div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Birthdate</div><div style="color:#0f172a;font-weight:500;margin-top:2px;">${escapeHtml(p.birthdate || '—')}</div></div>
+        <div><div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Contact Number</div><div style="color:#0f172a;font-weight:500;margin-top:2px;">${escapeHtml(p.contact_number || '—')}</div></div>
+        <div><div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Email Address</div><div style="color:#0f172a;font-weight:500;margin-top:2px;">${escapeHtml(p.email || '—')}</div></div>
+        <div style="grid-column:1 / -1;"><div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">Home Address</div><div style="color:#0f172a;font-weight:500;margin-top:2px;">${escapeHtml(p.address || '—')}</div></div>
+      </div>
+    `;
+    staffQrResultEl.style.display = 'block';
+  }
+
+  async function lookupScannedPatient(rawId) {
+    const pid = String(rawId || '').trim();
+    if (!pid) {
+      setQrStatus('Enter or scan a valid Patient ID.', true);
+      return;
+    }
+    setQrStatus(`Looking up ${pid}...`, false);
+    try {
+      const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(pid)}`).then(r => r.json());
+      if (res && res.success && res.data) {
+        renderScannedPatientCard(res.data);
+        setQrStatus(`Verified: ${res.data.full_name || pid}`, false);
+        showToast('Patient record loaded.');
+      } else {
+        if (staffQrResultEl) staffQrResultEl.style.display = 'none';
+        setQrStatus((res && res.message) || `No patient found for ID "${pid}".`, true);
+        showToast('Patient ID not found.');
+      }
+    } catch (e) {
+      setQrStatus('Network error while looking up patient.', true);
+    }
+  }
+
+  async function stopStaffQrScanner() {
+    if (!staffQrInstance || !staffQrScanning) {
+      if (staffQrReaderEl) staffQrReaderEl.style.display = 'none';
+      if (btnStartQrScan) btnStartQrScan.style.display = '';
+      if (btnStopQrScan) btnStopQrScan.style.display = 'none';
+      return;
+    }
+    staffQrScanning = false;
+    try {
+      await staffQrInstance.stop();
+      staffQrInstance.clear();
+    } catch (_) {
+      // ignore stop errors when camera already released
+    }
+    if (staffQrReaderEl) staffQrReaderEl.style.display = 'none';
+    if (btnStartQrScan) btnStartQrScan.style.display = '';
+    if (btnStopQrScan) btnStopQrScan.style.display = 'none';
+  }
+
+  async function startStaffQrScanner() {
+    if (typeof Html5Qrcode === 'undefined') {
+      setQrStatus('QR scanner library failed to load. Use manual lookup.', true);
+      return;
+    }
+    if (staffQrScanning) return;
+    if (staffQrReaderEl) staffQrReaderEl.style.display = 'block';
+    if (btnStartQrScan) btnStartQrScan.style.display = 'none';
+    if (btnStopQrScan) btnStopQrScan.style.display = '';
+    setQrStatus('Starting camera...', false);
+
+    try {
+      staffQrInstance = staffQrInstance || new Html5Qrcode('staffQrReader');
+      staffQrScanning = true;
+      await staffQrInstance.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        async (decodedText) => {
+          const scanned = String(decodedText || '').trim();
+          if (!scanned) return;
+          await stopStaffQrScanner();
+          if (manualQrInput) manualQrInput.value = scanned;
+          lookupScannedPatient(scanned);
+        },
+        () => {}
+      );
+      setQrStatus('Camera active. Point at patient QR code.', false);
+    } catch (err) {
+      staffQrScanning = false;
+      if (staffQrReaderEl) staffQrReaderEl.style.display = 'none';
+      if (btnStartQrScan) btnStartQrScan.style.display = '';
+      if (btnStopQrScan) btnStopQrScan.style.display = 'none';
+      setQrStatus('Unable to access camera. Check permissions or use manual lookup.', true);
+    }
+  }
+
+  if (btnStartQrScan) btnStartQrScan.addEventListener('click', startStaffQrScanner);
+  if (btnStopQrScan) btnStopQrScan.addEventListener('click', () => {
+    stopStaffQrScanner();
+    setQrStatus('Camera stopped.', false);
+  });
+  if (btnManualQrLookup) btnManualQrLookup.addEventListener('click', () => {
+    lookupScannedPatient(manualQrInput ? manualQrInput.value : '');
+  });
+  if (manualQrInput) manualQrInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      lookupScannedPatient(manualQrInput.value);
+    }
+  });
 
   // ── 15. CSV Export ──
   window.exportRecordsCSV = function () {

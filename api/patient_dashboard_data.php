@@ -31,6 +31,24 @@ $patientId    = $_SESSION['patient_id'] ?? '';
 $patientEmail = $_SESSION['patient_email'] ?? '';
 $userId       = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? null;
 
+function buildPatientWhereClause($userId, string $patientId, string $patientEmail): array {
+    $clauses = [];
+    $params  = [];
+    if ($userId !== null && $userId !== '') {
+        $clauses[] = 'user_id = ?';
+        $params[]  = $userId;
+    }
+    if ($patientId !== '') {
+        $clauses[] = 'patient_id = ?';
+        $params[]  = $patientId;
+    }
+    if ($patientEmail !== '') {
+        $clauses[] = 'email = ?';
+        $params[]  = $patientEmail;
+    }
+    return [$clauses ? implode(' OR ', $clauses) : '1 = 0', $params];
+}
+
 function formatDeptName(string $dept): string {
     $d = strtolower($dept);
     if (str_contains($d, 'psych') || str_contains($d, 'opu')) return 'Psychiatry';
@@ -132,8 +150,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newPass     = $body['new_password'] ?? '';
         $confirmPass = $body['confirm_password'] ?? '';
 
-        if (strlen($newPass) < 6) {
-            echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters long.']);
+        $hasStrongPass = strlen($newPass) >= 8
+            && preg_match('/[A-Z]/', $newPass)
+            && preg_match('/[a-z]/', $newPass)
+            && preg_match('/[0-9]/', $newPass)
+            && preg_match('/[^A-Za-z0-9]/', $newPass);
+        if (!$hasStrongPass) {
+            echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.']);
             exit;
         }
         if ($newPass !== $confirmPass) {
@@ -142,14 +165,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
+            [$whereSql, $whereParams] = buildPatientWhereClause($userId, $patientId, $patientEmail);
             $stmtAcc = $pdo->prepare("
                 SELECT id, password 
                 FROM patients 
-                WHERE ((:uid IS NOT NULL AND user_id = :uid) OR (:pid != '' AND patient_id = :pid) OR (:pemail != '' AND email = :pemail))
+                WHERE ({$whereSql})
                   AND password IS NOT NULL
                 ORDER BY id DESC LIMIT 1
             ");
-            $stmtAcc->execute([':uid' => $userId, ':pid' => $patientId, ':pemail' => $patientEmail]);
+            $stmtAcc->execute($whereParams);
             $acc = $stmtAcc->fetch(PDO::FETCH_ASSOC);
 
             if ($acc && !empty($acc['password']) && $currentPass !== '') {
@@ -162,17 +186,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hashed = password_hash($newPass, PASSWORD_DEFAULT);
             $upd = $pdo->prepare("
                 UPDATE patients 
-                SET password = :pw 
-                WHERE (:uid IS NOT NULL AND user_id = :uid)
-                   OR (:pid != '' AND patient_id = :pid)
-                   OR (:pemail != '' AND email = :pemail)
+                SET password = ? 
+                WHERE {$whereSql}
             ");
-            $upd->execute([':pw' => $hashed, ':uid' => $userId, ':pid' => $patientId, ':pemail' => $patientEmail]);
+            $upd->execute(array_merge([$hashed], $whereParams));
 
             echo json_encode(['success' => true, 'message' => 'Password updated successfully.']);
             exit;
         } catch (Throwable $e) {
             echo json_encode(['success' => false, 'message' => 'Could not update password.']);
+            exit;
+        }
+    }
+
+    if ($action === 'update_avatar') {
+        try {
+            $hasCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'profile_image'")->fetch();
+            if (!$hasCol) {
+                $pdo->exec("ALTER TABLE patients ADD COLUMN profile_image VARCHAR(255) NULL");
+            }
+
+            [$whereSql, $whereParams] = buildPatientWhereClause($userId, $patientId, $patientEmail);
+            $stmtCur = $pdo->prepare("
+                SELECT id, profile_image
+                FROM patients
+                WHERE {$whereSql}
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmtCur->execute($whereParams);
+            $curRow = $stmtCur->fetch(PDO::FETCH_ASSOC);
+
+            $removeImage = !empty($body['remove_image']);
+            $imageData   = $body['image_data'] ?? null;
+            $finalPath   = $curRow['profile_image'] ?? null;
+
+            if ($removeImage) {
+                deleteLocalAvatar($curRow['profile_image'] ?? null);
+                $finalPath = null;
+            } elseif (!empty($imageData) && is_string($imageData)) {
+                $newPath = saveUploadedAvatar($imageData, 'patient', (int)($curRow['id'] ?? 0));
+                if ($newPath === null) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid image. Use PNG, JPG, or WEBP up to 5MB.']);
+                    exit;
+                }
+                deleteLocalAvatar($curRow['profile_image'] ?? null);
+                $finalPath = $newPath;
+            }
+
+            $upd = $pdo->prepare("
+                UPDATE patients
+                SET profile_image = ?
+                WHERE {$whereSql}
+            ");
+            $upd->execute(array_merge([$finalPath], $whereParams));
+            $_SESSION['patient_profile_image'] = $finalPath;
+
+            echo json_encode(['success' => true, 'profile_image' => $finalPath, 'message' => 'Profile photo updated.']);
+            exit;
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'message' => 'Could not update profile photo.']);
             exit;
         }
     }
@@ -723,6 +795,7 @@ try {
             'gender'         => $profile['gender'] ?? '',
             'birthdate'      => $profile['birthdate'] ?? '',
             'address'        => $profile['address'] ?? '',
+            'profile_image'  => $profile['profile_image'] ?? ($_SESSION['patient_profile_image'] ?? null),
             'total_visits'   => count($chronologicalAppts)
         ],
         'stats'         => [

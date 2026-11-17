@@ -234,6 +234,11 @@ try {
     $token = bin2hex(random_bytes(32)); // 64 hex characters cryptographically secure
     $tokenExpiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
+    ensurePatientOtpColumns($pdo);
+    $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
+    $otpExpiry = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
     // Normalize full name
     $cleanMI = rtrim($middleInitial, '.');
     $fullName = $cleanMI !== '' ? trim("$firstName {$cleanMI}. $lastName") : trim("$firstName $lastName");
@@ -262,6 +267,9 @@ try {
                 is_verified             = 0,
                 verification_token      = :token,
                 token_expires_at        = :token_expires_at,
+                otp_hash                = :otp_hash,
+                otp_expires_at          = :otp_expires_at,
+                otp_attempts            = 0,
                 updated_at              = NOW()
             WHERE id = :id
         ");
@@ -283,6 +291,8 @@ try {
             ':password'                => $passwordHash,
             ':token'                   => $token,
             ':token_expires_at'        => $tokenExpiry,
+            ':otp_hash'                => $otpHash,
+            ':otp_expires_at'          => $otpExpiry,
             ':id'                      => $existingId
         ]);
         $recordId = $existingId;
@@ -292,12 +302,12 @@ try {
                 patient_id, full_name, first_name, last_name, middle_initial,
                 gender, birthdate, age, contact_number, guardian_name, guardian_contact_number,
                 email, address, with_companion, relationship_to_patient, username, password, is_verified,
-                verification_token, token_expires_at, status, created_at, updated_at
+                verification_token, token_expires_at, otp_hash, otp_expires_at, otp_attempts, status, created_at, updated_at
             ) VALUES (
                 :patient_id, :full_name, :first_name, :last_name, :middle_initial,
                 :gender, :birthdate, :age, :contact_number, :guardian_name, :guardian_contact_number,
                 :email, :address, :with_companion, :relationship_to_patient, :username, :password, 0,
-                :token, :token_expires_at, 'pending', NOW(), NOW()
+                :token, :token_expires_at, :otp_hash, :otp_expires_at, 0, 'registered', NOW(), NOW()
             )
         ");
         $insertStmt->execute([
@@ -319,15 +329,24 @@ try {
             ':username'                => $username,
             ':password'                => $passwordHash,
             ':token'                   => $token,
-            ':token_expires_at'        => $tokenExpiry
+            ':token_expires_at'        => $tokenExpiry,
+            ':otp_hash'                => $otpHash,
+            ':otp_expires_at'          => $otpExpiry
         ]);
         $recordId = $pdo->lastInsertId();
     }
 
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $_SESSION['pending_otp_patient_id'] = (int)$recordId;
+    $_SESSION['pending_otp_mode']       = 'verify_only';
+    $_SESSION['pending_otp_sent_at']    = time();
+
     // ── 6. Construct Localhost Verification URL & Flush Fast Response ─────
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $verificationUrl = "{$protocol}://{$host}/sdn/api/verify_email.php?token={$token}";
+    $verificationUrl = "{$protocol}://{$host}/sdn/pages/verify-otp.php?token={$token}";
 
     $domain = substr(strrchr($email, "@"), 1);
     $webmailUrl = 'https://mail.google.com';
@@ -449,11 +468,13 @@ try {
                       <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>Username</div>
                       <div style='font-size:15px; color:#111827; font-weight:700; font-family:monospace; margin:2px 0 12px;'>{$safeUsername}</div>
                       <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>Temporary Password</div>
-                      <div style='font-size:16px; color:#14532d; font-weight:800; font-family:monospace; margin-top:2px;'>{$safeTempPassword}</div>
+                      <div style='font-size:16px; color:#14532d; font-weight:800; font-family:monospace; margin:2px 0 12px;'>{$safeTempPassword}</div>
+                      <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>6-Digit Verification OTP</div>
+                      <div style='font-size:24px; color:#111827; font-weight:800; font-family:monospace; letter-spacing:5px; margin-top:4px;'>" . htmlspecialchars($otp, ENT_QUOTES, 'UTF-8') . "</div>
                     </div>
-                    <p style='margin:0 0 24px; font-size:14px; line-height:1.55; color:#374151;'>You will be asked to enter a 6-digit email OTP on your first sign-in (or click the verification button below). We recommend changing your temporary password after signing in.</p>
+                    <p style='margin:0 0 24px; font-size:14px; line-height:1.55; color:#374151;'>Click the button below to open the verification page and enter your 6-digit OTP code before signing in.</p>
                     <div style='text-align:center; margin:8px 0 24px;'>
-                      <a href='{$verificationUrl}' target='_blank' style='display:inline-block; background:#15803d; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:14px 34px; border-radius:999px;'>Verify My Account</a>
+                      <a href='{$verificationUrl}' target='_blank' style='display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:14px 34px; border-radius:999px;'>Verify My Account</a>
                     </div>
                     <p style='margin:8px 0 20px; text-align:center; font-size:13px; line-height:1.5; font-style:italic; color:#6b7280;'><strong>Note:</strong> This verification link will expire in 24 hours. If you did not initiate this registration, please disregard this email.</p>
                     <p style='margin:0; text-align:center; font-size:12px; line-height:1.5; color:#9ca3af;'>&copy; {$year} Mariveles Mental Wellness and General Hospital. All Rights Reserved.<br>Mariveles, Bataan, Philippines.</p>

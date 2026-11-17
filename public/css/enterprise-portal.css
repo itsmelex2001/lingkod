@@ -761,9 +761,22 @@ body.portal-layout .custom-table-header th {
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.22) !important;
 }
 
-.form-control-clean[readonly] {
+.form-control-clean[readonly],
+.form-control[readonly] {
   background: #f9fafb !important;
   color: var(--ep-body) !important;
+  caret-color: transparent !important;
+  cursor: default !important;
+  user-select: none;
+}
+
+.form-control-clean[readonly]:focus,
+.form-control-clean[readonly]:focus-visible,
+.form-control[readonly]:focus,
+.form-control[readonly]:focus-visible {
+  border-color: var(--ep-line-strong) !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 /* Buttons */

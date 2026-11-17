@@ -94,11 +94,22 @@ try {
         exit;
     }
 
-    $pdo->prepare("UPDATE patients SET is_verified = 1, otp_hash = NULL, otp_expires_at = NULL, otp_attempts = 0, updated_at = NOW() WHERE id = ?")
+    $pdo->prepare("UPDATE patients SET is_verified = 1, verified_at = IFNULL(verified_at, NOW()), otp_hash = NULL, otp_expires_at = NULL, otp_attempts = 0, updated_at = NOW() WHERE id = ?")
         ->execute([$pendingId]);
 
+    $mode = $_SESSION['pending_otp_mode'] ?? 'login';
     $remember = !empty($_SESSION['pending_otp_remember']);
-    unset($_SESSION['pending_otp_patient_id'], $_SESSION['pending_otp_remember'], $_SESSION['pending_otp_sent_at']);
+    unset($_SESSION['pending_otp_patient_id'], $_SESSION['pending_otp_remember'], $_SESSION['pending_otp_sent_at'], $_SESSION['pending_otp_mode']);
+
+    if ($mode === 'verify_only') {
+        echo json_encode([
+            'success'       => true,
+            'verified_only' => true,
+            'message'       => 'Account verified! You may now sign in to the Patient Portal.',
+            'redirect'      => '/sdn/pages/patient-login.php?verified=1'
+        ]);
+        exit;
+    }
 
     $patient['is_verified'] = 1;
     completePatientLogin($pdo, $patient, $remember);

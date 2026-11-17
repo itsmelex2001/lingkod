@@ -85,6 +85,7 @@ try {
             ->execute([$otpHash, $otpExpires, $patient['id']]);
 
         $_SESSION['pending_otp_patient_id'] = (int)$patient['id'];
+        $_SESSION['pending_otp_mode']       = 'login';
         $_SESSION['pending_otp_remember']   = $remember ? 1 : 0;
         $_SESSION['pending_otp_sent_at']    = time();
 
@@ -93,6 +94,7 @@ try {
             'otp_required' => true,
             'email_sent'   => true,
             'masked_email' => maskEmail($patient['email']),
+            'redirect'     => '/sdn/pages/verify-otp.php',
             'message'      => 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
         ]);
 

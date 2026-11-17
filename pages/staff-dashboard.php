@@ -70,6 +70,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/sdn/public/css/staff-dashboard-clean.css?v=<?= time() ?>">
     <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=<?= time() ?>">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 </head>
 <body>
     <div class="staff-app-container">
@@ -447,6 +448,25 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                 <span class="settings-card-sub">Personal identification and assigned hospital department</span>
                             </div>
 
+                            <div style="display:flex; align-items:center; gap:16px; padding:12px 14px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; margin-bottom:16px;">
+                                <div id="staffSettingsAvatarPreview" style="width:56px; height:56px; border-radius:50%; background:#15803d; color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.05rem; overflow:hidden; flex-shrink:0;">
+                                    <?php if (!empty($staffProfileImg)): ?>
+                                    <img src="<?= htmlspecialchars($staffProfileImg) ?>" alt="<?= htmlspecialchars($userFullName) ?>" style="width:100%; height:100%; object-fit:cover; display:block;" />
+                                    <?php else: ?>
+                                    <?= htmlspecialchars($staffInitials ?? 'ST') ?>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:0.85rem; font-weight:600; color:#111827;">Profile Photo</div>
+                                    <div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">PNG, JPG, or WEBP up to 5MB.</div>
+                                    <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                                        <input type="file" id="staffSettingsAvatarInput" accept="image/png,image/jpeg,image/webp" hidden />
+                                        <button type="button" class="btn-clean outline" style="padding:5px 12px; font-size:0.78rem;" onclick="document.getElementById('staffSettingsAvatarInput').click()">Upload Photo</button>
+                                        <button type="button" class="btn-clean outline" id="staffSettingsAvatarRemoveBtn" style="padding:5px 12px; font-size:0.78rem; color:#b91c1c; <?= empty($staffProfileImg) ? 'display:none;' : '' ?>">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="settings-grid-2col">
                                 <div class="form-group-clean">
                                     <label for="settingsFullName">Full name</label>
@@ -502,6 +522,32 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                     <span>Update password</span>
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Patient QR ID Scanner Card -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <span class="settings-card-title">Patient QR ID Scanner</span>
+                                <span class="settings-card-sub">Scan a patient's Digital ID QR code with the camera or enter their Patient ID</span>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+                                <button type="button" class="btn-clean primary" id="btnStartQrScan">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+                                    <span>Start Camera Scan</span>
+                                </button>
+                                <button type="button" class="btn-clean outline" id="btnStopQrScan" style="display:none;">
+                                    <span>Stop Camera</span>
+                                </button>
+                                <div style="display:flex; align-items:center; gap:8px; margin-left:auto; flex-wrap:wrap;">
+                                    <input type="text" id="manualQrPatientId" class="form-control-clean" placeholder="Enter Patient ID" aria-label="Enter Patient ID" style="width:190px;">
+                                    <button type="button" class="btn-clean outline" id="btnManualQrLookup">Lookup ID</button>
+                                </div>
+                            </div>
+
+                            <div id="staffQrReader" style="display:none; max-width:360px; border-radius:10px; overflow:hidden; border:1px solid #e5e7eb; margin-bottom:12px;"></div>
+                            <div id="staffQrStatus" style="display:none; font-size:0.82rem; color:#4b5563; margin-bottom:10px;"></div>
+                            <div id="staffQrResultCard" style="display:none; padding:16px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px;"></div>
                         </div>
 
                         <!-- Session Card -->

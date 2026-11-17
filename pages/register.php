@@ -692,6 +692,7 @@ session_start();
     }
       .btn-pill-next { padding: 8px 30px; width: 100%; }
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -761,7 +762,7 @@ session_start();
 
                 <div class="field-group">
                   <label for="middleInitial">M.I. <span class="req-star">*</span></label>
-                  <input type="text" id="middleInitial" class="input-ctrl" placeholder="e.g., B." maxlength="5" required />
+                  <input type="text" id="middleInitial" class="input-ctrl" placeholder="e.g., B" maxlength="1" required oninput="this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);" />
                   <span id="errMiddleInitial" class="error-msg" role="alert">Middle initial is required.</span>
                 </div>
               </div>
@@ -960,14 +961,14 @@ session_start();
       </p>
       <div id="regModalEmailBadge" class="reg-email-pill"></div>
       <p class="reg-modal-subdesc">
-        Check your inbox for your <code>.lingkod</code> username and temporary password, then sign in and enter the 6-digit email OTP.
+        Check your inbox for your <code>.lingkod</code> username, temporary password, and 6-digit OTP, then verify your account before signing in.
       </p>
       <div class="reg-modal-btns">
         <a id="regModalEmailBtn" href="https://mail.google.com" target="_blank" rel="noopener noreferrer" class="btn-modal-open-email">
           Open Email Inbox &rarr;
         </a>
-        <a href="/sdn/pages/patient-login.php?registered=1" class="btn-modal-to-login">
-          Proceed to Sign In
+        <a href="/sdn/pages/verify-otp.php" class="btn-modal-to-login">
+          Enter 6-Digit Verification Code
         </a>
       </div>
     </div>
@@ -1049,7 +1050,7 @@ session_start();
 
     function populateReview() {
       const fn = document.getElementById('firstName').value.trim();
-      const mi = document.getElementById('middleInitial').value.trim();
+      const mi = document.getElementById('middleInitial').value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
       const ln = document.getElementById('lastName').value.trim();
       document.getElementById('revFullName').innerText = mi ? `${fn} ${mi}. ${ln}` : `${fn} ${ln}`;
       document.getElementById('revGenderAge').innerText = `${document.getElementById('gender').value}, ${document.getElementById('age').value} yrs old`;
@@ -1138,17 +1139,17 @@ session_start();
 
       submitBtn.disabled = true;
       if (backBtn) backBtn.disabled = true;
-      submitBtn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;" aria-hidden="true"></span>Submitting...';
 
       const subAge = parseInt(document.getElementById('age').value, 10) || 0;
       const isSubMinor = subAge < 18;
       const subGuardName = document.getElementById('guardianName') ? document.getElementById('guardianName').value.trim() : '';
       const subGuardContact = document.getElementById('guardianContactNumber') ? document.getElementById('guardianContactNumber').value.trim() : '';
 
+      const rawMi = document.getElementById('middleInitial').value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 1);
       const payload = {
         first_name: document.getElementById('firstName').value.trim(),
         last_name: document.getElementById('lastName').value.trim(),
-        middle_initial: document.getElementById('middleInitial').value.trim(),
+        middle_initial: rawMi ? `${rawMi}.` : '',
         gender: document.getElementById('gender').value,
         birthdate: document.getElementById('birthdate').value,
         age: subAge,
@@ -1195,7 +1196,6 @@ session_start();
       } finally {
         submitBtn.disabled = false;
         if (backBtn) backBtn.disabled = false;
-        submitBtn.innerText = 'Submit Registration';
       }
     }
   </script>

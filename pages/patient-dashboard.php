@@ -633,10 +633,10 @@ $initials  = count($nameParts) >= 2
         color: #ffffff;
       }
       .hero-banner h1 {
-        font-family: 'Outfit', sans-serif;
-        font-size: 1.85rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 1.55rem;
+        font-weight: 600;
+        letter-spacing: -0.025em;
         color: #ffffff;
       }
       .hero-banner p {
@@ -712,29 +712,21 @@ $initials  = count($nameParts) >= 2
         box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
       }
       .metric-icon-box {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
+        width: 20px;
+        height: 20px;
+        background: transparent;
+        color: #9ca3af;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       }
-      .metric-icon-box.green {
-        background: #dcfce7;
-        color: #15803d;
-      }
-      .metric-icon-box.blue {
-        background: #e0f2fe;
-        color: #0284c7;
-      }
-      .metric-icon-box.purple {
-        background: #f3e8ff;
-        color: #7c3aed;
-      }
+      .metric-icon-box.green,
+      .metric-icon-box.blue,
+      .metric-icon-box.purple,
       .metric-icon-box.amber {
-        background: #fef3c7;
-        color: #d97706;
+        background: transparent;
+        color: #9ca3af;
       }
       .metric-lbl {
         font-size: 0.78rem;
@@ -855,11 +847,10 @@ $initials  = count($nameParts) >= 2
         gap: 10px;
       }
       .section-title-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 9px;
-        background: var(--brand-green-light);
-        color: var(--brand-green);
+        width: auto;
+        height: auto;
+        background: transparent;
+        color: #6b7280;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1287,6 +1278,19 @@ $initials  = count($nameParts) >= 2
         background: #ffffff;
         border-color: var(--brand-green);
       }
+      .settings-input[readonly] {
+        caret-color: transparent;
+        cursor: default;
+        user-select: none;
+        background: #f8fafc;
+        color: #475569;
+      }
+      .settings-input[readonly]:focus {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        box-shadow: none;
+        outline: none;
+      }
       .settings-save-btn {
         display: inline-flex;
         align-items: center;
@@ -1304,6 +1308,14 @@ $initials  = count($nameParts) >= 2
       }
       .settings-save-btn:hover {
         background: var(--brand-green-hover);
+      }
+      #btnSubmitPw {
+        background: #2563eb;
+        border-color: #2563eb;
+      }
+      #btnSubmitPw:hover {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
       }
       .settings-row {
         display: flex;
@@ -1545,6 +1557,7 @@ $initials  = count($nameParts) >= 2
       }
     </style>
       <link rel="stylesheet" href="/sdn/assets/css/dashboard-mobile.css?v=<?= time() ?>" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   </head>
   <body>
 
@@ -1707,7 +1720,9 @@ $initials  = count($nameParts) >= 2
                   <div class="mobile-next-appt-status" id="mobileNextApptStatus"></div>
                 </div>
                 <div class="metric-icon-box green">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                  </svg>
                 </div>
               </div>
 
@@ -1718,7 +1733,9 @@ $initials  = count($nameParts) >= 2
                   <div class="metric-sub">Active bookings</div>
                 </div>
                 <div class="metric-icon-box blue">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z" />
+                  </svg>
                 </div>
               </div>
 
@@ -1729,7 +1746,9 @@ $initials  = count($nameParts) >= 2
                   <div class="metric-sub" id="totalVisitsSubText">Consultation history</div>
                 </div>
                 <div class="metric-icon-box amber">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd" />
+                  </svg>
                 </div>
               </div>
             </div>
@@ -1740,7 +1759,9 @@ $initials  = count($nameParts) >= 2
                 <div class="section-header">
                   <div class="section-title-group">
                     <div class="section-title-icon">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                      <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                      </svg>
                     </div>
                     <div>
                       <span class="section-title" data-i18n="upcoming_appts">Upcoming Appointments</span>
@@ -1815,6 +1836,20 @@ $initials  = count($nameParts) >= 2
 
             <div class="settings-card">
               <span class="settings-card-title" data-i18n="settings_profile">Patient Profile</span>
+              <div style="display:flex; align-items:center; gap:16px; padding:12px 14px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; margin-bottom:16px;">
+                <div id="patientSettingsAvatarPreview" style="width:56px; height:56px; border-radius:50%; background:#15803d; color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.05rem; overflow:hidden; flex-shrink:0;">
+                  <?= htmlspecialchars($initials) ?>
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:0.85rem; font-weight:600; color:#111827;">Profile Photo</div>
+                  <div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">PNG, JPG, or WEBP up to 5MB.</div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                    <input type="file" id="patientSettingsAvatarInput" accept="image/png,image/jpeg,image/webp" hidden />
+                    <button type="button" class="btn-outline-sm" onclick="document.getElementById('patientSettingsAvatarInput').click()">Upload Photo</button>
+                    <button type="button" class="btn-outline-sm" id="patientSettingsAvatarRemoveBtn" style="color:#b91c1c; display:none;" onclick="removePatientAvatar()">Remove</button>
+                  </div>
+                </div>
+              </div>
               <div class="settings-grid">
                 <div class="settings-field">
                   <label for="setFullName" data-i18n="settings_fname">Full name</label>
@@ -1850,6 +1885,35 @@ $initials  = count($nameParts) >= 2
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                   <span data-i18n="settings_save">Save preferences</span>
                 </button>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <span class="settings-card-title">Digital Patient ID (QR Code)</span>
+              <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-top:10px;">
+                <div id="patientIdCardPreview" style="background:linear-gradient(135deg,#166534 0%,#15803d 58%,#047857 100%); color:#ffffff; border-radius:14px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; flex:1; min-width:290px; max-width:480px; box-shadow:0 6px 18px rgba(21,128,61,0.18);">
+                  <div style="flex:1; min-width:170px;">
+                    <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#bbf7d0; margin-bottom:10px;">MMWGH LINGKOD &bull; Digital Patient ID</div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <div id="qrCardAvatar" style="width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.18); border:2px solid rgba(255,255,255,0.85); color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; overflow:hidden; flex-shrink:0;">
+                        <?= htmlspecialchars($initials) ?>
+                      </div>
+                      <div style="min-width:0;">
+                        <div style="font-size:1rem; font-weight:700; color:#ffffff; line-height:1.25; word-break:break-word;" id="qrCardFullName"><?= htmlspecialchars($patientName) ?></div>
+                        <div style="display:inline-block; margin-top:5px; padding:2px 9px; border-radius:999px; background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.3); font-size:0.78rem; font-weight:600; color:#ecfdf5;" id="qrCardPatientId"><?= htmlspecialchars($patientId) ?></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="patientQrBox" style="padding:8px; background:#ffffff; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; width:126px; height:126px; flex-shrink:0;"></div>
+                </div>
+                <div style="flex:1; min-width:200px;">
+                  <p style="font-size:0.82rem; color:#6b7280; margin:0 0 12px; line-height:1.5;">
+                    Present this Digital Patient ID at the MMWGH clinic desk so staff can scan your QR code and verify your profile.
+                  </p>
+                  <button type="button" class="btn-outline-sm" onclick="downloadPatientQr()">
+                    Download ID Card (PNG)
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1967,7 +2031,7 @@ $initials  = count($nameParts) >= 2
           <div class="settings-field" style="margin-bottom:12px;">
             <label for="pwNew">New Password</label>
             <div class="pw-input-wrap">
-              <input type="password" id="pwNew" class="settings-input" placeholder="Minimum 6 characters" />
+              <input type="password" id="pwNew" class="settings-input" placeholder="Min. 8 chars (A-z, 0-9, symbol)" />
               <button type="button" class="pw-eye-btn" onclick="togglePwField('pwNew')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
               </button>
@@ -1983,7 +2047,9 @@ $initials  = count($nameParts) >= 2
             </div>
           </div>
           <p id="pwMsg" style="display:none; font-size:0.84rem; margin-bottom:10px; font-weight:600;"></p>
-          <button type="button" class="settings-save-btn" id="btnSubmitPw" onclick="submitPasswordChange()">Update Password</button>
+          <div style="display:flex; justify-content:center; margin-top:4px;">
+            <button type="button" class="settings-save-btn" id="btnSubmitPw" onclick="submitPasswordChange()">Update Password</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2197,6 +2263,8 @@ $initials  = count($nameParts) >= 2
           if (codeInput) codeInput.value = prof.patient_id || '';
           const topChip = document.getElementById('topPatientIdChip');
           if (topChip) topChip.textContent = `Patient ID: ${prof.patient_id || 'Verified'}`;
+          syncPatientAvatarUI(prof.profile_image || null);
+          renderPatientQrCode(prof.patient_id || '', prof.full_name || '');
         }
 
         // Sidebar counts
@@ -2687,6 +2755,240 @@ $initials  = count($nameParts) >= 2
         toggleApptReminders(switchEl);
       }
 
+      let currentPatientAvatarUrl = null;
+      function syncPatientAvatarUI(imgUrl) {
+        currentPatientAvatarUrl = imgUrl || null;
+        const preview = document.getElementById('patientSettingsAvatarPreview');
+        const topCircle = document.getElementById('topAvatarInitials');
+        const qrAvatar = document.getElementById('qrCardAvatar');
+        const removeBtn = document.getElementById('patientSettingsAvatarRemoveBtn');
+        const fallbackInitials = <?= json_encode($initials) ?>;
+
+        if (imgUrl) {
+          const imgHtml = `<img src="${escapeHtml(imgUrl)}" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />`;
+          if (preview) preview.innerHTML = imgHtml;
+          if (qrAvatar) qrAvatar.innerHTML = imgHtml;
+          if (topCircle) {
+            topCircle.style.padding = '0';
+            topCircle.style.overflow = 'hidden';
+            topCircle.innerHTML = imgHtml;
+          }
+          if (removeBtn) removeBtn.style.display = 'inline-flex';
+        } else {
+          if (preview) preview.textContent = fallbackInitials;
+          if (qrAvatar) qrAvatar.textContent = fallbackInitials;
+          if (topCircle) topCircle.textContent = fallbackInitials;
+          if (removeBtn) removeBtn.style.display = 'none';
+        }
+      }
+
+      document.getElementById('patientSettingsAvatarInput')?.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+          alert('Please select a PNG, JPG, or WEBP image.');
+          e.target.value = '';
+          return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Image must be 5MB or less.');
+          e.target.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const res = await fetch('/sdn/api/patient_dashboard_data.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'update_avatar', image_data: reader.result })
+            }).then(r => r.json());
+            if (res.success) {
+              syncPatientAvatarUI(res.profile_image || reader.result);
+            } else {
+              alert(res.message || 'Failed to upload profile photo.');
+            }
+          } catch (err) {
+            alert('Network error while uploading profile photo.');
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+
+      async function removePatientAvatar() {
+        try {
+          const res = await fetch('/sdn/api/patient_dashboard_data.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_avatar', remove_image: true })
+          }).then(r => r.json());
+          if (res.success) {
+            const inp = document.getElementById('patientSettingsAvatarInput');
+            if (inp) inp.value = '';
+            syncPatientAvatarUI(null);
+          }
+        } catch (err) {
+          alert('Network error while removing profile photo.');
+        }
+      }
+
+      let patientQrRenderedId = '';
+      function renderPatientQrCode(pid, fullName) {
+        const box = document.getElementById('patientQrBox');
+        const idEl = document.getElementById('qrCardPatientId');
+        const nameEl = document.getElementById('qrCardFullName');
+        const cleanId = String(pid || '').trim();
+        if (idEl && cleanId) idEl.textContent = cleanId;
+        if (nameEl && fullName) nameEl.textContent = fullName;
+        if (!box || !cleanId || cleanId === patientQrRenderedId) return;
+        if (typeof QRCode !== 'function') {
+          setTimeout(() => renderPatientQrCode(cleanId, fullName), 200);
+          return;
+        }
+        box.innerHTML = '';
+        new QRCode(box, {
+          text: cleanId,
+          width: 110,
+          height: 110,
+          colorDark: '#111827',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        patientQrRenderedId = cleanId;
+      }
+
+      async function downloadPatientQr() {
+        const box = document.getElementById('patientQrBox');
+        if (!box) return;
+        const qrCanvas = box.querySelector('canvas');
+        const qrImg = box.querySelector('img');
+        const qrSrc = qrCanvas ? qrCanvas.toDataURL('image/png') : (qrImg ? qrImg.src : '');
+        if (!qrSrc) return;
+
+        const fullName = (document.getElementById('qrCardFullName')?.textContent || <?= json_encode($patientName) ?>).trim();
+        const pid = (document.getElementById('qrCardPatientId')?.textContent || patientQrRenderedId || 'patient-id').trim();
+        const fallbackInitials = <?= json_encode($initials) ?>;
+
+        const loadImage = (src) => new Promise((resolve) => {
+          if (!src) return resolve(null);
+          const im = new Image();
+          im.crossOrigin = 'anonymous';
+          im.onload = () => resolve(im);
+          im.onerror = () => resolve(null);
+          im.src = src;
+        });
+
+        const [qrImage, avatarImage] = await Promise.all([
+          loadImage(qrSrc),
+          loadImage(currentPatientAvatarUrl)
+        ]);
+
+        const W = 720, H = 400;
+        const out = document.createElement('canvas');
+        out.width = W;
+        out.height = H;
+        const ctx = out.getContext('2d');
+
+        const drawRoundRect = (x, y, w, h, r) => {
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, r);
+        };
+
+        // Green gradient card background
+        const grad = ctx.createLinearGradient(0, 0, W, H);
+        grad.addColorStop(0, '#166534');
+        grad.addColorStop(0.58, '#15803d');
+        grad.addColorStop(1, '#047857');
+        drawRoundRect(0, 0, W, H, 24);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Header text
+        ctx.fillStyle = '#bbf7d0';
+        ctx.font = '700 14px system-ui, -apple-system, sans-serif';
+        ctx.fillText('MARIVELES MENTAL WELLNESS AND GENERAL HOSPITAL', 36, 46);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 22px system-ui, -apple-system, sans-serif';
+        ctx.fillText('LINGKOD DIGITAL PATIENT ID', 36, 76);
+
+        // Divider line
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(36, 98);
+        ctx.lineTo(W - 36, 98);
+        ctx.stroke();
+
+        // Circular avatar on left
+        const avX = 96, avY = 210, avR = 56;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avX, avY, avR, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        if (avatarImage) {
+          const scale = Math.max((avR * 2) / avatarImage.width, (avR * 2) / avatarImage.height);
+          const dw = avatarImage.width * scale;
+          const dh = avatarImage.height * scale;
+          ctx.drawImage(avatarImage, avX - dw / 2, avY - dh / 2, dw, dh);
+        } else {
+          ctx.fillStyle = 'rgba(255,255,255,0.18)';
+          ctx.fillRect(avX - avR, avY - avR, avR * 2, avR * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '700 32px system-ui, -apple-system, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(fallbackInitials, avX, avY);
+        }
+        ctx.restore();
+
+        // Avatar white border
+        ctx.beginPath();
+        ctx.arc(avX, avY, avR, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Patient Name & ID
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 24px system-ui, -apple-system, sans-serif';
+        ctx.fillText(fullName, 174, 198, 250);
+
+        drawRoundRect(174, 214, 196, 34, 17);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ecfdf5';
+        ctx.font = '600 16px system-ui, -apple-system, sans-serif';
+        ctx.fillText(pid, 190, 237);
+
+        // Footer note
+        ctx.fillStyle = '#d1fae5';
+        ctx.font = '500 13px system-ui, -apple-system, sans-serif';
+        ctx.fillText('Present this QR code at the MMWGH clinic desk.', 36, 358);
+
+        // White QR panel on right
+        const qrPanelSize = 212;
+        const qrPanelX = W - qrPanelSize - 36;
+        const qrPanelY = 128;
+        drawRoundRect(qrPanelX, qrPanelY, qrPanelSize, qrPanelSize, 16);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        if (qrImage) {
+          ctx.drawImage(qrImage, qrPanelX + 16, qrPanelY + 16, qrPanelSize - 32, qrPanelSize - 32);
+        }
+
+        const a = document.createElement('a');
+        a.href = out.toDataURL('image/png');
+        a.download = `${pid}-digital-id.png`;
+        a.click();
+      }
+
       function saveSettings() {
         const btn = document.getElementById('btnSaveSettings');
         if (!btn) return;
@@ -2787,6 +3089,13 @@ $initials  = count($nameParts) >= 2
         const btn = document.getElementById('btnSubmitPw');
 
         msg.style.display = 'none';
+        const isStrongPw = new_password.length >= 8 && /[A-Z]/.test(new_password) && /[a-z]/.test(new_password) && /[0-9]/.test(new_password) && /[^A-Za-z0-9]/.test(new_password);
+        if (!isStrongPw) {
+          msg.style.display = 'block';
+          msg.style.color = '#b91c1c';
+          msg.textContent = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+          return;
+        }
         btn.disabled = true;
         try {
           const res = await fetch('/sdn/api/patient_dashboard_data.php', {

@@ -1571,15 +1571,8 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           if (data.success) {
             window.location.href = '/sdn/pages/patient-dashboard.php';
           } else if (data.otp_required) {
-            formError.style.display = 'none';
-            document.getElementById('patientSignInForm').style.display = 'none';
-            document.getElementById('otpVerifyView').style.display = 'block';
-            document.getElementById('otpNoticeText').textContent = data.message || 'Enter the 6-digit verification code sent to your email.';
-            const otpErr = document.getElementById('otpErrorMsg');
-            otpErr.style.display = 'none';
-            const otpInp = document.getElementById('patientOtpInput');
-            otpInp.value = '';
-            otpInp.focus();
+            window.location.href = data.redirect || '/sdn/pages/verify-otp.php';
+            return;
           } else {
             // Trigger failure shake & inline feedback
             triggerLoginError(data.message || (data.unverified ? i18n[currentLang].unverified : i18n[currentLang].incorrectAuth));
@@ -1612,7 +1605,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         }
         otpErr.style.display = 'none';
         btn.disabled = true;
-        btn.textContent = 'Verifying...';
+        btn.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>Verifying...</span>';
         try {
           const res = await fetch('/sdn/api/patient_verify_otp.php', {
             method: 'POST',
@@ -1871,7 +1864,12 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         const text = document.getElementById('systemAlertText');
         const icon = document.getElementById('systemAlertIcon');
 
-        if (params.get('registered') === '1') {
+        if (params.get('verified') === '1') {
+          banner.className = 'auth-alert auth-alert-success';
+          icon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          text.textContent = 'Your account is verified! Please sign in with your credentials.';
+          banner.style.display = 'flex';
+        } else if (params.get('registered') === '1') {
           banner.className = 'auth-alert auth-alert-success';
           icon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
           text.textContent = 'Registration submitted! Please verify your email before signing in.';

@@ -177,8 +177,10 @@ if ($method === 'GET') {
         if ($fetchedDept) $dept = $fetchedDept;
     }
     
+    $bookedOnlySql = "LOWER(COALESCE(p.status, '')) <> 'registered' AND (p.appointment_date IS NOT NULL OR (p.department IS NOT NULL AND p.department <> '') OR (p.chief_complaints IS NOT NULL AND p.chief_complaints <> '') OR (p.consultation_nature IS NOT NULL AND p.consultation_nature <> '') OR p.unscheduled_walkin = 1)";
+
     if ($role === 'admin') {
-        $filterSql = "";
+        $filterSql = "AND $bookedOnlySql";
         if ($filter === 'week') {
             $filterSql = "AND YEARWEEK(p.created_at, 1) = YEARWEEK(CURDATE(), 1)";
         } elseif ($filter === 'month') {
@@ -216,7 +218,7 @@ if ($method === 'GET') {
         respondOk(['data' => $rows]);
     }
 
-    $whereClauses = [];
+    $whereClauses = [$bookedOnlySql];
     $params = [];
     
     if (!empty($dept)) {

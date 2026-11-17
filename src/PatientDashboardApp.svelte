@@ -782,9 +782,14 @@
                 <button
                   type="submit"
                   disabled={isSavingProfile}
-                  class="px-4 py-2 rounded-lg bg-[#166534] hover:bg-[#14532d] disabled:opacity-50 text-white text-xs font-semibold transition"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#166534] hover:bg-[#14532d] disabled:opacity-50 text-white text-xs font-semibold transition"
                 >
-                  {isSavingProfile ? 'Saving...' : 'Save Profile Changes'}
+                  {#if isSavingProfile}
+                    <span class="inline-block w-3.5 h-3.5 border-2 border-white/35 border-t-white rounded-full animate-spin" aria-hidden="true"></span>
+                    <span>Saving...</span>
+                  {:else}
+                    Save Profile Changes
+                  {/if}
                 </button>
               </div>
             </form>
