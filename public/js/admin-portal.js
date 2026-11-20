@@ -1479,7 +1479,7 @@ async function loadDoctors() {
 }
 
 function clearDoctorModalErrors() {
-    ['docName', 'docDept', 'docSpec', 'docSlots', 'docStatus'].forEach(id => {
+    ['docName', 'docTitle', 'docLicense', 'docDept', 'docSpec', 'docSlots', 'docStatus'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('input-error');
     });
@@ -1490,6 +1490,8 @@ function openAddDoctorModal() {
     document.getElementById('doctorModalTitle').innerText = 'Add Doctor';
     document.getElementById('editDoctorId').value = '';
     document.getElementById('docName').value = '';
+    if (document.getElementById('docTitle')) document.getElementById('docTitle').value = '';
+    if (document.getElementById('docLicense')) document.getElementById('docLicense').value = '';
     document.getElementById('docDept').value = 'general';
     document.getElementById('docSpec').value = '';
     document.getElementById('docSlots').value = '20';
@@ -1508,6 +1510,8 @@ function openEditDoctorModal(id) {
     document.getElementById('doctorModalTitle').innerText = 'Edit Doctor: ' + doc.name;
     document.getElementById('editDoctorId').value = doc.id;
     document.getElementById('docName').value = doc.name || '';
+    if (document.getElementById('docTitle')) document.getElementById('docTitle').value = doc.title || '';
+    if (document.getElementById('docLicense')) document.getElementById('docLicense').value = doc.license_number || '';
     const deptVal = (doc.department || 'general').toLowerCase();
     document.getElementById('docDept').value = deptVal.includes('psych') ? 'psychiatry' : (deptVal.includes('neuro') ? 'neurology' : 'general');
     document.getElementById('docSpec').value = doc.specialization || '';
@@ -1542,6 +1546,8 @@ async function submitDoctorForm() {
     const statusEl = document.getElementById('docStatus');
 
     const name = (nameEl?.value || '').trim();
+    const title = (document.getElementById('docTitle')?.value || '').trim();
+    const license_number = (document.getElementById('docLicense')?.value || '').trim();
     const specialization = (specEl?.value || '').trim();
     const department = (deptEl?.value || '').trim();
     const slotsRaw = (slotsEl?.value || '').trim();
@@ -1582,6 +1588,8 @@ async function submitDoctorForm() {
         action: 'update',
         id: id,
         name,
+        title,
+        license_number,
         specialization,
         department,
         total_slots,
@@ -1589,6 +1597,8 @@ async function submitDoctorForm() {
     } : {
         action: 'create',
         name,
+        title,
+        license_number,
         specialization,
         department,
         total_slots,
@@ -2092,6 +2102,7 @@ async function openPatientDetailsModal(patient_id) {
                     ${p.medical_history_diagnosis ? `<div class="pv-info-row"><span class="pv-label">Diagnosis</span><span class="pv-val"><strong>${escapeHtml(p.medical_history_diagnosis)}</strong></span></div>` : ''}
                     ${p.medical_history_treatment ? `<div class="pv-info-row"><span class="pv-label">Treatment Plan</span><span class="pv-val">${escapeHtml(p.medical_history_treatment)}</span></div>` : ''}
                     ${p.medical_history_prescription ? `<div class="pv-info-row"><span class="pv-label">Prescription</span><span class="pv-val">${escapeHtml(p.medical_history_prescription)}</span></div>` : ''}
+                    ${p.active_medications ? `<div class="pv-info-row"><span class="pv-label">Active Medications</span><span class="pv-val">${escapeHtml((() => { try { const v = typeof p.active_medications === 'string' && (p.active_medications.trim().startsWith('[') || p.active_medications.trim().startsWith('{')) ? JSON.parse(p.active_medications) : p.active_medications; const arr = Array.isArray(v) ? v : (v && typeof v === 'object' ? [v] : null); return arr ? arr.map(m => typeof m === 'string' ? m : ([m.name || m.medicine || '', m.dosage || ''].filter(Boolean).join(' — ') + (m.quantity ? ` (Qty: ${m.quantity})` : ''))).filter(Boolean).join('; ') : String(p.active_medications); } catch (e) { return String(p.active_medications); } })())}</span></div>` : ''}
                     ${p.next_visit_date ? `<div class="pv-info-row"><span class="pv-label">Next Follow-Up</span><span class="pv-val"><strong>${escapeHtml(p.next_visit_date)}</strong></span></div>` : ''}
                     ${p.latest_progress_note ? `<div class="pv-info-row"><span class="pv-label">Progress Note</span><span class="pv-val">${escapeHtml(p.latest_progress_note.note)}</span></div>` : ''}
                 </div>
@@ -2850,14 +2861,18 @@ function togglePasswordVisibility(inputId) {
 // PHASE 4: UPCOMING PATIENT OPERATIONS & ANALYTICS
 // ══════════════════════════════════════════════════════════════════════════════
 let currentReportTab = 'upcoming'; // 'upcoming' | 'depts' | 'daily' | 'monthly'
-let currentReportRange = 'next_7';   // 'today' | 'next_7' | 'next_30' | 'monthly' | 'all'
+let currentReportRange = 'today';    // 'today' | 'past_7' | 'past_30' | 'past_month' | 'custom' | 'all'
 let currentReportDept = 'all';       // 'all' | 'general' | 'neurology' | 'psychiatry'
 let upcomingQuickFilter = 'all';     // 'all' | 'needs_action' | 'ready'
 let cachedReportsData = null;
 let reportsAnalyticsChartInstance = null;
 
 function setReportRange(range) {
-    currentReportRange = range || 'next_7';
+    currentReportRange = range || 'today';
+    const startEl = document.getElementById('reportStartDate');
+    const endEl = document.getElementById('reportEndDate');
+    if (startEl) startEl.value = '';
+    if (endEl) endEl.value = '';
     document.querySelectorAll('#reportRangePills .rep-pill-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.range === currentReportRange);
     });
@@ -2896,14 +2911,18 @@ function switchReportTab(tab) {
 }
 
 function resetReportFilters() {
-    currentReportRange = 'next_7';
+    currentReportRange = 'today';
     currentReportDept = 'all';
     upcomingQuickFilter = 'all';
     const searchEl = document.getElementById('reportSearchInput');
     if (searchEl) searchEl.value = '';
+    const startEl = document.getElementById('reportStartDate');
+    if (startEl) startEl.value = '';
+    const endEl = document.getElementById('reportEndDate');
+    if (endEl) endEl.value = '';
 
     document.querySelectorAll('#reportRangePills .rep-pill-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.range === 'next_7');
+        btn.classList.toggle('active', btn.dataset.range === 'today');
     });
     document.querySelectorAll('#reportDeptPills .rep-pill-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.dept === 'all');
@@ -2916,8 +2935,12 @@ function resetReportFilters() {
 
 function exportReportsCsv() {
     const q = (document.getElementById('reportSearchInput')?.value || '').trim();
+    const startVal = (document.getElementById('reportStartDate')?.value || '').trim();
+    const endVal = (document.getElementById('reportEndDate')?.value || '').trim();
     const qf = currentReportTab === 'upcoming' ? upcomingQuickFilter : 'all';
-    const exportUrl = `/sdn/api/reports.php?export_csv=1&range=${encodeURIComponent(currentReportRange)}&department=${encodeURIComponent(currentReportDept)}&qf=${encodeURIComponent(qf)}&q=${encodeURIComponent(q)}`;
+    let exportUrl = `/sdn/api/reports.php?export_csv=1&range=${encodeURIComponent(currentReportRange)}&department=${encodeURIComponent(currentReportDept)}&qf=${encodeURIComponent(qf)}&q=${encodeURIComponent(q)}`;
+    if (startVal) exportUrl += `&start_date=${encodeURIComponent(startVal)}`;
+    if (endVal) exportUrl += `&end_date=${encodeURIComponent(endVal)}`;
     const a = document.createElement('a');
     a.href = exportUrl;
     a.download = '';
@@ -3181,24 +3204,24 @@ function printReports() {
 
   <div class="rep-print-kpis">
     <div class="kpi-box">
-      <div class="kpi-lbl">Upcoming Appointments</div>
-      <div class="kpi-val">${Number(summary.total_upcoming || 0)}</div>
-      <div class="kpi-sub">${Number(summary.total_online || 0)} online &middot; ${Number(summary.total_walkin || 0)} walk-in</div>
-    </div>
-    <div class="kpi-box warn">
-      <div class="kpi-lbl">Action Needed</div>
-      <div class="kpi-val">${Number(summary.total_needs_action || 0)}</div>
-      <div class="kpi-sub">${Number(summary.total_for_approval || 0)} approval &middot; ${Number(summary.total_needs_doctor || 0)} unassigned doc</div>
+      <div class="kpi-lbl">Total Patients</div>
+      <div class="kpi-val">${Number(summary.total_patients || 0)}</div>
+      <div class="kpi-sub">${Number(summary.total_online || 0)} online &middot; ${Number(summary.total_walkin || 0)} walk-in / unscheduled</div>
     </div>
     <div class="kpi-box info">
-      <div class="kpi-lbl">Ready / In Clinic</div>
-      <div class="kpi-val">${Number(summary.total_confirmed_ready || 0)}</div>
-      <div class="kpi-sub">${Number(summary.total_in_clinic || 0)} currently checked-in/ongoing</div>
+      <div class="kpi-lbl">Attending Doctors</div>
+      <div class="kpi-val">${Number(summary.total_doctors_active || 0)}</div>
+      <div class="kpi-sub">Active doctors with consultations</div>
     </div>
     <div class="kpi-box slate">
-      <div class="kpi-lbl">Completed &amp; No-Shows</div>
+      <div class="kpi-lbl">Completed Consultations</div>
       <div class="kpi-val">${Number(summary.total_completed || 0)}</div>
-      <div class="kpi-sub">${escapeHtml(summary.completion_rate_text || '0%')} completed &middot; ${Number(summary.total_noshow || 0)} no-show</div>
+      <div class="kpi-sub">${escapeHtml(summary.completion_rate_text || '0%')} completion rate</div>
+    </div>
+    <div class="kpi-box">
+      <div class="kpi-lbl">Medications Prescribed</div>
+      <div class="kpi-val">${Number(summary.total_medications_prescribed || 0)}</div>
+      <div class="kpi-sub">Total prescriptions logged</div>
     </div>
   </div>
 
@@ -3273,22 +3296,38 @@ function printReports() {
     }, 350);
 }
 
+function applyCustomReportDateRange() {
+    const startVal = document.getElementById('reportStartDate')?.value || '';
+    const endVal = document.getElementById('reportEndDate')?.value || '';
+    if (startVal || endVal) {
+        currentReportRange = 'custom';
+        document.querySelectorAll('#reportRangePills .rep-pill-btn').forEach(b => b.classList.remove('active'));
+    }
+    loadReports();
+}
+
 async function loadReports() {
     const rangeLabels = {
-        today: 'Showing appointments scheduled for Today',
-        next_7: 'Showing upcoming schedule for the Next 7 Days',
-        next_30: 'Showing upcoming schedule for the Next 30 Days',
-        monthly: 'Showing appointments for This Month',
-        all: 'Showing All Time appointment records'
+        today: 'Showing Consultation Report for Today',
+        past_7: 'Showing Consultation Report for the Past 7 Days',
+        past_30: 'Showing Consultation Report for the Past 30 Days',
+        past_month: 'Showing Consultation Report for the Past 1 Month',
+        custom: 'Showing Consultation Report for Selected Date Range',
+        all: 'Showing All Time Consultation Report'
     };
+    const startVal = document.getElementById('reportStartDate')?.value || '';
+    const endVal = document.getElementById('reportEndDate')?.value || '';
     const rangeLabelEl = document.getElementById('reportRangeLabel');
     if (rangeLabelEl) {
         const deptName = currentReportDept === 'all' ? 'All Departments' : formatDeptTitleCase(currentReportDept);
-        rangeLabelEl.textContent = `${rangeLabels[currentReportRange] || rangeLabels.next_7} · ${deptName}`;
+        const customText = (startVal || endVal) ? ` (${startVal || '…'} to ${endVal || '…'})` : '';
+        rangeLabelEl.textContent = `${rangeLabels[currentReportRange] || rangeLabels.today}${customText} · ${deptName}`;
     }
 
     try {
-        const url = `/sdn/api/reports.php?range=${encodeURIComponent(currentReportRange)}&department=${encodeURIComponent(currentReportDept)}&_=${Date.now()}`;
+        let url = `/sdn/api/reports.php?range=${encodeURIComponent(currentReportRange)}&department=${encodeURIComponent(currentReportDept)}&_=${Date.now()}`;
+        if (startVal) url += `&start_date=${encodeURIComponent(startVal)}`;
+        if (endVal) url += `&end_date=${encodeURIComponent(endVal)}`;
         const res = await fetch(url).then(r => r.json());
 
         const repData = res.data || res;
@@ -3304,27 +3343,24 @@ async function loadReports() {
         const summary = repData.summary || {};
         const depts = repData.departments || [];
         const chartSeries = repData.chart_series || [];
-        const dailyReports = repData.daily_reports || [];
-        const monthlyReports = repData.monthly_reports || [];
 
-        // Update 4 Operational KPI Cards
+        // Update 4 Consultation Report KPI Cards (Patients, Doctors, Completed, Medications)
         const setEl = (id, text) => {
             const el = document.getElementById(id);
             if (el) el.textContent = text;
         };
 
-        setEl('repKpiTotal', Number(summary.total_upcoming || 0).toLocaleString());
-        setEl('repKpiSubTotal', `${summary.total_online || 0} online · ${summary.total_walkin || 0} walk-in`);
+        setEl('repKpiTotal', Number(summary.total_patients || 0).toLocaleString());
+        setEl('repKpiSubTotal', `${summary.total_online || 0} online · ${summary.total_walkin || 0} walk-in / unscheduled`);
 
-        const activePending = Number(summary.total_confirmed_ready || 0) + Number(summary.total_needs_action || 0);
-        setEl('repKpiReady', activePending.toLocaleString());
-        setEl('repKpiSubReady', `${summary.total_in_clinic || 0} in clinic · ${summary.total_needs_action || 0} pending`);
+        setEl('repKpiReady', Number(summary.total_doctors_active || 0).toLocaleString());
+        setEl('repKpiSubReady', 'Active doctors with consultations');
 
         setEl('repKpiCompleted', Number(summary.total_completed || 0).toLocaleString());
         setEl('repKpiSubCompleted', `${summary.completion_rate_text || '0%'} completion rate`);
 
-        setEl('repKpiNoshow', Number(summary.total_noshow || 0).toLocaleString());
-        setEl('repKpiSubNoshow', 'Missed or cancelled visits');
+        setEl('repKpiNoshow', Number(summary.total_medications_prescribed || 0).toLocaleString());
+        setEl('repKpiSubNoshow', 'Total prescriptions logged');
 
         setEl('reportLastUpdated', `Updated: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
 

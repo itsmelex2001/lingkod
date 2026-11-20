@@ -129,9 +129,9 @@ $initials  = count($nameParts) >= 2
         border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       }
       .sidebar-brand-box {
-        width: 78px;
-        height: 78px;
-        min-width: 78px;
+        width: 56px;
+        height: 56px;
+        min-width: 56px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -182,14 +182,19 @@ $initials  = count($nameParts) >= 2
         display: flex;
         align-items: center;
         justify-content: space-between;
+        min-height: 44px;
         padding: 11px 14px;
         border-radius: 11px;
         color: rgba(255, 255, 255, 0.92);
         font-size: 0.92rem;
         font-weight: 600;
         text-decoration: none;
-        transition: all 0.16s ease;
+        transition: background-color 0.16s ease, color 0.16s ease;
         cursor: pointer;
+      }
+      .nav-link:focus-visible {
+        outline: 2px solid #ffffff;
+        outline-offset: 2px;
       }
       .nav-link-left {
         display: flex;
@@ -222,6 +227,9 @@ $initials  = count($nameParts) >= 2
         background: #dcfce7;
         color: #15803d;
       }
+      .nav-pill-count[hidden] {
+        display: none;
+      }
 
       .sidebar-footer {
         padding-top: 1rem;
@@ -239,7 +247,7 @@ $initials  = count($nameParts) >= 2
         margin-bottom: 4px;
       }
       .sidebar-help-title {
-        font-size: 0.78rem;
+        font-size: 0.84rem;
         font-weight: 700;
         color: #ffffff;
         display: flex;
@@ -247,10 +255,10 @@ $initials  = count($nameParts) >= 2
         gap: 6px;
       }
       .sidebar-help-sub {
-        font-size: 0.72rem;
-        color: rgba(255, 255, 255, 0.8);
-        margin-top: 3px;
-        line-height: 1.35;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.88);
+        margin-top: 4px;
+        line-height: 1.45;
       }
 
       /* â”€â”€ Main Content Area â”€â”€ */
@@ -310,8 +318,10 @@ $initials  = count($nameParts) >= 2
         color: var(--text-secondary);
         background: #f8fafc;
         border: 1px solid var(--border-color);
-        padding: 5px 11px;
+        padding: 6px 12px;
         border-radius: 8px;
+        user-select: text;
+        -webkit-user-select: text;
       }
       .topbar-right {
         display: flex;
@@ -320,8 +330,8 @@ $initials  = count($nameParts) >= 2
       }
 
       .btn-top-icon {
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
         border-radius: 10px;
         border: 1px solid var(--border-color);
         background: #ffffff;
@@ -336,6 +346,12 @@ $initials  = count($nameParts) >= 2
       .btn-top-icon:hover {
         background: var(--brand-green-light);
         border-color: var(--brand-green-border);
+      }
+      .btn-top-icon:focus-visible,
+      .user-avatar-btn:focus-visible,
+      .section-link:focus-visible {
+        outline: 2px solid var(--brand-green);
+        outline-offset: 2px;
       }
 
       .notif-container, .profile-container {
@@ -594,15 +610,15 @@ $initials  = count($nameParts) >= 2
       /* â”€â”€ Hero Banner â”€â”€ */
       .hero-banner {
         background: linear-gradient(125deg, #15803d 0%, #0f6930 55%, #07471f 100%);
-        border-radius: 18px;
-        padding: 1.75rem 2rem;
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
         color: #ffffff;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
-        gap: 1.5rem;
-        box-shadow: 0 12px 28px rgba(21, 128, 61, 0.18);
+        gap: 1rem 1.5rem;
+        box-shadow: 0 8px 20px rgba(21, 128, 61, 0.14);
         position: relative;
         overflow: hidden;
       }
@@ -634,15 +650,17 @@ $initials  = count($nameParts) >= 2
       }
       .hero-banner h1 {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 1.55rem;
+        font-size: 1.45rem;
         font-weight: 600;
         letter-spacing: -0.025em;
+        line-height: 1.2;
         color: #ffffff;
       }
       .hero-banner p {
-        font-size: 0.92rem;
-        color: rgba(255, 255, 255, 0.88);
-        max-width: 560px;
+        font-size: 0.94rem;
+        line-height: 1.45;
+        color: rgba(255, 255, 255, 0.9);
+        max-width: 520px;
       }
       .hero-actions {
         display: flex;
@@ -654,36 +672,44 @@ $initials  = count($nameParts) >= 2
       .btn-hero-white {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
+        min-height: 44px;
         background: #ffffff;
         color: #0b5324;
         font-size: 0.88rem;
         font-weight: 700;
-        padding: 0.68rem 1.35rem;
+        padding: 0.65rem 1.2rem;
         border-radius: 10px;
         text-decoration: none;
         border: none;
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-        transition: all 0.16s ease;
+        transition: background-color 0.16s ease;
       }
       .btn-hero-white:hover {
         background: #f0fdf4;
-        transform: translateY(-1px);
+      }
+      .btn-hero-white:focus-visible,
+      .btn-hero-outline:focus-visible {
+        outline: 2px solid #ffffff;
+        outline-offset: 3px;
       }
       .btn-hero-outline {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
+        min-height: 44px;
         background: rgba(255, 255, 255, 0.14);
         color: #ffffff;
         font-size: 0.88rem;
         font-weight: 600;
-        padding: 0.68rem 1.25rem;
+        padding: 0.65rem 1.15rem;
         border-radius: 10px;
         text-decoration: none;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        transition: all 0.16s ease;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        transition: background-color 0.16s ease;
       }
       .btn-hero-outline:hover {
         background: rgba(255, 255, 255, 0.24);
@@ -698,18 +724,13 @@ $initials  = count($nameParts) >= 2
       .metric-card {
         background: var(--bg-card);
         border: 1px solid var(--border-color);
-        border-radius: 15px;
-        padding: 1.25rem 1.35rem;
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 12px;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
-        transition: transform 0.16s ease, box-shadow 0.16s ease;
-      }
-      .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       }
       .metric-icon-box {
         width: 20px;
@@ -737,11 +758,13 @@ $initials  = count($nameParts) >= 2
       }
       .metric-value {
         font-family: 'Outfit', sans-serif;
-        font-size: 1.6rem;
+        font-size: 1.35rem;
         font-weight: 800;
         color: var(--text-primary);
-        line-height: 1.2;
-        margin: 4px 0 3px;
+        line-height: 1.25;
+        margin: 4px 0 2px;
+        user-select: text;
+        -webkit-user-select: text;
       }
       .metric-sub {
         font-size: 0.78rem;
@@ -869,6 +892,12 @@ $initials  = count($nameParts) >= 2
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        background: none;
+        border: none;
+        font-family: inherit;
+        min-height: 44px;
+        padding: 0 4px;
+        border-radius: 8px;
       }
       .section-link:hover {
         text-decoration: underline;
@@ -1518,9 +1547,36 @@ $initials  = count($nameParts) >= 2
         align-items: center;
       }
 
+      @media (min-width: 1024px) {
+        #view-dashboard.active {
+          display: grid;
+          grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.78fr);
+          gap: 1.15rem;
+          align-items: start;
+        }
+        #view-dashboard .hero-banner {
+          grid-column: 1 / -1;
+        }
+        #view-dashboard .content-grid {
+          grid-column: 1;
+          grid-row: 2;
+        }
+        #view-dashboard .metrics-row {
+          grid-column: 2;
+          grid-row: 2;
+          display: flex;
+          flex-direction: column;
+          gap: 0.85rem;
+        }
+      }
       @media (max-width: 1024px) {
         .metrics-row { grid-template-columns: repeat(2, 1fr); }
         .dept-cards-grid, .content-grid { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .nav-link, .btn-hero-white, .btn-hero-outline, .btn-top-icon, .metric-card {
+          transition: none;
+        }
       }
       @media (max-width: 768px) {
         .app-layout { flex-direction: column; }
@@ -1590,7 +1646,7 @@ $initials  = count($nameParts) >= 2
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 <span data-i18n="nav_appointments">Appointments</span>
               </span>
-              <span class="nav-pill-count" id="sideApptCount">0</span>
+              <span class="nav-pill-count" id="sideApptCount" hidden>0</span>
             </a>
           </nav>
         </div>
@@ -1710,7 +1766,28 @@ $initials  = count($nameParts) >= 2
               </div>
             </div>
 
-            <!-- 3 KPI Cards -->
+            <!-- Main Content: Upcoming Appointments -->
+            <div class="content-grid">
+              <div class="section-card">
+                <div class="section-header">
+                  <div class="section-title-group">
+                    <div class="section-title-icon">
+                      <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <div>
+                      <span class="section-title" data-i18n="upcoming_appts">Upcoming Appointments</span>
+                      <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px; line-height:1.4;">Scheduled consultations and visits</div>
+                    </div>
+                  </div>
+                  <button type="button" class="section-link" onclick="switchView('appointments')">View all</button>
+                </div>
+                <div class="card-item-list" id="dashUpcomingList"></div>
+              </div>
+            </div>
+
+            <!-- Summary cards -->
             <div class="metrics-row">
               <div class="metric-card">
                 <div>
@@ -1750,26 +1827,6 @@ $initials  = count($nameParts) >= 2
                     <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd" />
                   </svg>
                 </div>
-              </div>
-            </div>
-
-            <!-- Main Content: Upcoming Appointments -->
-            <div class="content-grid">
-              <div class="section-card">
-                <div class="section-header">
-                  <div class="section-title-group">
-                    <div class="section-title-icon">
-                      <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" />
-                      </svg>
-                    </div>
-                    <div>
-                      <span class="section-title" data-i18n="upcoming_appts">Upcoming Appointments</span>
-                      <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:1px;">Scheduled consultations &amp; visits</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="card-item-list" id="dashUpcomingList"></div>
               </div>
             </div>
           </section>
@@ -2269,7 +2326,11 @@ $initials  = count($nameParts) >= 2
 
         // Sidebar counts
         const sideAppt = document.getElementById('sideApptCount');
-        if (sideAppt) sideAppt.textContent = (portalData.upcoming || []).length;
+        if (sideAppt) {
+          const upcomingCount = (portalData.upcoming || []).length;
+          sideAppt.textContent = upcomingCount;
+          sideAppt.hidden = upcomingCount === 0;
+        }
 
         // KPI metrics
         const upcoming = portalData.upcoming || [];

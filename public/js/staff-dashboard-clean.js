@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filter & Sort State
   let consultSearch = '';
   let consultStatus = 'all';
+  let consultDate = '';
+  let staffCalCursor = new Date();
+  staffCalCursor.setDate(1);
 
   let recordsSearch = '';
   let recordsSort = 'date_desc';
@@ -30,6 +33,143 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewSchedules = document.getElementById('view-schedules');
   const viewSettings = document.getElementById('view-settings');
   const toastEl = document.getElementById('cleanToast');
+
+  // Clear browser-autofilled credentials (e.g. "admin") from search inputs
+  ['globalStaffSearchInput', 'consultSearchInput', 'recordsSearchInput', 'schedSearchInput', 'manualQrPatientId'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value) el.value = '';
+  });
+  setTimeout(() => {
+    ['globalStaffSearchInput', 'consultSearchInput', 'recordsSearchInput', 'schedSearchInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value && el.value.toLowerCase() === (window.STAFF_USERNAME || 'admin').toLowerCase()) {
+        el.value = '';
+      }
+    });
+  }, 150);
+
+  function formatMedicationsReadable(raw) {
+    if (!raw) return '';
+    if (Array.isArray(raw)) {
+      return raw.map(item => {
+        if (!item) return '';
+        if (typeof item === 'string') return item;
+        const name = item.name || item.medicine || item.drug || '';
+        const dosage = item.dosage || item.instructions || '';
+        const qty = item.quantity ? ` (Qty: ${item.quantity})` : '';
+        return [name, dosage].filter(Boolean).join(' — ') + qty;
+      }).filter(Boolean).join('; ');
+    }
+    if (typeof raw === 'object') {
+      return formatMedicationsReadable([raw]);
+    }
+    const str = String(raw).trim();
+    if (!str) return '';
+    if (str.startsWith('[') || str.startsWith('{')) {
+      try {
+        return formatMedicationsReadable(JSON.parse(str));
+      } catch (e) {
+        return str;
+      }
+    }
+    return str;
+  }
+
+    // ── Dashboard Quick QR & Name Lookup ──
+    window.openDashboardQrScanner = function () {
+      switchView('settings');
+      setTimeout(() => {
+        const startBtn = document.getElementById('btnStartQrScan');
+        if (startBtn) {
+          startBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          startBtn.click();
+        }
+      }, 150);
+    };
+
+    window.runOverviewPatientLookup = function () {
+      const inp = document.getElementById('overviewQuickLookup');
+      const q = (inp ? inp.value : '').trim().toLowerCase();
+      if (!q) { showToast('Enter a patient name or ID to search.', 2200, 'info'); return; }
+      const match = (allPatients || []).find(p =>
+        String(p.patient_id || '').toLowerCase() === q ||
+        String(p.full_name || '').toLowerCase().includes(q)
+      );
+      if (match) {
+        openPatientDetailsModal(match.patient_id);
+      } else {
+        showToast('No matching patient found in this department.', 2600, 'warning');
+      }
+    };
+
+    // ── Staff Patient Count Calendar & Date Filter ──
+    window.setConsultDateFilter = function (isoDate) {
+      consultDate = (isoDate || '').trim();
+      const inp = document.getElementById('consultDateFilter');
+      if (inp) inp.value = consultDate;
+      const clr = document.getElementById('btnClearConsultDate');
+      if (clr) clr.style.display = consultDate ? 'inline-flex' : 'none';
+      if (consultDate && /^\d{4}-\d{2}-\d{2}$/.test(consultDate)) {
+        const [y, m] = consultDate.split('-').map(Number);
+        staffCalCursor = new Date(y, m - 1, 1);
+      }
+      renderStaffQueueCalendar();
+      renderConsultations();
+    };
+
+    window.setConsultDateFilterToday = function () {
+      const now = new Date();
+      const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      window.setConsultDateFilter(todayIso);
+    };
+
+    window.shiftStaffCalMonth = function (delta) {
+      staffCalCursor = new Date(staffCalCursor.getFullYear(), staffCalCursor.getMonth() + delta, 1);
+      renderStaffQueueCalendar();
+    };
+
+    function renderStaffQueueCalendar() {
+      const grid = document.getElementById('staffCalGrid');
+      const title = document.getElementById('staffCalMonthTitle');
+      if (!grid || !title) return;
+
+      const year = staffCalCursor.getFullYear();
+      const month = staffCalCursor.getMonth();
+      title.textContent = staffCalCursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      const countsByDate = {};
+      (allPatients || []).forEach(p => {
+        const d = String(p.appointment_date || p.created_at || '').split(' ')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) countsByDate[d] = (countsByDate[d] || 0) + 1;
+      });
+
+      const firstDow = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const today = new Date();
+      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      const headers = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        .map(h => `<div style="text-align:center; font-size:0.7rem; font-weight:700; color:#64748b; padding:4px 0;">${h}</div>`).join('');
+
+      let cells = '';
+      for (let i = 0; i < firstDow; i++) {
+        cells += '<div></div>';
+      }
+      for (let day = 1; day <= daysInMonth; day++) {
+        const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const cnt = countsByDate[iso] || 0;
+        const isSel = consultDate === iso;
+        const isToday = todayIso === iso;
+        const border = isSel ? '2px solid #15803d' : (isToday ? '1.5px solid #16a34a' : '1px solid #e2e8f0');
+        const bg = isSel ? '#dcfce7' : (cnt > 0 ? '#f8fafc' : '#ffffff');
+        cells += `
+          <button type="button" onclick="setConsultDateFilter('${iso}')" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 4px; min-height:46px; border:${border}; border-radius:8px; background:${bg}; cursor:pointer; font-family:inherit;">
+            <span style="font-size:0.78rem; font-weight:${isSel || isToday ? '700' : '600'}; color:#0f172a;">${day}</span>
+            ${cnt > 0 ? `<span style="margin-top:2px; font-size:0.66rem; font-weight:700; color:#15803d; background:#dcfce7; padding:1px 6px; border-radius:999px;">${cnt} pt</span>` : '<span style="height:14px;"></span>'}
+          </button>`;
+      }
+      grid.innerHTML = headers + cells;
+    }
 
   // ── 1. Time-of-Day Greeting ──
   function updateGreeting() {
@@ -565,10 +705,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!filtered.length) {
       container.innerHTML = `
-        <div class="dept-schedule-card">
-          <div class="modern-table-empty">
-            <div>No doctor schedules match the selected department or filters.</div>
-            <button type="button" class="modern-reset-btn" style="margin-top:12px;" onclick="resetScheduleFilters()">Reset Filters</button>
+        <div class="dept-schedule-card" style="padding:36px 24px; text-align:center;">
+          <div class="modern-table-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#64748b; padding:0;">
+            <div style="font-size:0.88rem; color:#475569; font-weight:500;">No doctor schedules match the selected department or filters.</div>
+            <button type="button" class="modern-reset-btn" onclick="resetScheduleFilters()">Reset Filters</button>
           </div>
         </div>
       `;
@@ -671,10 +811,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 6. Consultations View Renderer ──
   function renderConsultations() {
+    renderStaffQueueCalendar();
     const tbody = document.getElementById('consultationsTableBody');
     if (!tbody) return;
 
     const filtered = allPatients.filter(p => {
+      if (consultDate) {
+        const pDate = String(p.appointment_date || p.created_at || '').split(' ')[0];
+        if (pDate !== consultDate) return false;
+      }
+
       if (consultSearch) {
         const q = consultSearch.toLowerCase();
         const mName = (p.full_name || '').toLowerCase().includes(q);
@@ -715,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ? '<span class="patient-type-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Inquiry Only</span>'
         : (isOnline
           ? '<span class="patient-type-badge online">Online</span>'
-          : '<span class="patient-type-badge walkin">Walk-in</span>');
+          : '<span class="patient-type-badge walkin">Walk-in / Unscheduled</span>');
 
       const dateParts = formatDateBadge(p.appointment_date || p.created_at);
       const timeLabel = p.preferred_time_slot || formatTime12(p.scheduled_time) || '8:00 AM';
@@ -1859,6 +2005,8 @@ document.addEventListener('DOMContentLoaded', () => {
       { name: "GABAPENTIN 300 mg capsule", defaultDose: "1 cap TID for neuropathic pain", defaultQty: "30-90 caps" },
       { name: "PREGABALIN 75 mg capsule", defaultDose: "1 cap BID at bedtime", defaultQty: "30 caps" },
       { name: "CARBAMAZEPINE 200 mg tablet", defaultDose: "1 tab BID, titrate as directed", defaultQty: "60 tabs" },
+      { name: "VALPROATE DISODIUM 500 mg tablet", defaultDose: "1 tab BID with meals", defaultQty: "60 tabs" },
+      { name: "VALPROATE DISODIUM 250 mg tablet", defaultDose: "1 tab BID with meals", defaultQty: "60 tabs" },
       { name: "VALPROIC ACID 500 mg extended release tablet (as divalproex sodium)", defaultDose: "1 tab BID with meals", defaultQty: "60 tabs" },
       { name: "LEVETIRACETAM 500 mg Film-coated tablet", defaultDose: "1 tab BID for seizure prophylaxis", defaultQty: "60 tabs" },
       { name: "LEVETIRACETAM 1 g Film-coated tablet", defaultDose: "1 tab BID as directed", defaultQty: "60 tabs" },
@@ -1904,6 +2052,8 @@ document.addEventListener('DOMContentLoaded', () => {
       { name: "SERTRALINE 50 mg tablet (as Hydrochloride)", defaultDose: "1 tab OD in the morning or bedtime", defaultQty: "30 tabs" },
       { name: "ESCITALOPRAM 10 mg tablet (as Oxalate)", defaultDose: "1 tab OD morning or bedtime", defaultQty: "30 tabs" },
       { name: "LITHIUM CARBONATE 450 mg MR tablet", defaultDose: "1 tab BID with meals, monitor serum level", defaultQty: "60 tabs" },
+      { name: "VALPROATE DISODIUM 500 mg tablet", defaultDose: "1 tab BID with meals (bipolar / mood stabilization)", defaultQty: "60 tabs" },
+      { name: "VALPROATE DISODIUM 250 mg tablet", defaultDose: "1 tab BID with meals", defaultQty: "60 tabs" },
       { name: "VALPROIC ACID 500 mg controlled release tablet", defaultDose: "1 tab BID with meals (bipolar stabilization)", defaultQty: "60 tabs" },
       { name: "LAMOTRIGINE 50 mg tablet", defaultDose: "1 tab OD-BID (bipolar depression)", defaultQty: "30-60 tabs" },
       { name: "CLONAZEPAM 2 mg tablet", defaultDose: "0.5mg-1mg at bedtime PRN panic/anxiety", defaultQty: "30 tabs" },
@@ -2245,17 +2395,20 @@ document.addEventListener('DOMContentLoaded', () => {
       suggested_medicines: [
         { name: 'RISPERIDONE 2 mg tablet', dosage: '1 tab OD at bedtime or BID', quantity: '30-60 tabs' },
         { name: 'OLANZAPINE 5 mg tablet', dosage: '1 tab OD at bedtime', quantity: '30 tabs' },
-        { name: 'ARIPIPRAZOLE 10 mg tablet', dosage: '1 tab OD in the morning with food', quantity: '30 tabs' }
+        { name: 'ARIPIPRAZOLE 10 mg tablet', dosage: '1 tab OD in the morning with food', quantity: '30 tabs' },
+        { name: 'VALPROATE DISODIUM 500 mg tablet', dosage: '1 tab BID with meals (adjunct mood stabilization)', quantity: '60 tabs' }
       ]
     },
     {
       diagnosis: 'Bipolar I / II Disorder',
       department: 'OPU Psychiatry',
       treatment_plan: 'Mood charting, regular sleep-wake schedule, mood stabilizer adherence, and periodic serum level / renal-thyroid monitoring.',
-      medicine_name: 'VALPROIC ACID 500 mg controlled release tablet',
+      medicine_name: 'VALPROATE DISODIUM 500 mg tablet',
       dosage_instructions: '1 tab BID with meals (bipolar stabilization)',
       default_quantity: '60 tabs',
       suggested_medicines: [
+        { name: 'VALPROATE DISODIUM 500 mg tablet', dosage: '1 tab BID with meals (bipolar stabilization)', quantity: '60 tabs' },
+        { name: 'VALPROATE DISODIUM 250 mg tablet', dosage: '1 tab BID with meals', quantity: '60 tabs' },
         { name: 'VALPROIC ACID 500 mg controlled release tablet', dosage: '1 tab BID with meals (bipolar stabilization)', quantity: '60 tabs' },
         { name: 'LITHIUM CARBONATE 450 mg MR tablet', dosage: '1 tab BID with meals, monitor serum level', quantity: '60 tabs' },
         { name: 'QUETIAPINE 100 mg tablet (as fumarate)', dosage: '1 tab BID or at bedtime', quantity: '60 tabs' }
@@ -2418,7 +2571,75 @@ document.addEventListener('DOMContentLoaded', () => {
     html += '</optgroup>';
 
     selectEl.innerHTML = html;
+
+    // Populate multi-select checkbox list (#noteMedicineCheckboxes)
+    const cbWrap = document.getElementById('noteMedicineCheckboxes');
+    if (cbWrap) {
+      const seen = new Set();
+      const combined = [];
+      if (Array.isArray(suggestedMeds)) {
+        suggestedMeds.forEach(m => {
+          const n = String(m.name || '').trim();
+          if (n && !seen.has(n.toLowerCase())) {
+            seen.add(n.toLowerCase());
+            combined.push({ name: n, dose: m.dosage || '', qty: m.quantity || '', suggested: true });
+          }
+        });
+      }
+      list.forEach(m => {
+        const n = String(m.name || '').trim();
+        if (n && !seen.has(n.toLowerCase())) {
+          seen.add(n.toLowerCase());
+          combined.push({ name: n, dose: m.defaultDose || '', qty: m.defaultQty || '', suggested: false });
+        }
+      });
+
+      cbWrap.innerHTML = combined.map((m, i) => `
+        <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:#1e293b; cursor:pointer; padding:3px 2px;">
+          <input type="checkbox" class="note-med-checkbox" data-med-name="${escapeHtml(m.name)}" data-med-dose="${escapeHtml(m.dose)}" data-med-qty="${escapeHtml(m.qty)}" style="accent-color:#15803d; margin-top:2px; flex-shrink:0;" onchange="syncCheckedMedicinesToPrescription()">
+          <span>
+            <strong style="font-weight:600;">${escapeHtml(m.name)}</strong>
+            ${m.suggested ? '<span style="margin-left:5px; font-size:0.68rem; font-weight:700; color:#15803d; background:#dcfce7; padding:1px 6px; border-radius:999px;">Suggested</span>' : ''}
+            ${m.dose ? `<div style="font-size:0.72rem; color:#64748b;">${escapeHtml(m.dose)}${m.qty ? ' · #' + escapeHtml(m.qty) : ''}</div>` : ''}
+          </span>
+        </label>
+      `).join('');
+    }
   }
+
+  function getCheckedMedicines() {
+    return Array.from(document.querySelectorAll('#noteMedicineCheckboxes .note-med-checkbox:checked')).map(cb => ({
+      medicine_name: cb.dataset.medName || '',
+      dosage: cb.dataset.medDose || '',
+      quantity: cb.dataset.medQty || ''
+    })).filter(m => m.medicine_name);
+  }
+
+  window.syncCheckedMedicinesToPrescription = function () {
+    const checked = getCheckedMedicines();
+    const doseInput = document.getElementById('noteDosage');
+    const qtyInput = document.getElementById('noteQuantity');
+    const rxText = document.getElementById('notePrescription');
+
+    if (checked.length === 1) {
+      if (doseInput) doseInput.value = checked[0].dosage || '';
+      if (qtyInput) qtyInput.value = checked[0].quantity || '';
+    }
+    if (rxText) {
+      if (checked.length === 0) {
+        rxText.value = '';
+      } else {
+        rxText.value = checked.map((m, i) => {
+          const dose = (checked.length === 1 && doseInput && doseInput.value.trim()) ? doseInput.value.trim() : m.dosage;
+          const qty = (checked.length === 1 && qtyInput && qtyInput.value.trim()) ? qtyInput.value.trim() : m.quantity;
+          let line = `${checked.length > 1 ? (i + 1) + '. ' : ''}Rx: ${m.medicine_name}`;
+          if (qty) line += ` #${qty}`;
+          if (dose) line += `\n   Sig: ${dose}`;
+          return line;
+        }).join('\n');
+      }
+    }
+  };
 
   function getSelectedMedicineMeta() {
     const selectEl = document.getElementById('noteMedicineSelect');
@@ -2772,6 +2993,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('notePrescription').value = '';
     if (document.getElementById('noteDosage')) document.getElementById('noteDosage').value = '';
     if (document.getElementById('noteQuantity')) document.getElementById('noteQuantity').value = '';
+    if (document.getElementById('noteFollowUpDate')) document.getElementById('noteFollowUpDate').value = patientObj?.next_visit_date || '';
+    if (document.getElementById('noteFollowUpNotes')) document.getElementById('noteFollowUpNotes').value = patientObj?.follow_up_notes || '';
+
+    // Pre-fill recorded vitals if present
+    let existingVitals = {};
+    if (patientObj && patientObj.vitals_json) {
+      try { existingVitals = typeof patientObj.vitals_json === 'string' ? JSON.parse(patientObj.vitals_json) : patientObj.vitals_json; } catch (e) {}
+    }
+    const vMap = { vitalBp: 'bp', vitalTemp: 'temp', vitalPulse: 'pulse', vitalRr: 'rr', vitalSpo2: 'spo2', vitalWeight: 'weight' };
+    Object.entries(vMap).forEach(([elId, key]) => {
+      const el = document.getElementById(elId);
+      if (el) el.value = existingVitals[key] || '';
+    });
 
     activeSuggestedMedicines = [];
     renderSuggestedMedChips([], '');
@@ -2801,10 +3035,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const doseInput = document.getElementById('noteDosage');
     const qtyInput = document.getElementById('noteQuantity');
+    const checkedMeds = getCheckedMedicines();
     const selectedMed = getSelectedMedicineMeta();
-    const medicineName = selectedMed ? selectedMed.name : '';
+    const medicineName = checkedMeds.length ? checkedMeds[0].medicine_name : (selectedMed ? selectedMed.name : '');
     const dosage = doseInput ? doseInput.value.trim() : '';
     const quantity = qtyInput ? qtyInput.value.trim() : '';
+    const nextVisitDate = document.getElementById('noteFollowUpDate') ? document.getElementById('noteFollowUpDate').value.trim() : '';
+    const followUpNotes = document.getElementById('noteFollowUpNotes') ? document.getElementById('noteFollowUpNotes').value.trim() : '';
+    const vitals = {
+      bp: (document.getElementById('vitalBp')?.value || '').trim(),
+      temp: (document.getElementById('vitalTemp')?.value || '').trim(),
+      pulse: (document.getElementById('vitalPulse')?.value || '').trim(),
+      rr: (document.getElementById('vitalRr')?.value || '').trim(),
+      spo2: (document.getElementById('vitalSpo2')?.value || '').trim(),
+      weight: (document.getElementById('vitalWeight')?.value || '').trim()
+    };
 
     if (!diagnosis) {
       showToast('Please enter a clinical diagnosis.');
@@ -2836,24 +3081,155 @@ document.addEventListener('DOMContentLoaded', () => {
           prescription,
           medicine_name: medicineName,
           dosage,
-          quantity
+          quantity,
+          medicines: checkedMeds,
+          next_visit_date: nextVisitDate,
+          follow_up_notes: followUpNotes,
+          vitals
         })
       });
 
-      showToast('Consultation completed. Preparing summary slip...');
+      showToast('Consultation completed. You may now print the Medical Certificate or Prescription.');
       closeClinicalNoteModal();
 
-      // Trigger the official slip layout
-      printConsultationSlip(patientId, {
+      // Trigger the official prescription slip layout
+      printPrescriptionSlip(patientId, {
         diagnosis,
         treatment,
-        prescription
+        prescription,
+        next_visit_date: nextVisitDate
       });
 
       loadData();
     } catch (e) {
       showToast('Error saving consultation note.');
     }
+  };
+
+  // ── Dedicated Printable Medical Certificate & Prescription (Rx) Generators ──
+  async function fetchFreshPatientForPrint(patientId) {
+    let p = allPatients.find(x => x.patient_id === patientId);
+    try {
+      const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(patientId)}&_=${Date.now()}`).then(r => r.json());
+      if (res && res.success && res.data) p = Object.assign({}, p || {}, res.data);
+    } catch (e) {}
+    return p;
+  }
+
+  function resolveDoctorPrintBlock(p) {
+    const rawName = (p.assigned_doctor && p.assigned_doctor !== 'None') ? p.assigned_doctor : 'Attending Physician';
+    const docObj = (allDoctors || []).find(d => d.name && rawName.toLowerCase().includes(d.name.replace(/^Dr\.?\s*/i, '').toLowerCase()));
+    const title = p.doctor_title || (docObj && docObj.title) || 'MD';
+    const license = p.doctor_license || (docObj && docObj.license_number) || '________________';
+    const displayName = rawName.startsWith('Dr.') ? rawName : (rawName === 'Attending Physician' ? rawName : 'Dr. ' + rawName);
+    return { displayName: title && !displayName.includes(title) ? `${displayName}, ${title}` : displayName, license };
+  }
+
+  function openPrintWindow(html) {
+    const w = window.open('', '_blank', 'width=860,height=920');
+    if (!w) { showToast('Please allow pop-ups to print.', 3000, 'warning'); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+  }
+
+  window.printMedicalCertificate = async function (patientId, overrideData = {}) {
+    const p = await fetchFreshPatientForPrint(patientId);
+    if (!p) { showToast('Patient record not found for printing.'); return; }
+    const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const diagnosis = overrideData.diagnosis || p.medical_history_diagnosis || 'Clinical Evaluation';
+    const treatment = overrideData.treatment || p.medical_history_treatment || 'Advised appropriate rest and outpatient follow-up.';
+    const nextVisit = overrideData.next_visit_date || p.next_visit_date || '';
+    const doc = resolveDoctorPrintBlock(p);
+
+    openPrintWindow(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Medical Certificate - ${escapeHtml(p.patient_id)}</title>
+      <style>
+        @page { size: letter portrait; margin: 16mm; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; line-height: 1.6; }
+        .head { text-align: center; border-bottom: 2px solid #15803d; padding-bottom: 12px; margin-bottom: 22px; }
+        .head h2 { margin: 0; font-size: 16px; color: #14532d; text-transform: uppercase; }
+        .head p { margin: 2px 0; font-size: 12px; color: #475569; }
+        .doc-title { text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.08em; margin: 18px 0 22px; text-transform: uppercase; }
+        .meta { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 18px; color: #334155; }
+        .body-text { font-size: 14px; margin-bottom: 16px; text-align: justify; }
+        .box { border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin: 14px 0; background: #f8fafc; font-size: 13px; }
+        .sig { margin-top: 56px; float: right; text-align: center; min-width: 240px; }
+        .sig-line { border-top: 1px solid #0f172a; padding-top: 6px; font-weight: 700; font-size: 13px; }
+        .sig-sub { font-size: 12px; color: #475569; }
+      </style></head><body>
+      <div class="head">
+        <h2>Mariveles Mental Wellness and General Hospital</h2>
+        <p>Mariveles, Bataan, Philippines &middot; Outpatient Department (${escapeHtml(p.department || 'General Medical')})</p>
+      </div>
+      <div class="doc-title">Medical Certificate</div>
+      <div class="meta"><span><strong>Patient ID:</strong> ${escapeHtml(p.patient_id)}</span><span><strong>Date Issued:</strong> ${escapeHtml(todayDate)}</span></div>
+      <p class="body-text">To Whom It May Concern:</p>
+      <p class="body-text">This is to certify that <strong>${escapeHtml(p.full_name || 'Patient')}</strong>, ${escapeHtml(p.age ? p.age + ' years old' : '')}${p.gender ? ', ' + escapeHtml(p.gender) : ''}, residing at ${escapeHtml(p.address || 'Mariveles, Bataan')}, was examined and treated at this hospital on <strong>${escapeHtml(todayDate)}</strong>.</p>
+      <div class="box">
+        <div><strong>Clinical Diagnosis / Impression:</strong><br>${escapeHtml(diagnosis)}</div>
+        <div style="margin-top:10px;"><strong>Remarks / Recommendation:</strong><br>${escapeHtml(treatment)}</div>
+        ${nextVisit ? `<div style="margin-top:10px;"><strong>Recommended Follow-Up Date:</strong> ${escapeHtml(nextVisit)}</div>` : ''}
+      </div>
+      <p class="body-text">This certification is issued upon the request of the patient for whatever legal or medical purpose it may serve.</p>
+      <div class="sig">
+        <div class="sig-line">${escapeHtml(doc.displayName)}</div>
+        <div class="sig-sub">Attending Physician</div>
+        <div class="sig-sub">PRC License No.: ${escapeHtml(doc.license)}</div>
+      </div>
+    </body></html>`);
+  };
+
+  window.printPrescriptionSlip = async function (patientId, overrideData = {}) {
+    const p = await fetchFreshPatientForPrint(patientId);
+    if (!p) { showToast('Patient record not found for printing.'); return; }
+    const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const prescription = overrideData.prescription || p.medical_history_prescription || formatMedicationsReadable(p.active_medications) || 'None prescribed.';
+    const nextVisit = overrideData.next_visit_date || p.next_visit_date || '';
+    const doc = resolveDoctorPrintBlock(p);
+
+    openPrintWindow(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Prescription (Rx) - ${escapeHtml(p.patient_id)}</title>
+      <style>
+        @page { size: half-letter portrait; margin: 12mm; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; line-height: 1.55; }
+        .head { text-align: center; border-bottom: 2px solid #15803d; padding-bottom: 10px; margin-bottom: 16px; }
+        .head h2 { margin: 0; font-size: 15px; color: #14532d; text-transform: uppercase; }
+        .head p { margin: 2px 0; font-size: 11px; color: #475569; }
+        .pt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 12px; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px; margin-bottom: 16px; }
+        .rx-symbol { font-size: 32px; font-weight: 800; font-family: Georgia, serif; color: #14532d; line-height: 1; margin-bottom: 10px; }
+        .rx-body { white-space: pre-wrap; font-size: 13.5px; min-height: 160px; padding: 8px 4px; }
+        .followup { margin-top: 12px; font-size: 12px; color: #1e293b; border-top: 1px dashed #cbd5e1; padding-top: 8px; }
+        .sig { margin-top: 38px; float: right; text-align: center; min-width: 220px; }
+        .sig-line { border-top: 1px solid #0f172a; padding-top: 5px; font-weight: 700; font-size: 13px; }
+        .sig-sub { font-size: 11.5px; color: #475569; }
+      </style></head><body>
+      <div class="head">
+        <h2>Mariveles Mental Wellness and General Hospital</h2>
+        <p>Mariveles, Bataan &middot; ${escapeHtml(p.department || 'Outpatient Clinic')} Prescription</p>
+      </div>
+      <div class="pt-grid">
+        <div><strong>Patient:</strong> ${escapeHtml(p.full_name || 'Patient')}</div>
+        <div><strong>Date:</strong> ${escapeHtml(todayDate)}</div>
+        <div><strong>Age / Sex:</strong> ${escapeHtml(p.age ? p.age + ' y/o' : '—')} / ${escapeHtml(p.gender || '—')}</div>
+        <div><strong>Patient ID:</strong> ${escapeHtml(p.patient_id)}</div>
+      </div>
+      <div class="rx-symbol">&#8478;</div>
+      <div class="rx-body">${escapeHtml(prescription)}</div>
+      ${nextVisit ? `<div class="followup"><strong>Follow-Up Visit:</strong> ${escapeHtml(nextVisit)}${p.follow_up_notes ? ' — ' + escapeHtml(p.follow_up_notes) : ''}</div>` : ''}
+      <div class="sig">
+        <div class="sig-line">${escapeHtml(doc.displayName)}</div>
+        <div class="sig-sub">Lic. No.: ${escapeHtml(doc.license)}</div>
+      </div>
+    </body></html>`);
+  };
+
+  window.printMedicalCertificateFromDetails = function () {
+    if (window.currentDetailsPatientId) printMedicalCertificate(window.currentDetailsPatientId);
+  };
+
+  window.printPrescriptionFromDetails = function () {
+    if (window.currentDetailsPatientId) printPrescriptionSlip(window.currentDetailsPatientId);
   };
 
   // ── Print Slip Generator (Exact Government MMWGH Slip Layout) ──
@@ -2878,7 +3254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const diagnosis = overrideData.diagnosis || p.medical_history_diagnosis || 'No clinical diagnosis recorded.';
     const treatment = overrideData.treatment || p.medical_history_treatment || 'No treatment regimen recorded.';
     const prescription = overrideData.prescription || p.medical_history_prescription || 'None prescribed.';
-    const activeMeds = p.active_medications || 'None recorded.';
+    const activeMeds = formatMedicationsReadable(p.active_medications) || 'None recorded.';
     const nextVisit = p.next_visit_date || 'None scheduled.';
     const deptName = p.department || window.STAFF_DEPT || 'General Medical';
     const patientName = p.full_name || 'Patient';
@@ -3372,10 +3748,40 @@ document.addEventListener('DOMContentLoaded', () => {
             <div>
               <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Current Medications</div>
               <div style="font-size:0.84rem; color:#0f172a; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.65rem;">
-                ${escapeHtml(p.current_medications || 'None')}
+                ${escapeHtml(formatMedicationsReadable(p.current_medications) || formatMedicationsReadable(p.active_medications) || 'None')}
               </div>
             </div>
           </div>
+
+          ${(() => {
+            let vitals = null;
+            if (p.vitals_json) {
+              try { vitals = typeof p.vitals_json === 'string' ? JSON.parse(p.vitals_json) : p.vitals_json; } catch (e) {}
+            }
+            const vItems = vitals ? [
+              vitals.bp ? `BP: ${vitals.bp}` : '',
+              vitals.temp ? `Temp: ${vitals.temp}°C` : '',
+              vitals.pulse ? `PR: ${vitals.pulse} bpm` : '',
+              vitals.rr ? `RR: ${vitals.rr}/min` : '',
+              vitals.spo2 ? `SpO2: ${vitals.spo2}%` : '',
+              vitals.weight ? `Wt: ${vitals.weight} kg` : ''
+            ].filter(Boolean) : [];
+            return vItems.length ? `
+          <div>
+            <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Recorded Vital Signs</div>
+            <div style="font-size:0.84rem; color:#0f172a; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.65rem 0.75rem; font-weight:600;">
+              ${escapeHtml(vItems.join('  •  '))}
+            </div>
+          </div>` : '';
+          })()}
+
+          ${p.next_visit_date ? `
+          <div>
+            <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Scheduled Follow-Up</div>
+            <div style="font-size:0.85rem; color:#14532d; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.65rem 0.75rem;">
+              <strong>${escapeHtml(p.next_visit_date)}</strong>${p.follow_up_notes ? ' — ' + escapeHtml(p.follow_up_notes) : ''}
+            </div>
+          </div>` : ''}
 
           <div>
             <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Referral Source</div>

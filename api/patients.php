@@ -191,7 +191,21 @@ if ($method === 'GET') {
 
         $hasRefNoCol = false;
         try {
-            $hasRefNoCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'reference_no'")->fetch();
+            $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+            $hasRefNoCol = in_array('reference_no', $cols, true);
+            if (!in_array('vitals_json', $cols, true)) {
+                @$pdo->exec("ALTER TABLE patients ADD COLUMN vitals_json TEXT NULL");
+            }
+            if (!in_array('follow_up_notes', $cols, true)) {
+                @$pdo->exec("ALTER TABLE patients ADD COLUMN follow_up_notes TEXT NULL");
+            }
+            $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('title', $docCols, true)) {
+                @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
+            }
+            if (!in_array('license_number', $docCols, true)) {
+                @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+            }
         } catch (Throwable $ignoreRef) {}
         $refSelect = $hasRefNoCol ? 'p.reference_no,' : 'NULL AS reference_no,';
 
@@ -205,8 +219,9 @@ if ($method === 'GET') {
                     p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
                     p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.preferred_time_slot,
                     p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
+                    p.next_visit_date, p.vitals_json, p.follow_up_notes,
                     p.reminder_status, p.reminder_sent_at, p.created_at,
-                    d.id AS doctor_id, d.status AS doctor_status
+                    d.id AS doctor_id, d.status AS doctor_status, d.title AS doctor_title, d.license_number AS doctor_license
              FROM patients p
              LEFT JOIN doctors d ON (p.assigned_doctor = d.name OR p.assigned_doctor = CONCAT('Dr. ', d.name) OR REPLACE(p.assigned_doctor, 'Dr. ', '') = REPLACE(d.name, 'Dr. ', ''))
              WHERE 1=1 $filterSql
@@ -247,7 +262,21 @@ if ($method === 'GET') {
     
     $hasRefNoCol = false;
     try {
-        $hasRefNoCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'reference_no'")->fetch();
+        $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+        $hasRefNoCol = in_array('reference_no', $cols, true);
+        if (!in_array('vitals_json', $cols, true)) {
+            @$pdo->exec("ALTER TABLE patients ADD COLUMN vitals_json TEXT NULL");
+        }
+        if (!in_array('follow_up_notes', $cols, true)) {
+            @$pdo->exec("ALTER TABLE patients ADD COLUMN follow_up_notes TEXT NULL");
+        }
+        $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('title', $docCols, true)) {
+            @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
+        }
+        if (!in_array('license_number', $docCols, true)) {
+            @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+        }
     } catch (Throwable $ignoreRef) {}
     $refSelect = $hasRefNoCol ? 'p.reference_no,' : 'NULL AS reference_no,';
 
@@ -261,8 +290,9 @@ if ($method === 'GET') {
                 p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
                 p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.preferred_time_slot, p.referral_source,
                 p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
+                p.next_visit_date, p.vitals_json, p.follow_up_notes,
                 p.reminder_status, p.reminder_sent_at, p.created_at,
-                d.id AS doctor_id, d.status AS doctor_status
+                d.id AS doctor_id, d.status AS doctor_status, d.title AS doctor_title, d.license_number AS doctor_license
          FROM patients p
          LEFT JOIN doctors d ON (p.assigned_doctor = d.name OR p.assigned_doctor = CONCAT('Dr. ', d.name) OR REPLACE(p.assigned_doctor, 'Dr. ', '') = REPLACE(d.name, 'Dr. ', ''))
          $whereSql
@@ -517,6 +547,27 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         respondOk(['message' => "$name is checked in and marked as Arrived."]);
     }
 
+    // ── 2B. Save Vital Signs (Triage / Pre-Consultation) ─────────────────
+    if ($action === 'save_vitals') {
+        $vitals = is_array($body['vitals'] ?? null) ? $body['vitals'] : [
+            'bp'          => trim((string)($body['bp'] ?? '')),
+            'temp'        => trim((string)($body['temp'] ?? '')),
+            'pulse'       => trim((string)($body['pulse'] ?? '')),
+            'rr'          => trim((string)($body['rr'] ?? '')),
+            'spo2'        => trim((string)($body['spo2'] ?? '')),
+            'weight'      => trim((string)($body['weight'] ?? '')),
+            'height'      => trim((string)($body['height'] ?? '')),
+        ];
+        $vitals['recorded_by'] = $actor;
+        $vitals['recorded_at'] = date('Y-m-d H:i:s');
+        $vitalsJson = json_encode($vitals, JSON_UNESCAPED_UNICODE);
+
+        $pdo->prepare("UPDATE patients SET vitals_json = ?, updated_at = NOW() WHERE patient_id = ?")
+            ->execute([$vitalsJson, $patientId]);
+        addLog($pdo, 'info', 'Vitals Recorded', $actor, "Vital signs recorded for patient $patientId ($name).");
+        respondOk(['message' => "Vital signs saved for $name.", 'vitals' => $vitals]);
+    }
+
     // ── 3. Ongoing / Start Consultation ──────────────────────────────────
     if ($action === 'ongoing' || $action === 'start_consultation') {
         $currSt = strtolower(trim($patient['status'] ?? ''));
@@ -723,10 +774,48 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         $medName      = trim($body['medicine_name'] ?? '');
         $medDosage    = trim($body['dosage'] ?? '');
         $medQuantity  = trim($body['quantity'] ?? '');
+        $nextVisit    = trim($body['next_visit_date'] ?? '');
+        $followUpNote = trim($body['follow_up_notes'] ?? '');
+        $vitalsInput  = is_array($body['vitals'] ?? null) ? $body['vitals'] : null;
+        $medicinesArr = is_array($body['medicines'] ?? null) ? $body['medicines'] : [];
 
-        // Build structured active_medications JSON if medicine/prescription provided
+        $vitalsJson = null;
+        if ($vitalsInput) {
+            $hasAnyVital = false;
+            foreach (['bp', 'temp', 'pulse', 'rr', 'spo2', 'weight', 'height'] as $vk) {
+                if (trim((string)($vitalsInput[$vk] ?? '')) !== '') {
+                    $hasAnyVital = true;
+                    break;
+                }
+            }
+            if ($hasAnyVital) {
+                $vitalsInput['recorded_by'] = $actor;
+                $vitalsInput['recorded_at'] = date('Y-m-d H:i:s');
+                $vitalsJson = json_encode($vitalsInput, JSON_UNESCAPED_UNICODE);
+            }
+        }
+
+        // Build structured active_medications JSON (supports multi-select medicines array or single medicine)
         $activeMedsJson = null;
-        if ($medName !== '' || $rx !== '') {
+        if (!empty($medicinesArr)) {
+            $cleanMeds = [];
+            foreach ($medicinesArr as $mItem) {
+                if (!is_array($mItem)) continue;
+                $mn = trim((string)($mItem['medicine_name'] ?? ($mItem['name'] ?? '')));
+                if ($mn === '') continue;
+                $cleanMeds[] = [
+                    'medicine_name' => $mn,
+                    'dosage'        => trim((string)($mItem['dosage'] ?? '')) ?: 'Take as directed by physician',
+                    'quantity'      => trim((string)($mItem['quantity'] ?? '')) ?: 'Prescribed supply',
+                    'diagnosis'     => $diag ?: 'Clinical Consultation',
+                    'recorded_by'   => $actor,
+                    'prescribed_at' => date('Y-m-d H:i:s')
+                ];
+            }
+            if (!empty($cleanMeds)) {
+                $activeMedsJson = json_encode(count($cleanMeds) === 1 ? $cleanMeds[0] : $cleanMeds, JSON_UNESCAPED_UNICODE);
+            }
+        } elseif ($medName !== '' || $rx !== '') {
             $parsedName = $medName;
             $parsedDose = $medDosage;
             $parsedQty  = $medQuantity;
@@ -766,7 +855,7 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
             }
         }
 
-        if ($diag !== '' || $rx !== '' || $plan !== '' || $activeMedsJson !== null) {
+        if ($diag !== '' || $rx !== '' || $plan !== '' || $activeMedsJson !== null || $nextVisit !== '' || $vitalsJson !== null) {
             $upd = $pdo->prepare(
                 "UPDATE patients 
                  SET status = 'completed', 
@@ -778,12 +867,25 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                      medical_history_treatment = COALESCE(?, medical_history_treatment),
                      medical_history_prescription = COALESCE(?, medical_history_prescription),
                      active_medications = COALESCE(?, active_medications),
+                     next_visit_date = COALESCE(?, next_visit_date),
+                     follow_up_notes = COALESCE(?, follow_up_notes),
+                     vitals_json = COALESCE(?, vitals_json),
                      medical_history_recorded_by = ?,
                      medical_history_date = NOW(),
                      updated_at = NOW() 
                  WHERE patient_id = ?"
             );
-            $upd->execute([$diag ?: null, $plan ?: null, $rx ?: null, $activeMedsJson, $actor, $patientId]);
+            $upd->execute([
+                $diag ?: null,
+                $plan ?: null,
+                $rx ?: null,
+                $activeMedsJson,
+                ($nextVisit !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $nextVisit)) ? $nextVisit : null,
+                $followUpNote ?: null,
+                $vitalsJson,
+                $actor,
+                $patientId
+            ]);
         } else {
             $upd = $pdo->prepare(
                 "UPDATE patients 

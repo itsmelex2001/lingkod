@@ -778,7 +778,7 @@
           <!-- Quiet Footer -->
           <footer class="cal-footer">
             <button type="button" class="btn-next-open-link" id="btn-next-open">Next open day</button>
-            <span class="cal-hours">Mon–Sat, 8:00 AM – 5:00 PM</span>
+            <span class="cal-hours">Mon–Fri &middot; Psychiatry 8:00 AM – 3:00 PM &middot; General Medical &amp; Neurology Mon–Fri</span>
           </footer>
         </section>
 

@@ -29,6 +29,23 @@ if ($adminInitials === '') $adminInitials = 'AD';
     <link rel="stylesheet" href="/sdn/public/css/admin-portal.css?v=<?= time() ?>" />
     <link rel="stylesheet" href="/sdn/public/css/portal-chrome.css?v=<?= time() ?>" />
     <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=<?= time() ?>" />
+    <style>
+        body, body * {
+            caret-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        input:not([type="date"]):not([type="checkbox"]):not([type="radio"]),
+        textarea {
+            caret-color: auto;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        input[type="date"] {
+            caret-color: transparent;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body class="portal-layout admin-portal-v2">
     <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" aria-hidden="true"></div>
@@ -89,7 +106,7 @@ if ($adminInitials === '') $adminInitials = 'AD';
             </button>
             <div class="header-search-wrap admin-search-wrap">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="adminGlobalSearchInput" placeholder="Search Dashboard..." aria-label="Search Dashboard">
+                <input type="search" id="adminGlobalSearchInput" name="admin_global_search" placeholder="Search Dashboard..." aria-label="Search Dashboard" autocomplete="new-password" data-lpignore="true" spellcheck="false">
             </div>
             <div class="admin-topbar-right">
                 <div class="admin-notif-wrap" id="adminNotifWrap">
@@ -253,7 +270,7 @@ if ($adminInitials === '') $adminInitials = 'AD';
                     <div class="modern-table-controls">
                         <div class="modern-search-box">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                            <input type="text" id="rbacSearchInput" placeholder="Search by name or username..." oninput="filterRBACTable()">
+                            <input type="search" id="rbacSearchInput" name="rbac_search_q" placeholder="Search by name or username..." oninput="filterRBACTable()" autocomplete="new-password" data-lpignore="true" spellcheck="false">
                         </div>
                         <select id="rbacStatusFilter" class="modern-select" onchange="filterRBACTable()" aria-label="Filter by status">
                             <option value="all">All Statuses</option>
@@ -320,7 +337,7 @@ if ($adminInitials === '') $adminInitials = 'AD';
                     <div class="modern-table-controls">
                         <div class="modern-search-box">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                            <input type="text" id="docSearchInput" placeholder="Search doctor or specialization..." oninput="filterDoctorsTable()">
+                            <input type="search" id="docSearchInput" name="doc_search_q" placeholder="Search doctor or specialization..." oninput="filterDoctorsTable()" autocomplete="new-password" data-lpignore="true" spellcheck="false">
                         </div>
                         <select id="docStatusFilter" class="modern-select" onchange="filterDoctorsTable()" aria-label="Filter by status">
                             <option value="all">All Statuses</option>
@@ -398,7 +415,7 @@ if ($adminInitials === '') $adminInitials = 'AD';
             <div class="pmi-action-toolbar">
                 <div class="pmi-search-wrap">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="pmiSearchInput" class="form-control pmi-search-input" placeholder="Search patient name or ID..." oninput="filterPMITable()">
+                    <input type="search" id="pmiSearchInput" name="pmi_search_q" class="form-control pmi-search-input" placeholder="Search patient name or ID..." oninput="filterPMITable()" autocomplete="new-password" data-lpignore="true" spellcheck="false">
                 </div>
                 <div class="pmi-filters-wrap">
                     <div class="filter-item">
@@ -473,14 +490,14 @@ if ($adminInitials === '') $adminInitials = 'AD';
             <div class="header-flex queue-header-flex">
                 <div>
                     <h1>Reports &amp; Analytics</h1>
-                    <p>Monitor upcoming patient volume, clinic shift balance, and departmental readiness.</p>
+                    <p>Track consultations, attending doctors, prescribed medications, and date-filtered patient activity.</p>
                 </div>
                 <div class="rep-header-actions">
-                    <button class="btn btn-outline" id="btnReportPrint" onclick="printReports()" title="Print upcoming schedule and analytics summary">
+                    <button class="btn btn-outline" id="btnReportPrint" onclick="printReports()" title="Print consultation and analytics summary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         <span>Print Summary</span>
                     </button>
-                    <button class="btn btn-primary" id="btnReportExport" onclick="exportReportsCsv()" title="Download filtered patient schedule as CSV">
+                    <button class="btn btn-primary" id="btnReportExport" onclick="exportReportsCsv()" title="Download filtered consultation report as CSV">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         <span>Export CSV</span>
                     </button>
@@ -488,27 +505,36 @@ if ($adminInitials === '') $adminInitials = 'AD';
             </div>
 
             <!-- Segmented Pill Control Bar -->
-            <div class="rep-toolbar">
-                <div class="rep-toolbar-row">
+            <div class="rep-toolbar" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="rep-toolbar-row" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                     <div class="rep-pill-group" id="reportRangePills" role="tablist" aria-label="Time horizon">
-                        <button type="button" class="rep-pill-btn" data-range="today" onclick="setReportRange('today')">Today</button>
-                        <button type="button" class="rep-pill-btn active" data-range="next_7" onclick="setReportRange('next_7')">Next 7 Days</button>
-                        <button type="button" class="rep-pill-btn" data-range="next_30" onclick="setReportRange('next_30')">Next 30 Days</button>
-                        <button type="button" class="rep-pill-btn" data-range="monthly" onclick="setReportRange('monthly')">This Month</button>
+                        <button type="button" class="rep-pill-btn active" data-range="today" onclick="setReportRange('today')">Today</button>
+                        <button type="button" class="rep-pill-btn" data-range="past_7" onclick="setReportRange('past_7')">Past 7 Days</button>
+                        <button type="button" class="rep-pill-btn" data-range="past_30" onclick="setReportRange('past_30')">Past 30 Days</button>
+                        <button type="button" class="rep-pill-btn" data-range="past_month" onclick="setReportRange('past_month')">Past 1 Month</button>
                         <button type="button" class="rep-pill-btn" data-range="all" onclick="setReportRange('all')">All Time</button>
                     </div>
 
-                    <div class="rep-toolbar-right">
-                        <div class="modern-search-box rep-search-box">
+                    <div class="rep-toolbar-right" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto;">
+                        <div class="modern-search-box rep-search-box" style="min-width:220px;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                            <input type="text" id="reportSearchInput" placeholder="Search patient or physician..." oninput="renderUpcomingPatientsTable()">
+                            <input type="search" id="reportSearchInput" name="report_search_q" placeholder="Search patient or physician..." oninput="renderUpcomingPatientsTable()" autocomplete="new-password" data-lpignore="true" spellcheck="false">
                         </div>
-                        <button type="button" class="modern-reset-btn" onclick="resetReportFilters()" title="Reset to Next 7 Days">Refresh</button>
+                        <button type="button" class="modern-reset-btn" onclick="resetReportFilters()" title="Reset to Today">Refresh</button>
                     </div>
                 </div>
-                <div class="rep-toolbar-meta">
-                    <span id="reportRangeLabel">Showing appointments for the Next 7 Days</span>
-                    <span id="reportLastUpdated"></span>
+
+                <div class="rep-toolbar-meta" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:10px; border-top:1px solid #f1f5f9;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="font-size:0.76rem; font-weight:600; color:#475569;">Date Range:</span>
+                        <input type="date" id="reportStartDate" aria-label="Start date" onchange="applyCustomReportDateRange()" style="height:32px; width:138px; padding:0 9px; border:1px solid #cbd5e1; border-radius:7px; font-family:inherit; font-size:0.78rem; color:#0f172a; background:#ffffff;">
+                        <span style="font-size:0.76rem; color:#64748b;">to</span>
+                        <input type="date" id="reportEndDate" aria-label="End date" onchange="applyCustomReportDateRange()" style="height:32px; width:138px; padding:0 9px; border:1px solid #cbd5e1; border-radius:7px; font-family:inherit; font-size:0.78rem; color:#0f172a; background:#ffffff;">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:0.78rem; color:#64748b;">
+                        <span id="reportRangeLabel">Showing Consultation Report for Today</span>
+                        <span id="reportLastUpdated"></span>
+                    </div>
                 </div>
             </div>
 
@@ -516,9 +542,9 @@ if ($adminInitials === '') $adminInitials = 'AD';
             <div class="rep-kpi-grid">
                 <div class="admin-ov-kpi-card rep-kpi-card">
                     <div class="admin-ov-kpi-content">
-                        <div class="admin-ov-kpi-label">TOTAL APPOINTMENTS</div>
+                        <div class="admin-ov-kpi-label">TOTAL PATIENTS</div>
                         <div class="admin-ov-kpi-value" id="repKpiTotal">0</div>
-                        <div class="rep-kpi-sub" id="repKpiSubTotal">0 online &middot; 0 walk-in</div>
+                        <div class="rep-kpi-sub" id="repKpiSubTotal">0 online &middot; 0 walk-in / unscheduled</div>
                     </div>
                     <svg class="admin-ov-kpi-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -530,19 +556,19 @@ if ($adminInitials === '') $adminInitials = 'AD';
 
                 <div class="admin-ov-kpi-card rep-kpi-card">
                     <div class="admin-ov-kpi-content">
-                        <div class="admin-ov-kpi-label">PENDING / ACTIVE</div>
+                        <div class="admin-ov-kpi-label">ATTENDING DOCTORS</div>
                         <div class="admin-ov-kpi-value" id="repKpiReady">0</div>
-                        <div class="rep-kpi-sub" id="repKpiSubReady">0 in clinic &middot; 0 pending</div>
+                        <div class="rep-kpi-sub" id="repKpiSubReady">Active doctors with patients</div>
                     </div>
                     <svg class="admin-ov-kpi-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9"></circle>
-                        <polyline points="12 7 12 12 15.5 14"></polyline>
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </div>
 
                 <div class="admin-ov-kpi-card rep-kpi-card">
                     <div class="admin-ov-kpi-content">
-                        <div class="admin-ov-kpi-label">COMPLETED</div>
+                        <div class="admin-ov-kpi-label">COMPLETED CONSULTATIONS</div>
                         <div class="admin-ov-kpi-value" id="repKpiCompleted">0</div>
                         <div class="rep-kpi-sub" id="repKpiSubCompleted">0% completion rate</div>
                     </div>
@@ -555,14 +581,13 @@ if ($adminInitials === '') $adminInitials = 'AD';
 
                 <div class="admin-ov-kpi-card rep-kpi-card">
                     <div class="admin-ov-kpi-content">
-                        <div class="admin-ov-kpi-label">CANCELLED / NO-SHOW</div>
+                        <div class="admin-ov-kpi-label">MEDICATIONS PRESCRIBED</div>
                         <div class="admin-ov-kpi-value" id="repKpiNoshow">0</div>
-                        <div class="rep-kpi-sub" id="repKpiSubNoshow">Missed or cancelled visits</div>
+                        <div class="rep-kpi-sub" id="repKpiSubNoshow">Total prescriptions logged</div>
                     </div>
                     <svg class="admin-ov-kpi-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9"></circle>
-                        <line x1="15" y1="9" x2="9" y2="15"></line>
-                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                        <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path>
+                        <line x1="8.5" y1="8.5" x2="15.5" y2="15.5"></line>
                     </svg>
                 </div>
             </div>
@@ -618,7 +643,7 @@ if ($adminInitials === '') $adminInitials = 'AD';
             <div class="rbac-action-toolbar pmi-action-toolbar" style="margin-bottom: 16px; flex-shrink: 0;">
                 <div class="pmi-search-wrap">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="auditSearchInput" class="form-control pmi-search-input" placeholder="Search action, user, or details..." oninput="filterAndSortAuditTable()">
+                    <input type="search" id="auditSearchInput" name="audit_search_q" class="form-control pmi-search-input" placeholder="Search action, user, or details..." oninput="filterAndSortAuditTable()" autocomplete="new-password" data-lpignore="true" spellcheck="false">
                 </div>
                 <div class="pmi-filters-wrap">
                     <div class="filter-item">
@@ -857,6 +882,16 @@ if ($adminInitials === '') $adminInitials = 'AD';
             <div class="form-group">
                 <label>Doctor Name <span class="required">*</span></label>
                 <input type="text" id="docName" class="form-control" placeholder="e.g. Dr. Maria Santos" autocomplete="off" oninput="this.classList.remove('input-error')">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="form-group">
+                    <label>Title / Credentials</label>
+                    <input type="text" id="docTitle" class="form-control" placeholder="e.g. MD, FPPA, FPNA" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>PRC License Number</label>
+                    <input type="text" id="docLicense" class="form-control" placeholder="e.g. 0123456" autocomplete="off">
+                </div>
             </div>
             <div class="form-group">
                 <label>Department <span class="required">*</span></label>

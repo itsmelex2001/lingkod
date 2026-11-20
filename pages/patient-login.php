@@ -1085,14 +1085,14 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
                 <line x1="12" y1="16" x2="12.01" y2="16"></line>
               </svg>
             </span>
-            <span id="formErrorText">Incorrect email or password.</span>
+            <span id="formErrorText">Incorrect username, email, or password.</span>
           </div>
 
           <!-- Sign In Form -->
           <form id="patientSignInForm" novalidate onsubmit="handlePatientLogin(event)">
             <!-- Username Field -->
             <div class="form-group" id="groupEmail">
-              <label for="patientEmail" class="form-label" id="labelEmail">Username</label>
+              <label for="patientEmail" class="form-label" id="labelEmail">Username or email</label>
               <div class="input-wrapper">
                 <span class="input-icon-lead" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1105,7 +1105,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
                   id="patientEmail"
                   name="username"
                   class="form-input"
-                  placeholder="e.g., yourname.lingkod"
+                  placeholder="Enter your username or email"
                   value="<?= htmlspecialchars($rememberedEmail) ?>"
                   autocomplete="username"
                   inputmode="text"
@@ -1120,7 +1120,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
                 />
               </div>
               <p class="field-error-msg" id="emailError" role="alert" aria-live="polite">
-                Enter your username.
+                Enter your username or email.
               </p>
             </div>
 
@@ -1346,9 +1346,9 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           translation: 'Reliable Service',
           portalHeading: 'Patient Portal',
           portalSubheading: 'Sign in to manage your appointments and clinical records.',
-          emailLabel: 'Username',
-          emailPlaceholder: 'e.g., yourname.lingkod',
-          emailError: 'Enter your username.',
+          emailLabel: 'Username or email',
+          emailPlaceholder: 'Enter your username or email',
+          emailError: 'Enter your username or email.',
           passLabel: 'Password',
           passPlaceholder: 'Enter your password',
           passError: 'Please enter your password.',
@@ -1359,7 +1359,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           signingIn: 'Signing in…',
           newPatient: 'New patient?',
           createAccount: 'Create an account',
-          incorrectAuth: 'Incorrect username or password.',
+          incorrectAuth: 'Incorrect username, email, or password.',
           serverError: 'Unable to connect to the authentication server. Please try again.',
           unverified: 'Account not yet verified. Please check your email inbox.',
           dpaText: 'Protected under the Data Privacy Act of 2012 (RA 10173)',
@@ -1381,9 +1381,9 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           translation: 'Serbisyong Maaasahan',
           portalHeading: 'Patient Portal',
           portalSubheading: 'Mag-sign in upang pamahalaan ang iyong appointment at talaan sa ospital.',
-          emailLabel: 'Username',
-          emailPlaceholder: 'e.g., yourname.lingkod',
-          emailError: 'Ilagay ang iyong username.',
+          emailLabel: 'Username o email',
+          emailPlaceholder: 'Ilagay ang username o email',
+          emailError: 'Ilagay ang iyong username o email.',
           passLabel: 'Password',
           passPlaceholder: 'Ilagay ang iyong password',
           passError: 'Pakilagay ang iyong password.',
@@ -1394,7 +1394,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           signingIn: 'Nagla-log in…',
           newPatient: 'Bagong pasyente?',
           createAccount: 'Gumawa ng account',
-          incorrectAuth: 'Maling username o password.',
+          incorrectAuth: 'Maling username, email, o password.',
           serverError: 'Hindi makakonekta sa authentication server. Pakisubukan muli.',
           unverified: 'Hindi pa beripikado ang account. Pakitingnan ang iyong email.',
           dpaText: 'Protektado sa ilalim ng Data Privacy Act ng 2012 (RA 10173)',

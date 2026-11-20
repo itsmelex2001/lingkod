@@ -92,10 +92,10 @@ function sendPatientOtpEmail(string $email, string $fullName, string $otp): bool
                   <h2 style='margin:0 0 12px;color:#14532d;font-size:18px;'>One-Time Verification Code</h2>
                   <p style='margin:0 0 16px;color:#374151;font-size:14px;line-height:1.5;'>Hello {$safeName}, enter this 6-digit code to verify your MMWGH LINGKOD Patient Portal login:</p>
                   <div style='font-size:28px;font-weight:800;letter-spacing:6px;color:#111827;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;text-align:center;margin:0 0 16px;'>{$safeOtp}</div>
-                  <p style='margin:0;color:#6b7280;font-size:12px;'>This code expires in 10 minutes. Never share it with anyone.</p>
+                  <p style='margin:0;color:#6b7280;font-size:12px;'>This code expires in 30 minutes. Never share it with anyone.</p>
                 </div>
             ";
-            $mail->AltBody = "Hello {$fullName},\n\nYour MMWGH LINGKOD verification OTP is: {$otp}\nThis code expires in 10 minutes.";
+            $mail->AltBody = "Hello {$fullName},\n\nYour MMWGH LINGKOD verification OTP is: {$otp}\nThis code expires in 30 minutes.";
             @$mail->send();
             $sent = true;
         } catch (Exception $e) {

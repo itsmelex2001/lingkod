@@ -34,12 +34,12 @@ if (empty($b['department'])) {
     respondErr("Field 'department' is required.");
 }
 
-$isStaffUser = (!empty($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'staff'], true))
-            || (!empty($_SESSION['user_role']) && in_array($_SESSION['user_role'], ['admin', 'staff'], true));
+$sessRole = strtolower(trim((string)($_SESSION['role'] ?? ($_SESSION['user_role'] ?? ''))));
+$isStaffUser = in_array($sessRole, ['admin', 'staff', 'doctor', 'nurse'], true);
 $patientType = !empty($b['patient_type']) ? trim($b['patient_type']) : 'first-time';
 
-// Enforce 'Appointment Only' for new patients (no walk-ins via the public portal)
-if (!$isStaffUser || $patientType === 'first-time') {
+// Enforce 'Appointment Only' on the public portal (staff may admit walk-in / unscheduled patients)
+if (!$isStaffUser) {
     $b['unscheduled_walkin'] = 0;
     $b['is_walkin'] = 0;
     $b['appointment_type'] = 'online';
@@ -50,7 +50,10 @@ $isInquiryOnly = !empty($b['inquiry_only']);
 
 // ── 3. Validate required fields based on department and mode ─────────────────
 $required = [];
-if (!$isInquiryOnly && !$isWalkinQuick) {
+if ($isWalkinQuick) {
+    // Staff walk-in / unscheduled admission: only chief complaints required (contact optional)
+    $required = ['chief_complaints'];
+} elseif (!$isInquiryOnly) {
     if ($b['department'] === 'neurology') {
         $required = ['contact_number', 'chief_complaints', 'appointment_date'];
     } elseif ($b['department'] === 'psychiatry') {

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../api/config/patient_otp.php';
 $token = trim($_GET['token'] ?? '');
 $maskedEmail = '';
 $patientName = '';
+$autoResentOtp = false;
 
 try {
     ensurePatientOtpColumns($pdo);
@@ -39,11 +40,12 @@ try {
         if (empty($patient['otp_hash']) || empty($patient['otp_expires_at']) || strtotime($patient['otp_expires_at']) < time()) {
             $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
-            $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+            $otpExpires = date('Y-m-d H:i:s', strtotime('+30 minutes'));
             $pdo->prepare("UPDATE patients SET otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
                 ->execute([$otpHash, $otpExpires, $patient['id']]);
             $_SESSION['pending_otp_sent_at'] = time();
             sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp);
+            $autoResentOtp = true;
         }
 
         $maskedEmail = maskEmail($patient['email']);
@@ -86,149 +88,187 @@ try {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
+      :root {
+        --bg-page: #f1f5f9;
+        --surface: #ffffff;
+        --border: #d1d5db;
+        --border-input: #cbd5e1;
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #64748b;
+        --brand: #15803d;
+        --brand-hover: #166534;
+        --brand-ring: rgba(21, 128, 61, 0.16);
+        --danger: #dc2626;
+        --danger-soft: #fef2f2;
+      }
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: #f9fafb;
-        color: #111827;
-        min-height: 100vh;
+        background: var(--bg-page);
+        color: var(--text-primary);
+        min-height: 100dvh;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 1.5rem;
+        padding: 1.5rem 1rem;
         -webkit-font-smoothing: antialiased;
+        caret-color: transparent;
+        user-select: none;
       }
       .verify-card {
         width: 100%;
         max-width: 420px;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 12px;
         padding: 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 12px 28px -8px rgba(15, 23, 42, 0.1);
       }
       .verify-logo {
         display: block;
-        width: 148px;
+        width: 140px;
         height: auto;
         margin: 0 auto 1.25rem;
         object-fit: contain;
       }
       .verify-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #111827;
-        letter-spacing: -0.025em;
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
         text-align: center;
         margin-bottom: 0.4rem;
       }
       .verify-sub {
         font-size: 0.875rem;
-        color: #6b7280;
+        color: var(--text-secondary);
         text-align: center;
         line-height: 1.5;
         margin-bottom: 1.5rem;
       }
       .verify-sub strong {
-        color: #111827;
+        color: var(--text-primary);
         font-weight: 600;
+        overflow-wrap: anywhere;
       }
       .otp-label {
         display: block;
-        font-size: 0.78rem;
+        font-size: 0.8125rem;
         font-weight: 600;
-        color: #374151;
+        color: #334155;
         margin-bottom: 0.5rem;
       }
-      .otp-input {
-        width: 100%;
-        height: 46px;
-        border: none;
-        border-radius: 8px;
-        box-shadow: inset 0 0 0 1px #d1d5db;
-        background: #ffffff;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        font-size: 1.35rem;
-        font-weight: 700;
-        letter-spacing: 0.4em;
-        text-align: center;
-        color: #111827;
-        outline: none;
-        transition: box-shadow 0.15s ease;
+      .otp-boxes {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
       }
-      .otp-input:focus {
-        box-shadow: inset 0 0 0 2px #16a34a;
+      .otp-digit {
+        width: 100%;
+        height: 52px;
+        border: 1px solid var(--border-input);
+        border-radius: 8px;
+        background: var(--surface);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+        font-size: 1.4rem;
+        font-weight: 700;
+        text-align: center;
+        color: var(--text-primary);
+        outline: none;
+        caret-color: transparent;
+        user-select: text;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .otp-digit:hover {
+        border-color: #94a3b8;
+      }
+      .otp-digit:focus {
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px var(--brand-ring);
+      }
+      .otp-digit.filled {
+        border-color: #94a3b8;
+      }
+      .otp-boxes.has-error .otp-digit {
+        border-color: var(--danger);
+        background: var(--danger-soft);
+      }
+      .otp-boxes.has-error .otp-digit:focus {
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
       }
       .otp-error {
         display: none;
-        margin-top: 0.65rem;
+        margin-top: 0.75rem;
         padding: 0.6rem 0.75rem;
-        border-radius: 6px;
-        background: #fef2f2;
+        border-radius: 8px;
+        background: var(--danger-soft);
         color: #b91c1c;
-        box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.2);
+        border: 1px solid #fecaca;
         font-size: 0.8125rem;
         line-height: 1.4;
       }
       .otp-status {
         display: none;
-        margin-top: 0.65rem;
+        margin-top: 0.75rem;
         padding: 0.6rem 0.75rem;
-        border-radius: 6px;
+        border-radius: 8px;
         background: #f0fdf4;
-        color: #15803d;
-        box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.2);
+        color: var(--brand);
+        border: 1px solid #bbf7d0;
         font-size: 0.8125rem;
         line-height: 1.4;
       }
       .btn-verify {
         width: 100%;
-        height: 42px;
-        margin-top: 1.15rem;
+        height: 44px;
+        margin-top: 1.25rem;
         border: none;
         border-radius: 8px;
-        background: #15803d;
+        background: var(--brand);
         color: #ffffff;
         font-family: inherit;
         font-size: 0.875rem;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         transition: background-color 0.15s ease;
       }
-      .btn-verify:hover:not(:disabled) { background: #166534; }
+      .btn-verify:hover:not(:disabled) { background: var(--brand-hover); }
+      .btn-verify:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       .btn-verify:disabled { opacity: 0.65; cursor: not-allowed; }
       .verify-actions {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-top: 1rem;
+        margin-top: 1.15rem;
         font-size: 0.875rem;
       }
       .link-btn {
         background: none;
         border: none;
-        padding: 0;
+        padding: 4px 0;
         font-family: inherit;
         font-size: 0.875rem;
         font-weight: 500;
-        color: #15803d;
+        color: var(--brand);
         cursor: pointer;
         text-decoration: none;
       }
-      .link-btn:hover:not(:disabled) { color: #166534; text-decoration: underline; }
-      .link-btn:disabled { color: #9ca3af; cursor: not-allowed; text-decoration: none; }
+      .link-btn:hover:not(:disabled) { color: var(--brand-hover); text-decoration: underline; }
+      .link-btn:disabled { color: #94a3b8; cursor: not-allowed; text-decoration: none; }
       .link-muted {
-        color: #6b7280;
+        color: var(--text-muted);
         font-size: 0.875rem;
         font-weight: 500;
         text-decoration: none;
+        padding: 4px 0;
       }
-      .link-muted:hover { color: #111827; text-decoration: underline; }
+      .link-muted:hover { color: var(--text-primary); text-decoration: underline; }
       .spinner {
         width: 15px;
         height: 15px;
@@ -238,34 +278,50 @@ try {
         animation: spin 0.7s linear infinite;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        50% { transform: translateX(4px); }
+        75% { transform: translateX(-2px); }
+      }
+      .otp-boxes.shake { animation: shake 0.25s ease; }
+      @media (prefers-reduced-motion: reduce) {
+        .otp-digit, .btn-verify { transition: none; }
+        .otp-boxes.shake { animation: none; }
+      }
       .success-icon {
         width: 48px;
         height: 48px;
         border-radius: 50%;
         background: #f0fdf4;
-        color: #15803d;
+        color: var(--brand);
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0 auto 1rem;
-        box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.2);
+        border: 1px solid #bbf7d0;
       }
       .btn-signin-link {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 100%;
-        height: 42px;
+        height: 44px;
         margin-top: 1.25rem;
         border-radius: 8px;
-        background: #15803d;
+        background: var(--brand);
         color: #ffffff;
         font-size: 0.875rem;
-        font-weight: 500;
+        font-weight: 600;
         text-decoration: none;
         transition: background-color 0.15s ease;
       }
-      .btn-signin-link:hover { background: #166534; }
+      .btn-signin-link:hover { background: var(--brand-hover); }
+      @media (max-width: 480px) {
+        .verify-card { padding: 1.75rem 1.25rem; }
+        .otp-boxes { gap: 6px; }
+        .otp-digit { height: 48px; font-size: 1.25rem; }
+      }
     </style>
   </head>
   <body>
@@ -279,20 +335,17 @@ try {
         </p>
 
         <form id="verifyOtpForm" novalidate onsubmit="submitOtpVerification(event)">
-          <label for="otpCodeInput" class="otp-label">6-Digit Verification Code</label>
-          <input
-            type="text"
-            id="otpCodeInput"
-            class="otp-input"
-            placeholder="000000"
-            maxlength="6"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            autofocus
-            required
-          />
+          <label for="otpDigit1" class="otp-label">6-Digit Verification Code</label>
+          <div id="otpBoxes" class="otp-boxes" role="group" aria-label="6-Digit Verification Code">
+            <input type="text" id="otpDigit1" class="otp-digit" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1 of 6" autofocus required />
+            <input type="text" id="otpDigit2" class="otp-digit" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 2 of 6" required />
+            <input type="text" id="otpDigit3" class="otp-digit" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 3 of 6" required />
+            <input type="text" id="otpDigit4" class="otp-digit" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 4 of 6" required />
+            <input type="text" id="otpDigit5" class="otp-digit" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 5 of 6" required />
+            <input type="text" id="otpDigit6" class="otp-digit" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 6 of 6" required />
+          </div>
           <div id="otpErrorBox" class="otp-error" role="alert"></div>
-          <div id="otpStatusBox" class="otp-status" role="status"></div>
+          <div id="otpStatusBox" class="otp-status" role="status"<?= $autoResentOtp ? ' style="display:block;"' : '' ?>><?= $autoResentOtp ? 'Your previous code expired. A new 6-digit code was just sent to ' . htmlspecialchars($maskedEmail) . ' — please use the latest email.' : '' ?></div>
 
           <button type="submit" id="btnVerifySubmit" class="btn-verify">
             <span>Verify Account</span>
@@ -322,27 +375,110 @@ try {
     </main>
 
     <script>
-      const otpInput = document.getElementById('otpCodeInput');
-      if (otpInput) {
-        otpInput.addEventListener('input', () => {
-          otpInput.value = otpInput.value.replace(/\D/g, '').slice(0, 6);
-        });
+      const otpBoxesEl = document.getElementById('otpBoxes');
+      const otpDigits = Array.from(document.querySelectorAll('.otp-digit'));
+
+      function getOtpValue() {
+        return otpDigits.map(el => el.value.replace(/\D/g, '')).join('');
       }
+
+      function syncDigitStyles() {
+        otpDigits.forEach(el => el.classList.toggle('filled', el.value !== ''));
+      }
+
+      function clearOtpErrorState() {
+        otpBoxesEl.classList.remove('has-error', 'shake');
+      }
+
+      function triggerOtpErrorState(focusEl) {
+        otpBoxesEl.classList.remove('shake');
+        void otpBoxesEl.offsetWidth;
+        otpBoxesEl.classList.add('has-error', 'shake');
+        if (focusEl) focusEl.focus();
+      }
+
+      function fillDigitsFrom(startIdx, rawText) {
+        const digits = (rawText || '').replace(/\D/g, '').slice(0, otpDigits.length - startIdx);
+        if (!digits) return;
+        for (let i = 0; i < digits.length; i++) {
+          otpDigits[startIdx + i].value = digits[i];
+        }
+        syncDigitStyles();
+        clearOtpErrorState();
+        const nextIdx = Math.min(startIdx + digits.length, otpDigits.length - 1);
+        otpDigits[nextIdx].focus();
+        otpDigits[nextIdx].select();
+      }
+
+      otpDigits.forEach((input, idx) => {
+        input.addEventListener('focus', () => input.select());
+
+        input.addEventListener('input', (e) => {
+          const clean = input.value.replace(/\D/g, '');
+          clearOtpErrorState();
+          if (clean.length > 1) {
+            fillDigitsFrom(idx, clean);
+            return;
+          }
+          input.value = clean;
+          syncDigitStyles();
+          if (clean && idx < otpDigits.length - 1) {
+            otpDigits[idx + 1].focus();
+          }
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace') {
+            clearOtpErrorState();
+            if (input.value) {
+              input.value = '';
+              syncDigitStyles();
+            } else if (idx > 0) {
+              otpDigits[idx - 1].value = '';
+              syncDigitStyles();
+              otpDigits[idx - 1].focus();
+            }
+            e.preventDefault();
+          } else if (e.key === 'ArrowLeft' && idx > 0) {
+            e.preventDefault();
+            otpDigits[idx - 1].focus();
+          } else if (e.key === 'ArrowRight' && idx < otpDigits.length - 1) {
+            e.preventDefault();
+            otpDigits[idx + 1].focus();
+          } else if (e.key === 'Home') {
+            e.preventDefault();
+            otpDigits[0].focus();
+          } else if (e.key === 'End') {
+            e.preventDefault();
+            otpDigits[otpDigits.length - 1].focus();
+          }
+        });
+
+        input.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const pasted = (e.clipboardData || window.clipboardData).getData('text');
+          const digits = pasted.replace(/\D/g, '');
+          if (!digits) return;
+          fillDigitsFrom(digits.length >= otpDigits.length ? 0 : idx, digits);
+        });
+      });
 
       async function submitOtpVerification(e) {
         e.preventDefault();
         const errBox = document.getElementById('otpErrorBox');
         const statusBox = document.getElementById('otpStatusBox');
         const btn = document.getElementById('btnVerifySubmit');
-        const otp = (otpInput?.value || '').replace(/\D/g, '');
+        const otp = getOtpValue();
 
         errBox.style.display = 'none';
         statusBox.style.display = 'none';
+        clearOtpErrorState();
 
         if (otp.length !== 6) {
-          errBox.textContent = 'Please enter the 6-digit verification code.';
+          errBox.textContent = 'Please enter all 6 digits of your verification code.';
           errBox.style.display = 'block';
-          otpInput?.focus();
+          const firstEmpty = otpDigits.find(el => !el.value) || otpDigits[0];
+          triggerOtpErrorState(firstEmpty);
           return;
         }
 
@@ -367,7 +503,8 @@ try {
           } else {
             errBox.textContent = data.message || 'Invalid verification code.';
             errBox.style.display = 'block';
-            otpInput?.focus();
+            triggerOtpErrorState(otpDigits[0]);
+            otpDigits[0].select();
           }
         } catch (err) {
           errBox.textContent = 'Unable to verify code. Please try again.';
@@ -385,6 +522,7 @@ try {
 
         errBox.style.display = 'none';
         statusBox.style.display = 'none';
+        clearOtpErrorState();
         btn.disabled = true;
 
         try {
@@ -395,6 +533,9 @@ try {
           });
           const data = await res.json();
           if (data.success) {
+            otpDigits.forEach(el => { el.value = ''; });
+            syncDigitStyles();
+            otpDigits[0].focus();
             statusBox.textContent = data.message || 'A new verification code was sent.';
             statusBox.style.display = 'block';
           } else {

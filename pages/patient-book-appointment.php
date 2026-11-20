@@ -495,8 +495,8 @@ $profileBootstrap = [
                   <span class="ba-label">Consultation Mode <span class="req-mark">*</span></span>
                   <div class="ba-mode-row" role="radiogroup" aria-label="Consultation Mode">
                     <label id="cardModeF2F" class="ba-mode-pill">
-                      <input type="radio" id="radioModeF2F" name="consultation_mode" value="In-Person" />
-                      <span>In-Person</span>
+                      <input type="radio" id="radioModeF2F" name="consultation_mode" value="Face-to-Face" />
+                      <span>Face-to-Face</span>
                       <span class="ba-mode-circle" aria-hidden="true"></span>
                     </label>
 
@@ -507,7 +507,7 @@ $profileBootstrap = [
                     </label>
                   </div>
                   <p id="firstTimeModeNotice" class="ba-mode-policy-notice" style="display: none;">
-                    * Hospital Policy: First-time patients are required to have an initial In-Person (Face-to-Face) consultation. Teleconsultation is only available for returning (2nd-time or follow-up) patients.
+                    * Hospital Policy: First-time patients are required to have an initial Face-to-Face consultation. Teleconsultation is only available for returning (2nd-time or follow-up) patients.
                   </p>
                   <div class="ba-error-msg" id="errConsultationMode" role="alert"><span class="ba-error-text"></span></div>
                 </div>

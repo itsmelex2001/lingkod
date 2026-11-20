@@ -74,7 +74,10 @@ $isDependent   = ($bookingFor === 'Someone Else / Dependent' || $bookingFor === 
 $relationshipToPatient = trim($input['relationship_to_patient'] ?? '');
 $withCompanion = $isDependent ? 1 : (!empty($input['with_companion']) && in_array(strtolower((string)$input['with_companion']), ['1', 'true', 'yes'], true) ? 1 : 0);
 
-// ── 2. Username is strictly system-generated below from email local part ──
+// ── 2. Extract & Sanitize Account Credentials (Phase 2) ───────────────────
+$username        = trim((string)($input['username'] ?? ''));
+$password        = (string)($input['password'] ?? '');
+$confirmPassword = array_key_exists('confirm_password', $input) ? (string)$input['confirm_password'] : null;
 
 // ── 3. Strict Validation ──────────────────────────────────────────────────
 $errors = [];
@@ -132,6 +135,20 @@ if ($address === '') {
 
 if ($isDependent && $relationshipToPatient === '') {
     $errors[] = 'Please select your relationship to the patient.';
+}
+
+if ($username === '') {
+    $errors[] = 'Username is required.';
+} elseif (!preg_match('/^[a-zA-Z0-9._-]{3,30}$/', $username)) {
+    $errors[] = 'Username must be 3 to 30 characters and contain only letters, numbers, dots, underscores, or hyphens.';
+}
+
+if ($password === '') {
+    $errors[] = 'Password is required.';
+} elseif (strlen($password) < 8) {
+    $errors[] = 'Password must be at least 8 characters.';
+} elseif ($confirmPassword !== null && $password !== $confirmPassword) {
+    $errors[] = 'Passwords do not match.';
 }
 
 if (!empty($errors)) {
@@ -209,35 +226,27 @@ try {
         $existingId = null;
     }
 
-    // ── 5. Generate System Username (.lingkod), Temp Password & Token ──────
-    $localPart = preg_replace('/[^a-z0-9._-]/', '', strtolower((string)strstr($email, '@', true)));
-    if ($localPart === '') $localPart = 'patient';
-    $baseUsername = $localPart . '.lingkod';
-    $username = $baseUsername;
+    // ── 5. Verify Username Availability, Hash User Password & Generate Token ──
     $uCheck = $pdo->prepare("SELECT id FROM patients WHERE LOWER(username) = ? AND (? IS NULL OR id <> ?) LIMIT 1");
-    for ($attempt = 0; $attempt < 15; $attempt++) {
-        $uCheck->execute([strtolower($username), $existingId, $existingId]);
-        if (!$uCheck->fetchColumn()) break;
-        $username = $baseUsername . random_int(0, 9);
-        if ($attempt >= 10) {
-            $username = $baseUsername . random_int(10, 99);
-        }
+    $uCheck->execute([strtolower($username), $existingId, $existingId]);
+    if ($uCheck->fetchColumn()) {
+        http_response_code(409);
+        echo json_encode([
+            'success' => false,
+            'message' => 'This username is already taken. Please choose a different username.',
+            'code'    => 'USERNAME_TAKEN'
+        ]);
+        exit;
     }
 
-    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
-    $maxIdx = strlen($chars) - 1;
-    $tempPassword = '';
-    for ($i = 0; $i < 12; $i++) {
-        $tempPassword .= $chars[random_int(0, $maxIdx)];
-    }
-    $passwordHash = password_hash($tempPassword, PASSWORD_BCRYPT, ['cost' => 11]);
+    $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 11]);
     $token = bin2hex(random_bytes(32)); // 64 hex characters cryptographically secure
     $tokenExpiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
     ensurePatientOtpColumns($pdo);
     $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
-    $otpExpiry = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+    $otpExpiry = date('Y-m-d H:i:s', strtotime('+30 minutes'));
 
     // Normalize full name
     $cleanMI = rtrim($middleInitial, '.');
@@ -428,12 +437,11 @@ try {
             $safePatientId = htmlspecialchars($patientId, ENT_QUOTES, 'UTF-8');
             $safeEmail = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
             $safeUsername = htmlspecialchars($username, ENT_QUOTES, 'UTF-8');
-            $safeTempPassword = htmlspecialchars($tempPassword, ENT_QUOTES, 'UTF-8');
             $year = date('Y');
 
             // Content
             $mail->isHTML(true);
-            $mail->Subject = 'Your MMWGH LINGKOD Patient Portal Credentials';
+            $mail->Subject = 'Verify Your MMWGH LINGKOD Patient Portal Account';
 
             $mail->Body = "
             <!DOCTYPE html>
@@ -463,16 +471,14 @@ try {
                   <td style='padding:32px 36px 28px; background:#ffffff;'>
                     <div style='font-size:15px; font-weight:700; color:#15803d; margin:0 0 16px;'>{$safePatientId}</div>
                     <div style='font-size:20px; font-weight:700; color:#111827; margin:0 0 14px;'>Hello, {$safeName}!</div>
-                    <p style='margin:0 0 14px; font-size:15px; line-height:1.55; color:#374151;'>Thank you for registering with the MMWGH LINGKOD Patient Portal. Below are your system-generated login credentials:</p>
+                    <p style='margin:0 0 14px; font-size:15px; line-height:1.55; color:#374151;'>Thank you for registering with the MMWGH LINGKOD Patient Portal. Use the verification code below to activate your account:</p>
                     <div style='background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px 18px; margin:0 0 20px;'>
                       <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>Username</div>
                       <div style='font-size:15px; color:#111827; font-weight:700; font-family:monospace; margin:2px 0 12px;'>{$safeUsername}</div>
-                      <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>Temporary Password</div>
-                      <div style='font-size:16px; color:#14532d; font-weight:800; font-family:monospace; margin:2px 0 12px;'>{$safeTempPassword}</div>
                       <div style='font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;'>6-Digit Verification OTP</div>
                       <div style='font-size:24px; color:#111827; font-weight:800; font-family:monospace; letter-spacing:5px; margin-top:4px;'>" . htmlspecialchars($otp, ENT_QUOTES, 'UTF-8') . "</div>
                     </div>
-                    <p style='margin:0 0 24px; font-size:14px; line-height:1.55; color:#374151;'>Click the button below to open the verification page and enter your 6-digit OTP code before signing in.</p>
+                    <p style='margin:0 0 24px; font-size:14px; line-height:1.55; color:#374151;'>Click the button below to open the verification page and enter your 6-digit OTP code before signing in with the username and password you created.</p>
                     <div style='text-align:center; margin:8px 0 24px;'>
                       <a href='{$verificationUrl}' target='_blank' style='display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:14px 34px; border-radius:999px;'>Verify My Account</a>
                     </div>
@@ -485,7 +491,7 @@ try {
             </html>
             ";
 
-            $mail->AltBody = "Hello {$fullName},\n\nYour MMWGH LINGKOD Patient Portal credentials:\nPatient ID: {$patientId}\nUsername: {$username}\nEmail: {$email}\nTemporary Password: {$tempPassword}\n\nVerify your account: {$verificationUrl}\n\nSign in (an email OTP will be required if not yet verified): {$loginPortalUrl}";
+            $mail->AltBody = "Hello {$fullName},\n\nThank you for registering with the MMWGH LINGKOD Patient Portal.\nPatient ID: {$patientId}\nUsername: {$username}\nEmail: {$email}\n6-Digit Verification OTP: {$otp}\n\nVerify your account: {$verificationUrl}\n\nAfter verifying, sign in with your chosen username and password: {$loginPortalUrl}";
 
             // Suppress unhandled socket warnings if local MTA is unavailable
             @$mail->send();

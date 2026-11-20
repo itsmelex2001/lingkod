@@ -584,6 +584,8 @@ try {
             'diagnosis'                 => $diagText,
             'treatment'                 => $treatText,
             'prescription'              => $rxText,
+            'next_visit_date'           => $appt['next_visit_date'] ?? null,
+            'follow_up_notes'           => $appt['follow_up_notes'] ?? null,
             'previous_appointment_date' => $appt['_prev_date'] ?? null,
             'previous_appointment_time' => $appt['_prev_time'] ?? null,
             'previous_department'       => $appt['_prev_dept'] ?? null,

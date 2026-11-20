@@ -58,7 +58,7 @@ try {
         }
         $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
-        $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        $otpExpires = date('Y-m-d H:i:s', strtotime('+30 minutes'));
         $pdo->prepare("UPDATE patients SET otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
             ->execute([$otpHash, $otpExpires, $pendingId]);
         $_SESSION['pending_otp_sent_at'] = time();
@@ -90,7 +90,7 @@ try {
     if (!password_verify($otpInput, $patient['otp_hash'])) {
         $pdo->prepare("UPDATE patients SET otp_attempts = otp_attempts + 1 WHERE id = ?")->execute([$pendingId]);
         http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Invalid verification code. Please try again.']);
+        echo json_encode(['success' => false, 'message' => 'Invalid verification code. Please check your latest email or click Resend Code.']);
         exit;
     }
 

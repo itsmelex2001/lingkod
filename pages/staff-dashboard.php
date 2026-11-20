@@ -125,7 +125,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
             <header class="staff-header">
                 <div class="header-search-wrap">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="7.5"></circle><line x1="20.5" y1="20.5" x2="16.5" y2="16.5"></line></svg>
-                    <input type="text" id="globalStaffSearchInput" placeholder="Search patients, records..." autocomplete="off">
+                    <input type="search" id="globalStaffSearchInput" name="staff_global_search" placeholder="Search patients, records..." autocomplete="new-password" data-lpignore="true" spellcheck="false">
                 </div>
 
                 <div class="header-right-meta">
@@ -186,7 +186,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                             <p>Here&#8217;s your patient services overview for today.</p>
                         </div>
                         <div class="view-header-actions">
-                            <button type="button" class="btn-clean primary btn-new-walkin" onclick="openWalkinModal()"><span class="plus-mark">+</span> NEW WALK-IN</button>
+                            <button type="button" class="btn-clean primary btn-new-walkin" onclick="openWalkinModal()"><span class="plus-mark">+</span> WALK-IN / UNSCHEDULED</button>
                         </div>
                     </div>
 
@@ -211,6 +211,24 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                 <div class="ov-kpi-label">CURRENTLY IN QUEUE</div>
                                 <div class="ov-kpi-value" id="kpiQueue">0</div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Patient QR & Name Lookup Bar (Direct Dashboard Access) -->
+                    <div class="ov-quick-lookup-card" style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; padding:14px 20px; margin-bottom:20px; display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; box-shadow:0 1px 2px rgba(15,23,42,0.04);">
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <button type="button" class="btn-clean primary" onclick="openDashboardQrScanner()" style="white-space:nowrap;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+                                <span>Scan Patient QR</span>
+                            </button>
+                            <div>
+                                <div style="font-size:0.84rem; font-weight:600; color:#0f172a; line-height:1.25;">Quick Patient Lookup</div>
+                                <div style="font-size:0.76rem; color:#64748b; line-height:1.3;">Scan a Digital ID QR code or search by patient name or ID.</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; flex:0 1 360px; min-width:240px;">
+                            <input type="search" id="overviewQuickLookup" name="ov_quick_lookup" class="form-control-clean" placeholder="Enter patient name or ID..." autocomplete="new-password" data-lpignore="true" style="flex:1; min-width:0; height:38px;">
+                            <button type="button" class="btn-clean outline" onclick="runOverviewPatientLookup()" style="height:38px; white-space:nowrap;">Find Patient</button>
                         </div>
                     </div>
 
@@ -249,8 +267,26 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                         </div>
                         <div class="view-header-actions">
                             <button type="button" class="btn-clean outline" onclick="switchView('schedules')">Doctor Schedules</button>
-                            <button type="button" class="btn-clean primary" onclick="openWalkinModal()">+ New Walk-in</button>
+                            <button type="button" class="btn-clean primary" onclick="openWalkinModal()">+ Walk-in / Unscheduled</button>
                         </div>
+                    </div>
+
+                    <!-- Staff Patient Count Calendar (Click a day to filter queue) -->
+                    <div class="content-card" id="staffQueueCalendarCard" style="padding:14px 18px; margin-bottom:14px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                            <div>
+                                <h2 id="staffCalMonthTitle" style="font-size:0.95rem; font-weight:700; color:#0f172a; margin:0;">Patient Schedule Calendar</h2>
+                                <p style="font-size:0.76rem; color:#64748b; margin:2px 0 0;">Click any day to view scheduled patients for that date.</p>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <button type="button" class="btn-clean outline sm" onclick="shiftStaffCalMonth(-1)">&larr; Prev</button>
+                                <button type="button" class="btn-clean outline sm" onclick="setConsultDateFilterToday()">Today</button>
+                                <button type="button" class="btn-clean outline sm" onclick="shiftStaffCalMonth(1)">Next &rarr;</button>
+                                <input type="date" id="consultDateFilter" class="form-control-clean" style="width:155px; height:34px; font-size:0.8rem;" aria-label="Filter queue by date" onchange="setConsultDateFilter(this.value)">
+                                <button type="button" class="btn-clean outline sm" id="btnClearConsultDate" style="display:none;" onclick="setConsultDateFilter('')">All Dates</button>
+                            </div>
+                        </div>
+                        <div id="staffCalGrid" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px;"></div>
                     </div>
 
                     <!-- Consultation List Card -->
@@ -287,7 +323,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                             <div class="toolbar-right">
                                 <div class="search-input-box">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                    <input type="text" id="consultSearchInput" placeholder="Search patient name or ID..." aria-label="Search patient name or ID">
+                                    <input type="search" id="consultSearchInput" name="consult_search_q" placeholder="Search patient name or ID..." aria-label="Search patient name or ID" autocomplete="new-password" data-lpignore="true" spellcheck="false">
                                 </div>
                                 <button type="button" class="btn-clean outline btn-icon-only" id="btnRefreshConsult" title="Refresh queue" aria-label="Refresh queue">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
@@ -329,7 +365,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                             <div class="toolbar-left">
                                 <div class="search-input-box records-search-box">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                    <input type="text" id="recordsSearchInput" placeholder="Search patient name, ID, physician, complaint..." aria-label="Search patient records">
+                                    <input type="search" id="recordsSearchInput" name="records_search_q" placeholder="Search patient name, ID, physician, complaint..." aria-label="Search patient records" autocomplete="new-password" data-lpignore="true" spellcheck="false">
                                 </div>
                             </div>
                             <div class="toolbar-right records-toolbar-actions">
@@ -401,7 +437,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                             <div class="modern-table-controls">
                                 <div class="modern-search-box">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                    <input type="text" id="schedSearchInput" placeholder="Search doctor or specialization...">
+                                    <input type="search" id="schedSearchInput" name="sched_search_q" placeholder="Search doctor or specialization..." autocomplete="new-password" data-lpignore="true" spellcheck="false">
                                 </div>
                                 <select id="schedSpecFilter" class="modern-select" aria-label="Filter by specialization">
                                     <option value="all">All Specializations</option>
@@ -577,10 +613,14 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                 <button type="button" class="clean-modal-close" onclick="closePatientDetailsModal()">&times;</button>
             </div>
             <div class="clean-modal-body" id="patientDetailsContent"></div>
-            <div class="clean-modal-footer">
-                <button type="button" class="btn-clean outline" onclick="printPatientSlipFromDetails()">
+            <div class="clean-modal-footer" style="flex-wrap:wrap; gap:8px;">
+                <button type="button" class="btn-clean outline" onclick="printMedicalCertificateFromDetails()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Print Medical Certificate</span>
+                </button>
+                <button type="button" class="btn-clean outline" onclick="printPrescriptionFromDetails()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                    <span>Print Summary Slip</span>
+                    <span>Print Prescription (Rx)</span>
                 </button>
                 <button type="button" class="btn-clean outline" onclick="closePatientDetailsModal()">Close</button>
             </div>
@@ -597,8 +637,40 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                 </div>
                 <button type="button" class="clean-modal-close" onclick="closeClinicalNoteModal()">&times;</button>
             </div>
-            <div class="clean-modal-body" style="display:flex; flex-direction:column; gap:1.15rem;">
+            <div class="clean-modal-body" style="display:flex; flex-direction:column; gap:1rem; max-height:72vh; overflow-y:auto;">
                 <input type="hidden" id="notePatientId">
+
+                <!-- Vital Signs Section (Pre-Consultation / For Doctor) -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem 1rem;">
+                    <div style="font-size:0.76rem; font-weight:700; color:#0f172a; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:0.6rem;">Vital Signs (Triage / For Doctor)</div>
+                    <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px;">
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="vitalBp" style="font-size:0.72rem;">BP (mmHg)</label>
+                            <input type="text" id="vitalBp" class="form-control-clean" placeholder="120/80">
+                        </div>
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="vitalTemp" style="font-size:0.72rem;">Temp (°C)</label>
+                            <input type="text" id="vitalTemp" class="form-control-clean" placeholder="36.5">
+                        </div>
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="vitalPulse" style="font-size:0.72rem;">Pulse (bpm)</label>
+                            <input type="text" id="vitalPulse" class="form-control-clean" placeholder="78">
+                        </div>
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="vitalRr" style="font-size:0.72rem;">RR (/min)</label>
+                            <input type="text" id="vitalRr" class="form-control-clean" placeholder="18">
+                        </div>
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="vitalSpo2" style="font-size:0.72rem;">SpO2 (%)</label>
+                            <input type="text" id="vitalSpo2" class="form-control-clean" placeholder="98">
+                        </div>
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="vitalWeight" style="font-size:0.72rem;">Weight (kg)</label>
+                            <input type="text" id="vitalWeight" class="form-control-clean" placeholder="60">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group-clean" style="position:relative;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <label for="noteDiagnosis" style="font-weight:700; font-size:0.78rem; text-transform:uppercase; color:#334155; margin:0;">
@@ -606,7 +678,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                         </label>
                     </div>
                     <div style="position:relative;">
-                        <input type="text" id="noteDiagnosis" class="form-control-clean" placeholder="Type diagnosis (e.g. Hypertension, Migraine, Anxiety)..." autocomplete="off">
+                        <input type="text" id="noteDiagnosis" class="form-control-clean" placeholder="Type diagnosis (e.g. Schizophrenia, Hypertension, Migraine)..." autocomplete="off">
                         <div id="noteDiagnosisSpinner" style="display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.75rem; color:#059669; font-weight:600;">
                             Searching...
                         </div>
@@ -618,8 +690,8 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                     <textarea id="noteTreatment" class="form-control-clean" rows="2" placeholder="Recommended treatment regimen"></textarea>
                 </div>
 
-                <!-- Drug Prescription Section -->
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1rem; display:flex; flex-direction:column; gap:0.85rem;">
+                <!-- Drug Prescription Section (Checkbox Multi-Select) -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1rem; display:flex; flex-direction:column; gap:0.8rem;">
                     <div style="display:flex; align-items:center; justify-content:space-between;">
                         <span style="font-size:0.8rem; font-weight:700; color:#15803d; text-transform:uppercase; letter-spacing:0.03em;">Formulary Medicine &amp; Prescription</span>
                         <span style="font-size:0.72rem; color:#64748b;" id="dohDeptNotice">General Medicine</span>
@@ -631,8 +703,9 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                     </div>
 
                     <div class="form-group-clean">
-                        <label for="noteMedicineSelect">Select Medicine / Drug</label>
-                        <select id="noteMedicineSelect" class="form-control-clean" onchange="handleMedicineSelect(this.value)">
+                        <label>Select Medicine(s) / Drug(s)</label>
+                        <div id="noteMedicineCheckboxes" style="max-height:150px; overflow-y:auto; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:6px;"></div>
+                        <select id="noteMedicineSelect" class="form-control-clean" style="display:none;" onchange="handleMedicineSelect(this.value)">
                             <option value="">Select drug / medicine...</option>
                         </select>
                     </div>
@@ -640,17 +713,32 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                     <div class="settings-grid-2col">
                         <div class="form-group-clean">
                             <label for="noteDosage">Dosage / Instructions</label>
-                            <input type="text" id="noteDosage" class="form-control-clean" placeholder="e.g. 500mg, 1 tab TID after meals">
+                            <input type="text" id="noteDosage" class="form-control-clean" placeholder="e.g. 500mg, 1 tab BID after meals">
                         </div>
                         <div class="form-group-clean">
                             <label for="noteQuantity">Quantity</label>
-                            <input type="text" id="noteQuantity" class="form-control-clean" placeholder="e.g. 14 tabs / 1 bottle">
+                            <input type="text" id="noteQuantity" class="form-control-clean" placeholder="e.g. 30 tabs / 1 bottle">
                         </div>
                     </div>
 
                     <div class="form-group-clean">
                         <label for="notePrescription">Full Prescription Text</label>
                         <textarea id="notePrescription" class="form-control-clean" rows="2" placeholder="Prescription summary automatically formatted or manually edited"></textarea>
+                    </div>
+                </div>
+
+                <!-- Optional Follow-Up Schedule (Visible to Patient) -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem 1rem;">
+                    <div style="font-size:0.76rem; font-weight:700; color:#0f172a; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:0.55rem;">Follow-Up Schedule <span style="font-weight:500; color:#64748b; text-transform:none;">(Optional — visible on patient portal)</span></div>
+                    <div class="settings-grid-2col">
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="noteFollowUpDate">Next Follow-Up Date</label>
+                            <input type="date" id="noteFollowUpDate" class="form-control-clean">
+                        </div>
+                        <div class="form-group-clean" style="margin:0;">
+                            <label for="noteFollowUpNotes">Follow-Up Instructions</label>
+                            <input type="text" id="noteFollowUpNotes" class="form-control-clean" placeholder="e.g. Return in 2 weeks for lab review">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -666,8 +754,8 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
         <div class="clean-modal-box">
             <div class="clean-modal-header">
                 <div>
-                    <h3>Register Walk-in Patient</h3>
-                    <p style="font-size:0.78rem; color:#64748b; margin-top:2px;">Admit in-person arrival to <?= htmlspecialchars($deptLabel) ?></p>
+                    <h3>Walk-in / Unscheduled Patient</h3>
+                    <p style="font-size:0.78rem; color:#64748b; margin-top:2px;">Admit face-to-face arrival to <?= htmlspecialchars($deptLabel) ?></p>
                 </div>
                 <button type="button" class="clean-modal-close" onclick="closeWalkinModal()">&times;</button>
             </div>

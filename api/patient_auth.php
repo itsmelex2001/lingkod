@@ -37,20 +37,24 @@ if ($username === '' || $password === '') {
 }
 
 try {
+    ensurePatientOtpColumns($pdo);
+
     $stmt = $pdo->prepare("
-        SELECT id, patient_id, full_name, email, username, password, is_verified, status
+        SELECT id, patient_id, full_name, email, username, password, is_verified, status, otp_hash, otp_expires_at, otp_attempts
         FROM patients
-        WHERE username = :username
+        WHERE (LOWER(username) = LOWER(:ident_user) OR LOWER(email) = LOWER(:ident_email))
+          AND password IS NOT NULL AND password <> ''
+        ORDER BY is_verified DESC, id DESC
         LIMIT 1
     ");
-    $stmt->execute([':username' => $username]);
+    $stmt->execute([':ident_user' => $username, ':ident_email' => $username]);
     $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$patient || empty($patient['password'])) {
         http_response_code(401);
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid username or password.'
+            'message' => 'Invalid username, email, or password.'
         ]);
         exit;
     }
@@ -59,7 +63,7 @@ try {
         http_response_code(401);
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid username or password.'
+            'message' => 'Invalid username, email, or password.'
         ]);
         exit;
     }
@@ -76,29 +80,40 @@ try {
             exit;
         }
 
-        ensurePatientOtpColumns($pdo);
-        $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
-        $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        $hasActiveOtp = !empty($patient['otp_hash'])
+            && !empty($patient['otp_expires_at'])
+            && strtotime($patient['otp_expires_at']) > time()
+            && (int)($patient['otp_attempts'] ?? 0) < 5;
 
-        $pdo->prepare("UPDATE patients SET otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
-            ->execute([$otpHash, $otpExpires, $patient['id']]);
+        $otp = null;
+        if (!$hasActiveOtp) {
+            $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
+            $otpExpires = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+
+            $pdo->prepare("UPDATE patients SET otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
+                ->execute([$otpHash, $otpExpires, $patient['id']]);
+            $_SESSION['pending_otp_sent_at'] = time();
+        }
 
         $_SESSION['pending_otp_patient_id'] = (int)$patient['id'];
         $_SESSION['pending_otp_mode']       = 'login';
         $_SESSION['pending_otp_remember']   = $remember ? 1 : 0;
-        $_SESSION['pending_otp_sent_at']    = time();
 
         flushJsonAndContinue([
             'success'      => false,
             'otp_required' => true,
-            'email_sent'   => true,
+            'email_sent'   => $otp !== null,
             'masked_email' => maskEmail($patient['email']),
             'redirect'     => '/sdn/pages/verify-otp.php',
-            'message'      => 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
+            'message'      => $otp !== null
+                ? 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
+                : 'Enter the 6-digit verification code sent to ' . maskEmail($patient['email']) . '.'
         ]);
 
-        sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp);
+        if ($otp !== null) {
+            sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp);
+        }
         exit;
     }
 

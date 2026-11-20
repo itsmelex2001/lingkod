@@ -47,32 +47,39 @@ function resolveTimeBlock(?string $preferredSlot, ?string $scheduledTime): strin
     return 'Morning';
 }
 
-$range      = trim($_GET['range'] ?? 'next_7'); // 'today', 'next_7', 'next_30', 'daily', 'monthly', 'all'
+$range      = trim($_GET['range'] ?? 'today'); // 'today', 'past_7', 'past_30', 'past_month', 'next_7', 'next_30', 'monthly', 'custom', 'all'
 $deptFilter = trim($_GET['department'] ?? 'all');
 $startDate  = trim($_GET['start_date'] ?? '');
 $endDate    = trim($_GET['end_date'] ?? '');
 $exportCsv  = !empty($_GET['export_csv']);
 
+$dateExpr = "COALESCE(DATE(medical_history_date), appointment_date, DATE(created_at))";
 $whereParts = ["1=1"];
 $params = [];
 
-if ($range === 'today' || $range === 'daily') {
-    $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) = CURDATE()";
+if ($startDate !== '' || $endDate !== '') {
+    if ($startDate !== '') {
+        $whereParts[] = "$dateExpr >= ?";
+        $params[] = $startDate;
+    }
+    if ($endDate !== '') {
+        $whereParts[] = "$dateExpr <= ?";
+        $params[] = $endDate;
+    }
+} elseif ($range === 'today' || $range === 'daily') {
+    $whereParts[] = "($dateExpr = CURDATE() OR appointment_date = CURDATE())";
+} elseif ($range === 'past_7') {
+    $whereParts[] = "$dateExpr BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()";
+} elseif ($range === 'past_30') {
+    $whereParts[] = "$dateExpr BETWEEN DATE_SUB(CURDATE(), INTERVAL 29 DAY) AND CURDATE()";
+} elseif ($range === 'past_month') {
+    $whereParts[] = "$dateExpr BETWEEN DATE_SUB(CURDATE(), INTERVAL 1 MONTH) AND CURDATE()";
 } elseif ($range === 'next_7') {
     $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 6 DAY)";
 } elseif ($range === 'next_30') {
     $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 29 DAY)";
 } elseif ($range === 'monthly') {
-    $whereParts[] = "DATE_FORMAT(COALESCE(appointment_date, DATE(created_at)), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')";
-}
-
-if ($startDate !== '') {
-    $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) >= ?";
-    $params[] = $startDate;
-}
-if ($endDate !== '') {
-    $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) <= ?";
-    $params[] = $endDate;
+    $whereParts[] = "DATE_FORMAT($dateExpr, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')";
 }
 
 if ($deptFilter !== '' && $deptFilter !== 'all') {
@@ -105,12 +112,12 @@ $patientSql = "SELECT id, patient_id, $refColExpr, full_name, contact_number, de
                       appointment_date, scheduled_time, $slotColExpr, patient_type,
                       appointment_type, unscheduled_walkin, $inqColExpr, $modeInqColExpr,
                       assigned_doctor, specialty, chief_complaints,
-                      medical_history_diagnosis, medical_history_treatment,
-                      reminder_status, reminder_sent_at, created_at,
-                      COALESCE(appointment_date, DATE(created_at)) AS record_date
+                      medical_history_diagnosis, medical_history_treatment, medical_history_prescription, active_medications,
+                      medical_history_date, reminder_status, reminder_sent_at, created_at,
+                      COALESCE(DATE(medical_history_date), appointment_date, DATE(created_at)) AS record_date
                FROM patients
                WHERE $whereClause
-               ORDER BY record_date ASC, COALESCE(scheduled_time, '08:00:00') ASC, id DESC";
+               ORDER BY record_date DESC, COALESCE(scheduled_time, '08:00:00') ASC, id DESC";
 
 $stmt = $pdo->prepare($patientSql);
 $stmt->execute($params);
@@ -506,39 +513,76 @@ if ($exportCsv) {
     exit;
 }
 
+// Build Consultation Report Summary: Unique Doctors & Prescribed Medications Tally
+$doctorTally = [];
+$medicationTally = [];
+foreach ($allPatients as $rec) {
+    $docName = trim((string)($rec['assigned_doctor'] ?? ''));
+    if ($docName !== '' && strcasecmp($docName, 'None') !== 0) {
+        $doctorTally[$docName] = ($doctorTally[$docName] ?? 0) + 1;
+    }
+    $rawMeds = trim((string)($rec['active_medications'] ?? ''));
+    if ($rawMeds !== '') {
+        $decoded = json_decode($rawMeds, true);
+        if (is_array($decoded)) {
+            $items = isset($decoded['medicine_name']) ? [$decoded] : $decoded;
+            foreach ($items as $mItem) {
+                $mName = is_array($mItem) ? trim((string)($mItem['medicine_name'] ?? ($mItem['name'] ?? ''))) : trim((string)$mItem);
+                if ($mName !== '') {
+                    $medicationTally[$mName] = ($medicationTally[$mName] ?? 0) + 1;
+                }
+            }
+        }
+    }
+}
+arsort($doctorTally);
+arsort($medicationTally);
+$totalDoctorsActive = count($doctorTally);
+$totalMedicationsPrescribed = array_sum($medicationTally);
+
 $payload = [
     'range'   => $range,
     'summary' => [
-        'total_patients'        => $totalPatients,
-        'total_upcoming'        => $upcomingTotalCount,
-        'total_needs_action'    => $needsActionCount,
-        'total_needs_doctor'    => $needsDoctorCount,
-        'total_for_approval'    => $forApprovalCount,
-        'total_confirmed_ready' => $confirmedReadyCount,
-        'total_in_clinic'       => $inClinicCount,
-        'total_completed'       => $completedCount,
-        'total_walkin'          => $walkinCount,
-        'total_online'          => $onlineCount,
-        'total_noshow'          => $noshowCount,
-        'total_ongoing'         => $ongoingCount,
-        'total_approved'        => $approvedCount,
-        'total_inquiries'       => $inquiryCount,
-        'morning_count'         => $morningCount,
-        'afternoon_count'       => $afternoonCount,
-        'assigned_doctor_count' => $assignedDoctorCount,
-        'completion_rate'       => $completionRate,
-        'completion_rate_text'  => $completionRate . '%',
-        'noshow_rate'           => $noshowRate,
-        'noshow_rate_text'      => $noshowRate . '%',
-        'walkin_ratio'          => $walkinRatio,
-        'walkin_ratio_text'     => $walkinRatio . '%'
+        'total_patients'               => $totalPatients,
+        'total_doctors_active'         => $totalDoctorsActive,
+        'total_medications_prescribed' => $totalMedicationsPrescribed,
+        'total_upcoming'               => $upcomingTotalCount,
+        'total_needs_action'           => $needsActionCount,
+        'total_needs_doctor'           => $needsDoctorCount,
+        'total_for_approval'           => $forApprovalCount,
+        'total_confirmed_ready'        => $confirmedReadyCount,
+        'total_in_clinic'              => $inClinicCount,
+        'total_completed'              => $completedCount,
+        'total_walkin'                 => $walkinCount,
+        'total_online'                 => $onlineCount,
+        'total_noshow'                 => $noshowCount,
+        'total_ongoing'                => $ongoingCount,
+        'total_approved'               => $approvedCount,
+        'total_inquiries'              => $inquiryCount,
+        'morning_count'                => $morningCount,
+        'afternoon_count'              => $afternoonCount,
+        'assigned_doctor_count'        => $assignedDoctorCount,
+        'completion_rate'              => $completionRate,
+        'completion_rate_text'         => $completionRate . '%',
+        'noshow_rate'                  => $noshowRate,
+        'noshow_rate_text'             => $noshowRate . '%',
+        'walkin_ratio'                 => $walkinRatio,
+        'walkin_ratio_text'            => $walkinRatio . '%'
+    ],
+    'consultation_report' => [
+        'patients_count'     => $totalPatients,
+        'completed_count'    => $completedCount,
+        'doctors_count'      => $totalDoctorsActive,
+        'medications_count'  => $totalMedicationsPrescribed,
+        'doctors_breakdown'  => array_map(fn($k, $v) => ['doctor' => $k, 'patients' => $v], array_keys($doctorTally), array_values($doctorTally)),
+        'medications_breakdown' => array_map(fn($k, $v) => ['medication' => $k, 'count' => $v], array_keys($medicationTally), array_values($medicationTally))
     ],
     'departments'       => array_values($deptStats),
     'chart_series'      => array_values($chartBuckets),
     'upcoming_patients' => array_slice($upcomingList, 0, 150),
     'daily_reports'     => $dailyList,
     'monthly_reports'   => $monthlyList,
-    'recent_records'    => array_slice(array_reverse($allPatients), 0, 100)
+    'recent_records'    => array_slice($allPatients, 0, 150)
 ];
 
 respondOk(array_merge(['data' => $payload], $payload));

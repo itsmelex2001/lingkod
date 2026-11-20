@@ -36,11 +36,17 @@ if ($method === 'POST' || $method === 'DELETE') {
 $dept = $_GET['department'] ?? null;
 $mode = $_GET['mode']       ?? null;
 
-// Ensure profile_image column exists even if schema lock predates v6
+// Ensure profile_image, license_number, and title columns exist
 try {
     $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
     if (!in_array('profile_image', $docCols, true)) {
         @$pdo->exec("ALTER TABLE doctors ADD COLUMN profile_image VARCHAR(255) NULL");
+    }
+    if (!in_array('license_number', $docCols, true)) {
+        @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+    }
+    if (!in_array('title', $docCols, true)) {
+        @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
     }
 } catch (Throwable $ignore) {}
 
@@ -50,7 +56,7 @@ if ($method === 'GET') {
     // Admin: get all doctors with full details
     if ($mode === 'manage') {
         $stmt = $pdo->query(
-            "SELECT id, name, specialization, department, schedule_start, schedule_end,
+            "SELECT id, name, title, license_number, specialization, department, schedule_start, schedule_end,
                     total_slots, status, schedule_date, profile_image
              FROM doctors
              ORDER BY department, name ASC"
@@ -69,7 +75,7 @@ if ($method === 'GET') {
     // Assign-doctor dropdown (admin patient profile)
     if ($mode === 'assign') {
         $stmt = $pdo->query(
-            "SELECT id, name, specialization, department, status, profile_image
+            "SELECT id, name, title, license_number, specialization, department, status, profile_image
              FROM doctors
              ORDER BY department, name ASC"
         );
@@ -79,7 +85,7 @@ if ($method === 'GET') {
     // Schedule view (public)
     if ($dept) {
         $stmt = $pdo->prepare(
-            "SELECT id, name, specialization, department,
+            "SELECT id, name, title, license_number, specialization, department,
                     TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
                     status, schedule_date, profile_image
@@ -90,7 +96,7 @@ if ($method === 'GET') {
         $stmt->execute([$dept, $dept]);
     } else {
         $stmt = $pdo->query(
-            "SELECT id, name, specialization, department,
+            "SELECT id, name, title, license_number, specialization, department,
                     TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
                     TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
                     status, schedule_date, profile_image
@@ -140,6 +146,8 @@ if ($method === 'POST' && $isAdmin) {
     // ── CREATE doctor ────────────────────────────────────────────────────────
     if ($action === 'create') {
         $name           = trim($b['name'] ?? '');
+        $title          = trim($b['title'] ?? '');
+        $licenseNumber  = trim($b['license_number'] ?? '');
         $specialization = trim($b['specialization'] ?? '');
         $departmentRaw  = trim($b['department'] ?? '');
         $deptMap = [
@@ -169,10 +177,10 @@ if ($method === 'POST' && $isAdmin) {
         }
 
         $stmt = $pdo->prepare(
-            "INSERT INTO doctors (name, specialization, department, total_slots, status, schedule_date)
-             VALUES (?, ?, ?, ?, ?, CURDATE())"
+            "INSERT INTO doctors (name, title, license_number, specialization, department, total_slots, status, schedule_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())"
         );
-        $stmt->execute([$name, $specialization, $department, $totalSlots, $status]);
+        $stmt->execute([$name, $title !== '' ? $title : null, $licenseNumber !== '' ? $licenseNumber : null, $specialization, $department, $totalSlots, $status]);
         $newDoctorId = $pdo->lastInsertId();
 
         $profileImageUrl = null;
@@ -202,7 +210,7 @@ if ($method === 'POST' && $isAdmin) {
         $updates = [];
         $params  = [];
 
-        foreach (['name', 'specialization', 'department', 'total_slots', 'status'] as $field) {
+        foreach (['name', 'title', 'license_number', 'specialization', 'department', 'total_slots', 'status'] as $field) {
             if (isset($b[$field])) {
                 if ($field === 'department') {
                     $deptMap = [
