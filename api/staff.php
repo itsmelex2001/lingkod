@@ -34,14 +34,14 @@ if ($method === 'GET') {
         respondOk(['data' => $user]);
     }
 
-    // Get all staff (for both admin and staff portals), excluding current user
+    // Get all medical staff accounts (exclude current admin, patient portal accounts, and legacy superadmin)
     if (!isset($_GET['patient_id'])) {
         $stmt = $pdo->prepare(
-            "SELECT id, username, full_name, role, department, profile_image, created_at, status, 
-                    CASE WHEN role = 'admin' THEN 'admin' ELSE COALESCE(department, 'Unassigned') END AS dept
+            "SELECT id, username, full_name, role, department, profile_image, created_at, status,
+                    COALESCE(department, 'Unassigned') AS dept
              FROM users
-             WHERE username != ?
-             ORDER BY role DESC, username ASC"
+             WHERE role = 'staff' AND username != ?
+             ORDER BY department ASC, username ASC"
         );
         $stmt->execute([$actor]);
         respondOk(['data' => $stmt->fetchAll()]);
@@ -294,6 +294,9 @@ if ($method === 'POST') {
 
         $del = $pdo->prepare("DELETE FROM users WHERE id = ? AND role = 'staff'");
         $del->execute([$userId]);
+        if ($del->rowCount() === 0) {
+            respondErr('Only medical staff accounts can be deleted from User Management.', 400);
+        }
 
         addLog($pdo, 'warning', 'Staff Account Deleted', $actor,
                "Staff account '{$staffUser['username']}' has been deleted.");
@@ -426,7 +429,7 @@ if ($method === 'DELETE' && $role === 'admin') {
     $result = $del->execute([$userId]);
 
     if ($del->rowCount() === 0) {
-        respondErr('Could not delete staff account.', 400);
+        respondErr('Only medical staff accounts can be deleted from User Management.', 400);
     }
 
     addLog($pdo, 'warning', 'Staff Account Deleted', $actor,

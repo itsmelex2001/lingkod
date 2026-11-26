@@ -66,8 +66,27 @@ try {
 
 // ── Self-healing Schema Check ────────────────────────────────────────────────
 try {
-    $lockFile = sys_get_temp_dir() . '/sdn_schema_v6.lock';
+    $lockFile = sys_get_temp_dir() . '/sdn_schema_v8.lock';
     if (!file_exists($lockFile) && isset($pdo)) {
+        $execSafe = static function (PDO $pdo, string $sql): void {
+            try {
+                $pdo->exec($sql);
+            } catch (Throwable $e) {
+                // Ignore individual idempotent DDL errors so subsequent migrations still run
+            }
+        };
+
+        $pColsEarly = $pdo->query("SHOW COLUMNS FROM `patients`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('rescheduled_by_staff', $pColsEarly, true)) {
+            $execSafe($pdo, "ALTER TABLE `patients` ADD COLUMN `rescheduled_by_staff` TINYINT(1) NOT NULL DEFAULT 0");
+        }
+        if (!in_array('rescheduled_from_date', $pColsEarly, true)) {
+            $execSafe($pdo, "ALTER TABLE `patients` ADD COLUMN `rescheduled_from_date` DATE NULL");
+        }
+        if (!in_array('rescheduled_at', $pColsEarly, true)) {
+            $execSafe($pdo, "ALTER TABLE `patients` ADD COLUMN `rescheduled_at` DATETIME NULL");
+        }
+
         @touch($lockFile);
         $uCols = $pdo->query("SHOW COLUMNS FROM `users`")->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('email', $uCols, true)) {
@@ -238,6 +257,20 @@ try {
         }
         @$pdo->exec("ALTER TABLE `doctors` MODIFY COLUMN `status` VARCHAR(30) NOT NULL DEFAULT 'in'");
     }
+
+    // Runs even after the schema lock. Account profiles with no visit were
+    // stored as pending and counted as approvals.
+    @$pdo->exec("
+        UPDATE `patients`
+        SET `status` = 'registered'
+        WHERE LOWER(TRIM(COALESCE(`status`, ''))) IN ('pending', 'for_approval', 'for_processing', 'for approval')
+          AND (`appointment_date` IS NULL OR `appointment_date` = '0000-00-00')
+          AND (`department` IS NULL OR TRIM(`department`) = '')
+          AND (`chief_complaints` IS NULL OR TRIM(`chief_complaints`) = '')
+          AND (`consultation_nature` IS NULL OR TRIM(`consultation_nature`) = '')
+          AND COALESCE(`unscheduled_walkin`, 0) = 0
+          AND COALESCE(`inquiry_only`, 0) = 0
+    ");
 } catch (Throwable $ignore) {
     // Continue gracefully
 }

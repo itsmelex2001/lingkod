@@ -1,71 +1,122 @@
 /**
- * Custom Notifier to replace native alert() and confirm() dialogs
+ * Unified Lingkod Notifier — replaces native alert() and provides window.showToast()
  */
 
 class Notifier {
   static init() {
-    if (!document.getElementById('custom-notifier-container')) {
-      const container = document.createElement('div');
+    let container = document.getElementById('custom-notifier-container');
+    if (!container) {
+      container = document.createElement('div');
       container.id = 'custom-notifier-container';
+      container.setAttribute('aria-live', 'polite');
       document.body.appendChild(container);
     }
+    return container;
   }
 
-  static show(message, type = 'info') {
-    this.init();
-    const container = document.getElementById('custom-notifier-container');
+  static normalizeVariant(message, type) {
+    const raw = String(type || '').toLowerCase();
+    if (raw === 'error' || raw === 'danger') return 'error';
+    if (raw === 'warning' || raw === 'warn') return 'warning';
+    if (raw === 'info' || raw === 'muted') return 'info';
+    if (raw === 'success') return 'success';
+    const lower = String(message || '').toLowerCase();
+    if (lower.includes('error') || lower.includes('fail') || lower.includes('invalid')) return 'error';
+    return 'success';
+  }
 
-    const toast = document.createElement('div');
-    toast.className = 'custom-toast';
-    if (type === 'error') toast.style.borderLeftColor = '#d32f2f';
-
-    const isError = type === 'error' || message.toLowerCase().includes('error') || message.toLowerCase().includes('fail');
-    const iconClass = isError ? 'error' : '';
-    const title = isError ? 'System Alert' : 'Notification';
-    
-    // Update border color if it's an error string even if type was info
-    if (isError) {
-      toast.style.borderLeftColor = '#d32f2f';
+  static show(message, type = 'success', customTitle = null) {
+    const container = this.init();
+    while (container.children.length >= 3) {
+      container.firstElementChild.remove();
     }
 
-    const svgIcon = isError 
-      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
-      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+    const variant = this.normalizeVariant(message, type);
+    const titles = {
+      success: 'Success',
+      error: 'Action Failed',
+      warning: 'Attention',
+      info: 'Notice'
+    };
+    const icons = {
+      success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+      error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+      warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
 
-    toast.innerHTML = `
-      <div class="custom-toast-icon ${iconClass}">
-        ${svgIcon}
-      </div>
-      <div class="custom-toast-content">
-        <h4 class="custom-toast-title">${title}</h4>
-        <p class="custom-toast-msg">${message}</p>
-      </div>
-      <button class="custom-toast-close" onclick="this.parentElement.classList.replace('show', 'hide'); setTimeout(() => this.parentElement.remove(), 400)">&times;</button>
-    `;
+    const toast = document.createElement('div');
+    toast.className = `custom-toast is-${variant}`;
+    toast.setAttribute('role', variant === 'error' ? 'alert' : 'status');
+
+    const iconEl = document.createElement('div');
+    iconEl.className = `custom-toast-icon ${variant}`;
+    iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.innerHTML = icons[variant];
+
+    const contentEl = document.createElement('div');
+    contentEl.className = 'custom-toast-content';
+
+    const titleEl = document.createElement('h4');
+    titleEl.className = 'custom-toast-title';
+    titleEl.textContent = customTitle || titles[variant];
+
+    const msgEl = document.createElement('p');
+    msgEl.className = 'custom-toast-msg';
+    msgEl.textContent = String(message ?? '');
+
+    contentEl.append(titleEl, msgEl);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'custom-toast-close';
+    closeBtn.setAttribute('aria-label', 'Dismiss notification');
+    closeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    const progressEl = document.createElement('div');
+    progressEl.className = 'custom-toast-progress';
+    progressEl.setAttribute('aria-hidden', 'true');
+
+    toast.append(iconEl, contentEl, closeBtn, progressEl);
+
+    let timer = null;
+    const dismiss = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (!toast.parentElement) return;
+      toast.classList.remove('show');
+      toast.classList.add('hide');
+      setTimeout(() => {
+        if (toast.parentElement) toast.remove();
+      }, 170);
+    };
+
+    closeBtn.addEventListener('click', dismiss);
+    toast.addEventListener('mouseenter', () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    });
+    toast.addEventListener('mouseleave', () => {
+      if (toast.parentElement && toast.classList.contains('show')) {
+        timer = setTimeout(dismiss, 1800);
+      }
+    });
 
     container.appendChild(toast);
-
-    // Trigger reflow for animation
     void toast.offsetWidth;
     toast.classList.add('show');
-
-    // Auto dismiss
-    setTimeout(() => {
-      if (toast.parentElement) {
-        toast.classList.replace('show', 'hide');
-        setTimeout(() => {
-          if (toast.parentElement) toast.remove();
-        }, 400);
-      }
-    }, 4000);
+    timer = setTimeout(dismiss, 3800);
   }
 }
 
-// Override native alert globally
-window.alert = function(message) {
+window.alert = function (message) {
   Notifier.show(message);
 };
 
-window.showToast = function(message, type = 'info') {
-  Notifier.show(message, type);
+window.showToast = function (message, type = 'success', title = null) {
+  Notifier.show(message, type, title);
 };

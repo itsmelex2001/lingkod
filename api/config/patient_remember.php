@@ -102,10 +102,13 @@ function tryAutoLoginPatientFromCookie(PDO $pdo): bool {
     }
 
     try {
+        require_once __DIR__ . '/patient_otp.php';
+        ensurePatientOtpColumns($pdo);
         ensurePatientRememberTable($pdo);
         $stmt = $pdo->prepare("
             SELECT t.id AS token_id, t.token_hash, t.expires_at,
-                   p.id, p.patient_id, p.full_name, p.email, p.user_id, p.is_verified, p.status
+                   p.id, p.patient_id, p.full_name, p.email, p.user_id, p.is_verified, p.status,
+                   COALESCE(p.account_status, 'active') AS account_status
             FROM patient_remember_tokens t
             INNER JOIN patients p ON p.id = t.patient_db_id
             WHERE t.selector = ?
@@ -123,6 +126,10 @@ function tryAutoLoginPatientFromCookie(PDO $pdo): bool {
             return false;
         }
         if (isset($row['is_verified']) && (int)$row['is_verified'] !== 1) {
+            clearPatientRememberCookies($pdo, false);
+            return false;
+        }
+        if (strtolower((string)($row['account_status'] ?? 'active')) === 'suspended') {
             clearPatientRememberCookies($pdo, false);
             return false;
         }

@@ -44,11 +44,11 @@ function getDoctorStats($pdo) {
         $result = $pdo->query("SELECT COUNT(*) FROM doctors");
         $stats['total_doctors'] = $result->fetchColumn() ?? 0;
         
-        $result = $pdo->query("SELECT COUNT(*) FROM doctors WHERE status = 'available'");
-        $stats['available_doctors'] = $result->fetchColumn() ?? 0;
+        $result = $pdo->query("SELECT COUNT(*) FROM doctors WHERE LOWER(COALESCE(status, '')) IN ('in', 'available')");
+        $stats['available_doctors'] = (int)($result->fetchColumn() ?? 0);
         
-        $result = $pdo->query("SELECT COUNT(*) FROM doctors WHERE status = 'leave'");
-        $stats['doctors_on_leave'] = $result->fetchColumn() ?? 0;
+        $result = $pdo->query("SELECT COUNT(*) FROM doctors WHERE LOWER(COALESCE(status, '')) IN ('out', 'leave', 'unavailable')");
+        $stats['doctors_on_leave'] = (int)($result->fetchColumn() ?? 0);
         
         $result = $pdo->query("SELECT COUNT(*) FROM doctors WHERE status = 'booked'");
         $stats['fully_booked'] = $result->fetchColumn() ?? 0;

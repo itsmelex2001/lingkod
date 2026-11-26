@@ -16,6 +16,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/settings_helper.php';
 
 function isPatientFirstTime(PDO $pdo, string $sessionPatientId, string $email, string $firstName, string $lastName, string $birthdate, bool $isOtherPatient): bool {
     $baseWhere = "COALESCE(inquiry_only, 0) = 0
@@ -139,9 +140,9 @@ $illnessDescription = $illnessDescriptionInput !== ''
     ? $illnessDescriptionInput
     : implode(' | ', $illnessParts);
 
-$consultationMode  = trim((string)($b['consultation_mode'] ?? 'In-Person'));
-if (strcasecmp($consultationMode, 'Face-to-Face') === 0) {
-    $consultationMode = 'In-Person';
+$consultationMode  = trim((string)($b['consultation_mode'] ?? 'Face-to-Face'));
+if ($consultationMode === '' || strcasecmp($consultationMode, 'In-Person') === 0 || strcasecmp($consultationMode, 'Face-to-Face') === 0) {
+    $consultationMode = 'Face-to-Face';
 } elseif (strcasecmp($consultationMode, 'Online Teleconsultation') === 0) {
     $consultationMode = 'Teleconsultation';
 }
@@ -219,22 +220,10 @@ if (!$inquiryOnly) {
         exit;
     }
 
-    $minDate = date('Y-m-d', strtotime('+1 day'));
-    $maxDate = date('Y-m-d', strtotime('+1 year'));
-    if ($appointmentDate < $minDate) {
+    $ruleErr = validateBookingAgainstRules($pdo, $department, $appointmentDate, $scheduledTime);
+    if ($ruleErr !== null) {
         http_response_code(422);
-        echo json_encode(['success' => false, 'message' => "Appointments must be scheduled at least 1 day in advance (earliest available: $minDate)."]);
-        exit;
-    }
-    if ($appointmentDate > $maxDate) {
-        http_response_code(422);
-        echo json_encode(['success' => false, 'message' => "Appointments cannot be scheduled more than 1 year in advance (latest available: $maxDate)."]);
-        exit;
-    }
-
-    if ((int)date('w', strtotime($appointmentDate)) === 0) {
-        http_response_code(422);
-        echo json_encode(['success' => false, 'message' => 'The hospital outpatient clinics are closed on Sundays. Please select a Monday to Saturday date.']);
+        echo json_encode(['success' => false, 'message' => $ruleErr]);
         exit;
     }
 } else {
@@ -264,7 +253,7 @@ if (!$inquiryOnly && $isFirstTimePatient && strcasecmp($consultationMode, 'Telec
     http_response_code(422);
     echo json_encode([
         'success' => false,
-        'message' => 'First-time patients are required to have an initial In-Person (Face-to-Face) consultation. Teleconsultation is only available for returning patients.'
+        'message' => 'First-time patients are required to have an initial Face-to-Face consultation. Teleconsultation is only available for returning patients.'
     ]);
     exit;
 }
@@ -286,25 +275,26 @@ if ($birthdate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthdate)) {
     $age = (int)$b['age'];
 }
 
-// Retrieve existing patient account credentials and HRN if present
+// Retrieve existing patient record by email/session (works even before post-booking credentials are issued)
 $existingAccount = null;
-if ($sessionPatientId !== '' || $email !== '') {
+if (!$isOtherPatient && ($sessionPatientId !== '' || $email !== '')) {
     [$idSql, $idParams] = buildIdentityCondition($sessionPatientId, $email);
     $stmtExisting = $pdo->prepare("
-        SELECT hrn, username, password, is_verified
+        SELECT id, patient_id, user_id, hrn, username, password, is_verified
         FROM patients
         WHERE ($idSql)
-          AND password IS NOT NULL
-        ORDER BY id DESC
+          AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
+        ORDER BY (password IS NOT NULL AND password <> '') DESC, id ASC
         LIMIT 1
     ");
     $stmtExisting->execute($idParams);
     $existingAccount = $stmtExisting->fetch(PDO::FETCH_ASSOC);
 }
 
+$originalPatientId = !empty($existingAccount['patient_id']) ? $existingAccount['patient_id'] : null;
 $userPassword = $existingAccount['password'] ?? null;
 $username     = $existingAccount['username'] ?? null;
-$isVerified   = !empty($existingAccount['is_verified']) ? 1 : 1;
+$isVerified   = !empty($existingAccount['is_verified']) ? 1 : 0;
 $hrn          = !empty($existingAccount['hrn']) ? $existingAccount['hrn'] : null;
 
 // Normalize department name
@@ -377,9 +367,9 @@ try {
         $hrn = 'HRN-' . substr($newPatientId, 3);
     }
 
-    $userId = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? null;
+    $userId = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? ($existingAccount['user_id'] ?? null);
     if (!$userId && $email !== '') {
-        $uStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        $uStmt = $pdo->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1");
         $uStmt->execute([$email]);
         $userId = $uStmt->fetchColumn() ?: null;
     }
@@ -552,7 +542,7 @@ try {
     echo json_encode([
         'success'             => true,
         'message'             => $inquiryOnly ? 'Inquiry submitted successfully!' : 'Appointment booked successfully!',
-        'patient_id'          => $accountPatientId !== '' ? $accountPatientId : $newPatientId,
+        'patient_id'          => $accountPatientId !== '' ? $accountPatientId : ($originalPatientId ?: $newPatientId),
         'reference_no'        => $referenceNo,
         'booking_code'        => $newPatientId,
         'department'          => $deptName,

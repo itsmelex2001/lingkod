@@ -1,7 +1,0 @@
-{
-    "maintenance_mode": false,
-    "maintenance_message": "The system is undergoing scheduled maintenance. Please try again shortly.",
-    "maintenance_updated_at": null,
-    "maintenance_updated_by": null,
-    "smtp_configured": false
-}

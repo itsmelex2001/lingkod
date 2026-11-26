@@ -41,7 +41,7 @@
       role: { EN: "LINGKOD ASSISTANT", TL: "LINGKOD ASSISTANT" },
       avatar: "/sdn/public/assets/chibi_boy_full.png",
       welcome: {
-        EN: "Hello! I am Nurse Mika, your LINGKOD assistant. How can I help you today?",
+        EN: "Hello! I am Dr. Leo, your LINGKOD assistant. How can I help you today?",
         TL: "Kumusta! Ako si Dr. Leo, inyong LINGKOD assistant. Paano ko kayo matutulungan ngayon?"
       }
     }
@@ -447,39 +447,37 @@
       </div>
 
       <!-- Chat Conversation Window -->
-      <div class="chibi-chat-window" id="chibiChatWindow" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="chibi-chat-window" id="chibiChatWindow" data-assistant="girl" role="dialog" aria-modal="true" aria-hidden="true">
         <div class="chibi-chat-header">
-          <button type="button" class="chibi-close-btn" id="chibiCloseBtn" aria-label="Close Chat">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-
-          <div class="chibi-header-top" id="headerInfoToggle">
+          <div class="chibi-header-identity" id="headerInfoToggle">
             <div class="chibi-header-icon-wrap" id="chibiHeaderIconWrap">
               ${HEADER_ICONS[chatAssistant]}
             </div>
-            <h3 id="chibiHeaderName">${ASSISTANTS[chatAssistant].name[currentLang]}</h3>
+            <div class="chibi-header-copy">
+              <h3 id="chibiHeaderName">${ASSISTANTS[chatAssistant].name[currentLang]}</h3>
+              <p id="chibiHeaderRole">${ASSISTANTS[chatAssistant].role[currentLang]}</p>
+            </div>
           </div>
 
-          <div class="chibi-header-divider"></div>
-
-          <div class="chibi-header-bottom">
-            <p id="chibiHeaderRole">${ASSISTANTS[chatAssistant].role[currentLang]}</p>
-
+          <div class="chibi-header-actions">
             <div class="chibi-lang-dropdown">
-              <button type="button" class="chibi-lang-trigger" id="chibiLangTrigger" aria-label="Switch Language">
+              <button type="button" class="chibi-lang-trigger" id="chibiLangTrigger" aria-label="Switch Language" aria-haspopup="menu" aria-expanded="false">
                 <span id="chibiLangCode">${currentLang}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
-              <div class="chibi-lang-menu" id="chibiLangMenu" hidden>
-                <button type="button" class="chibi-lang-option active" data-lang="EN" id="btnLangEN">EN (English)</button>
-                <button type="button" class="chibi-lang-option" data-lang="TL" id="btnLangTL">TL (Tagalog)</button>
+              <div class="chibi-lang-menu" id="chibiLangMenu" role="menu" hidden>
+                <button type="button" class="chibi-lang-option active" role="menuitem" data-lang="EN" id="btnLangEN">EN (English)</button>
+                <button type="button" class="chibi-lang-option" role="menuitem" data-lang="TL" id="btnLangTL">TL (Tagalog)</button>
               </div>
             </div>
+            <button type="button" class="chibi-close-btn" id="chibiCloseBtn" aria-label="Close Chat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -511,14 +509,17 @@
         const isHidden = langMenu.hasAttribute('hidden');
         if (isHidden) {
           langMenu.removeAttribute('hidden');
+          langTrigger.setAttribute('aria-expanded', 'true');
         } else {
           langMenu.setAttribute('hidden', '');
+          langTrigger.setAttribute('aria-expanded', 'false');
         }
       });
 
       document.addEventListener('click', () => {
         if (!langMenu.hasAttribute('hidden')) {
           langMenu.setAttribute('hidden', '');
+          langTrigger.setAttribute('aria-expanded', 'false');
         }
       });
     }
@@ -526,11 +527,13 @@
     btnEN.addEventListener('click', (e) => {
       e.stopPropagation();
       if (langMenu) langMenu.setAttribute('hidden', '');
+      if (langTrigger) langTrigger.setAttribute('aria-expanded', 'false');
       switchLanguage('EN');
     });
     btnTL.addEventListener('click', (e) => {
       e.stopPropagation();
       if (langMenu) langMenu.setAttribute('hidden', '');
+      if (langTrigger) langTrigger.setAttribute('aria-expanded', 'false');
       switchLanguage('TL');
     });
     // Header assistant switching disabled per design
@@ -550,6 +553,38 @@
     } else {
       startWalkingCycle();
     }
+
+    hydrateLiveFaqs();
+  }
+
+  async function hydrateLiveFaqs() {
+    try {
+      const res = await fetch('/sdn/api/admin-settings-router.php?route=/public/chatbot-faqs', {
+        headers: { Accept: 'application/json' }
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const data = json && json.data;
+      if (!data) return;
+
+      ['EN', 'TL'].forEach((lang) => {
+        if (Array.isArray(data[lang]) && data[lang].length > 0) {
+          faqs[lang] = data[lang];
+          topics[lang] = data[lang].slice(0, 4).map((item) => item.question);
+        }
+      });
+
+      if (isOpen && showingMainTopics) {
+        renderChatBody(false);
+      }
+    } catch (_) {
+      // Silent fallback to bundled EN/TL FAQs when Laravel API is offline
+    }
+  }
+
+  function matchesAssistantPersona(item) {
+    if (!item || !item.persona || item.persona === 'both') return true;
+    return chatAssistant === 'boy' ? item.persona === 'dr_leo' : item.persona === 'nurse_mika';
   }
 
   // --- Walking Loop ---
@@ -667,6 +702,8 @@
     if (iconWrap) iconWrap.innerHTML = HEADER_ICONS[chatAssistant];
     if (nameEl) nameEl.textContent = prof.name[currentLang];
     if (roleEl) roleEl.textContent = prof.role[currentLang];
+    const windowEl = document.getElementById('chibiChatWindow');
+    if (windowEl) windowEl.setAttribute('data-assistant', chatAssistant);
   }
 
   function switchLanguage(lang) {
@@ -731,13 +768,18 @@
 
         // Initial 4 Topic Cards at original top area (only when showingMainTopics is true)
         if (m.isInitial && showingMainTopics) {
+          const personaTopics = (faqs[currentLang] || [])
+            .filter(matchesAssistantPersona)
+            .slice(0, 4)
+            .map((item) => item.question);
+          const displayTopics = personaTopics.length > 0 ? personaTopics : topics[currentLang];
           const cardContainer = document.createElement('div');
           cardContainer.className = 'chibi-faq-container';
           cardContainer.id = 'initialTopicsList';
           cardContainer.innerHTML = `
             <div class="chibi-faq-label">${dict[currentLang].selectQuestion}</div>
             <div class="chibi-faq-list">
-              ${topics[currentLang].map(topic => `
+              ${displayTopics.map(topic => `
                 <button type="button" class="chibi-faq-item" data-question="${topic.replace(/"/g, '&quot;')}">
                   <span class="chibi-faq-text">${topic}</span>
                   <svg class="chibi-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -817,7 +859,7 @@
   }
 
   function findBestMatch(queryText) {
-    const list = faqs[currentLang];
+    const list = (faqs[currentLang] || []).filter(matchesAssistantPersona);
     const clean = queryText.toLowerCase().trim();
 
     const direct = list.find(

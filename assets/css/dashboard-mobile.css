@@ -82,6 +82,10 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   }
 
+  .sidebar-toggle-btn {
+    display: none !important;
+  }
+
   .sidebar-brand-box {
     width: 44px;
     height: 44px;
@@ -609,9 +613,15 @@
     text-overflow: ellipsis;
   }
 
-  #dashUpcomingList .item-row > div:last-child {
+  #dashUpcomingList .appt-schedule-col {
     grid-column: 2;
     grid-row: 2;
+    gap: 3px;
+  }
+
+  #dashUpcomingList .item-row > div:last-child {
+    grid-column: 2;
+    grid-row: 3;
     justify-self: start;
     display: flex;
     align-items: center;
@@ -686,6 +696,34 @@
   }
 
   /* ── APPOINTMENTS PAGE ── */
+  .appt-workspace-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .appt-panel-head,
+  .appt-filter-strip {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .appt-list-header,
+  .appt-count-meta {
+    display: none !important;
+  }
+
+  .appt-date-pill {
+    display: contents;
+  }
+
   .toolbar-row {
     display: flex;
     flex-direction: column;
@@ -698,7 +736,7 @@
   /* Segmented Control Filter Tabs */
   .filter-pills-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
     padding: 4px;
     background: #e2e8f0;
@@ -845,7 +883,7 @@
     display: grid;
     grid-template-columns: 48px minmax(0, 1fr);
     column-gap: 12px;
-    row-gap: 12px;
+    row-gap: 10px;
     padding: var(--card-pad);
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -854,9 +892,15 @@
     width: 100%;
   }
 
+  #fullApptsList .appt-schedule-col {
+    grid-column: 2;
+    grid-row: 2;
+    gap: 3px;
+  }
+
   #fullApptsList .item-row > div:last-child {
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
     display: flex;
     align-items: center;
     justify-content: space-between;

@@ -15,6 +15,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/patient_otp.php';
 
 // Access guard
 if (empty($_SESSION['patient_logged_in']) || (empty($_SESSION['patient_id']) && empty($_SESSION['patient_email']))) {
@@ -239,12 +240,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 WHERE {$whereSql}
             ");
             $upd->execute(array_merge([$finalPath], $whereParams));
+            if ($userId) {
+                try {
+                    if ($pdo->query("SHOW COLUMNS FROM users LIKE 'profile_image'")->fetch()) {
+                        $pdo->prepare("UPDATE users SET profile_image = ? WHERE id = ?")->execute([$finalPath, $userId]);
+                    }
+                } catch (Throwable $ignoreUserImg) {}
+            }
             $_SESSION['patient_profile_image'] = $finalPath;
 
-            echo json_encode(['success' => true, 'profile_image' => $finalPath, 'message' => 'Profile photo updated.']);
+            echo json_encode(['success' => true, 'profile_image' => $finalPath, 'message' => 'Profile photo saved.']);
             exit;
         } catch (Throwable $e) {
             echo json_encode(['success' => false, 'message' => 'Could not update profile photo.']);
+            exit;
+        }
+    }
+
+    if ($action === 'toggle_otp') {
+        $enabled = !empty($body['enabled']) ? 1 : 0;
+        try {
+            ensurePatientOtpColumns($pdo);
+            [$whereSql, $whereParams] = buildPatientWhereClause($userId, $patientId, $patientEmail);
+
+            if ($enabled === 1) {
+                $stmtEmail = $pdo->prepare("SELECT email FROM patients WHERE ({$whereSql}) AND email IS NOT NULL AND email <> '' ORDER BY id DESC LIMIT 1");
+                $stmtEmail->execute($whereParams);
+                $regEmail = trim((string)($stmtEmail->fetchColumn() ?: ''));
+                if ($regEmail === '' || !filter_var($regEmail, FILTER_VALIDATE_EMAIL)) {
+                    http_response_code(422);
+                    echo json_encode(['success' => false, 'message' => 'A valid registered email is required to enable two-step verification.']);
+                    exit;
+                }
+            }
+
+            $upd = $pdo->prepare("UPDATE patients SET is_otp_enabled = ? WHERE {$whereSql}");
+            $upd->execute(array_merge([$enabled], $whereParams));
+
+            echo json_encode([
+                'success'        => true,
+                'is_otp_enabled' => $enabled === 1,
+                'message'        => $enabled === 1
+                    ? 'Email two-step verification enabled.'
+                    : 'Email two-step verification disabled.'
+            ]);
+            exit;
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Could not update two-step verification setting.']);
             exit;
         }
     }
@@ -292,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 try {
-    // 0. Auto-link appointments for patient across their identifiers
+    // 0. Auto-link appointments for patient across their stable identifiers (user_id / email / patient_id)
     if ($userId) {
         $linkClauses = [];
         $linkParams  = [$userId];
@@ -304,10 +347,6 @@ try {
             $linkClauses[] = "patient_id = ?";
             $linkParams[]  = $patientId;
         }
-        if (!empty($_SESSION['patient_name'])) {
-            $linkClauses[] = "LOWER(TRIM(full_name)) = LOWER(TRIM(?))";
-            $linkParams[]  = $_SESSION['patient_name'];
-        }
         if (!empty($linkClauses)) {
             try {
                 $linkSql = "UPDATE patients SET user_id = ? WHERE user_id IS NULL AND (" . implode(' OR ', $linkClauses) . ")";
@@ -316,7 +355,34 @@ try {
         }
     }
 
-    // 1. Profile information - match latest record across user_id, patient_id, email, or full name
+    // 1. Canonical account owner profile — anchored to users.patient_id or earliest non-dependent account row
+    ensurePatientOtpColumns($pdo);
+    $hasPatientAvatarCol = false;
+    try {
+        $hasPatientAvatarCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'profile_image'")->fetch();
+    } catch (Throwable $ignoreCol) {}
+    $avatarSelect = $hasPatientAvatarCol ? ', profile_image' : '';
+    $otpSelect = ', COALESCE(is_otp_enabled, 0) AS is_otp_enabled';
+
+    $profile = null;
+    if ($userId) {
+        try {
+            $uRowStmt = $pdo->prepare("SELECT patient_id FROM users WHERE id = ? LIMIT 1");
+            $uRowStmt->execute([$userId]);
+            $ownerRowId = $uRowStmt->fetchColumn();
+            if ($ownerRowId && is_numeric($ownerRowId)) {
+                $ownerStmt = $pdo->prepare("
+                    SELECT id, patient_id, hrn, full_name, gender, age, birthdate, email, contact_number, address{$avatarSelect}{$otpSelect}
+                    FROM patients
+                    WHERE id = ?
+                    LIMIT 1
+                ");
+                $ownerStmt->execute([(int)$ownerRowId]);
+                $profile = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            }
+        } catch (Throwable $ignoreOwnerRow) {}
+    }
+
     $profileClauses = [];
     $profileParams  = [];
     if ($userId) {
@@ -331,21 +397,31 @@ try {
         $profileClauses[] = "email = ?";
         $profileParams[]  = $patientEmail;
     }
-    if (!empty($_SESSION['patient_name'])) {
-        $profileClauses[] = "LOWER(TRIM(full_name)) = LOWER(TRIM(?))";
-        $profileParams[]  = $_SESSION['patient_name'];
-    }
 
     $profileSql = !empty($profileClauses) ? implode(' OR ', $profileClauses) : "1=0";
-    $stmtProfile = $pdo->prepare("
-        SELECT id, patient_id, hrn, full_name, gender, age, birthdate, email, contact_number, address
-        FROM patients
-        WHERE $profileSql
-        ORDER BY id DESC
-        LIMIT 1
-    ");
-    $stmtProfile->execute($profileParams);
-    $profile = $stmtProfile->fetch(PDO::FETCH_ASSOC);
+    if (!$profile) {
+        $stmtProfile = $pdo->prepare("
+            SELECT id, patient_id, hrn, full_name, gender, age, birthdate, email, contact_number, address{$avatarSelect}{$otpSelect}
+            FROM patients
+            WHERE ($profileSql)
+              AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
+            ORDER BY (password IS NOT NULL AND password <> '') DESC, id ASC
+            LIMIT 1
+        ");
+        $stmtProfile->execute($profileParams);
+        $profile = $stmtProfile->fetch(PDO::FETCH_ASSOC);
+    }
+    if (!$profile) {
+        $stmtFallback = $pdo->prepare("
+            SELECT id, patient_id, hrn, full_name, gender, age, birthdate, email, contact_number, address{$avatarSelect}{$otpSelect}
+            FROM patients
+            WHERE ($profileSql)
+            ORDER BY id ASC
+            LIMIT 1
+        ");
+        $stmtFallback->execute($profileParams);
+        $profile = $stmtFallback->fetch(PDO::FETCH_ASSOC);
+    }
 
     if (!$profile) {
         $profile = [
@@ -356,9 +432,46 @@ try {
             'contact_number' => '',
             'gender'         => '',
             'birthdate'      => '',
-            'address'        => ''
+            'address'        => '',
+            'profile_image'  => null
         ];
     }
+
+    // Resolve persisted profile image even if a newer booking row has NULL profile_image
+    $resolvedAvatar = !empty($profile['profile_image']) ? $profile['profile_image'] : null;
+    if ($resolvedAvatar === null && $hasPatientAvatarCol && !empty($profileClauses)) {
+        try {
+            $stmtAvatar = $pdo->prepare("
+                SELECT profile_image
+                FROM patients
+                WHERE ($profileSql) AND profile_image IS NOT NULL AND profile_image <> ''
+                ORDER BY id DESC
+                LIMIT 1
+            ");
+            $stmtAvatar->execute($profileParams);
+            $foundAvatar = $stmtAvatar->fetchColumn();
+            if (is_string($foundAvatar) && trim($foundAvatar) !== '') {
+                $resolvedAvatar = trim($foundAvatar);
+            }
+        } catch (Throwable $ignoreAvatarLookup) {}
+    }
+    if ($resolvedAvatar === null && $userId) {
+        try {
+            if ($pdo->query("SHOW COLUMNS FROM users LIKE 'profile_image'")->fetch()) {
+                $uImgStmt = $pdo->prepare("SELECT profile_image FROM users WHERE id = ? LIMIT 1");
+                $uImgStmt->execute([$userId]);
+                $uImg = $uImgStmt->fetchColumn();
+                if (is_string($uImg) && trim($uImg) !== '') {
+                    $resolvedAvatar = trim($uImg);
+                }
+            }
+        } catch (Throwable $ignoreUserAvatar) {}
+    }
+    if ($resolvedAvatar === null && !empty($_SESSION['patient_profile_image'])) {
+        $resolvedAvatar = $_SESSION['patient_profile_image'];
+    }
+    $profile['profile_image'] = $resolvedAvatar;
+    $_SESSION['patient_profile_image'] = $resolvedAvatar;
 
     // Resolve permanent account_patient_id from users table so header ID never changes across bookings
     $accountPatientId = '';
@@ -375,6 +488,8 @@ try {
     if ($accountPatientId !== '') {
         $profile['patient_id'] = $accountPatientId;
         $_SESSION['patient_id'] = $accountPatientId;
+    } elseif (!empty($profile['patient_id'])) {
+        $_SESSION['patient_id'] = $profile['patient_id'];
     }
     if (!empty($profile['full_name'])) {
         $_SESSION['patient_name'] = $profile['full_name'];
@@ -430,11 +545,15 @@ try {
             reference_no,
             hrn,
             user_id,
+            full_name,
+            patient_type,
+            receiver,
             department,
             appointment_date,
             scheduled_time,
             preferred_time_slot,
             appointment_recipient,
+            relationship_to_patient,
             status,
             assigned_doctor,
             consultation_mode,
@@ -449,7 +568,11 @@ try {
             medical_history_prescription,
             active_medications,
             medical_history_date,
+            medical_history_recorded_by,
             next_visit_date,
+            rescheduled_by_staff,
+            rescheduled_from_date,
+            rescheduled_at,
             created_at,
             updated_at
         FROM patients
@@ -501,6 +624,7 @@ try {
     $upcoming      = [];
     $past          = [];
     $cancelled     = [];
+    $rescheduled   = [];
     $medications   = [];
     $notifications = [];
 
@@ -521,6 +645,17 @@ try {
         $isExplicitCancelled = in_array($statusLower, ['cancelled', 'rejected', 'declined'], true);
         $isExplicitMissed    = in_array($statusLower, ['no-show', 'no_show', 'missed'], true);
         $isExplicitCompleted = ($statusLower === 'completed');
+        $isRescheduledByStaff = !empty($appt['rescheduled_by_staff']) || ($statusLower === 'rescheduled');
+        $reschedFromFormatted = !empty($appt['rescheduled_from_date']) ? date('M j, Y', strtotime($appt['rescheduled_from_date'])) : null;
+
+        $natureLower   = strtolower(trim((string)($appt['consultation_nature'] ?? '')));
+        $apptTypeLower = strtolower(trim((string)($appt['appointment_type'] ?? '')));
+        $patTypeLower  = strtolower(trim((string)($appt['patient_type'] ?? '')));
+        $isFollowUp = str_contains($natureLower, 'follow')
+            || str_contains($apptTypeLower, 'follow')
+            || in_array($patTypeLower, ['returning', 'old', 'follow-up', 'follow up'], true)
+            || (!empty($appt['_prev_date']) && !$isOtherPatient);
+        $visitType = $isFollowUp ? 'Follow-up' : 'Initial';
 
         // Resolve display status cleanly
         if ($isExplicitCancelled) {
@@ -555,11 +690,25 @@ try {
         $rxText = trim($appt['medical_history_prescription'] ?? '');
 
         $refNo = !empty($appt['reference_no']) ? $appt['reference_no'] : ($appt['patient_id'] ?: ('APT-' . $appt['id']));
+        $recipientRaw = trim((string)($appt['appointment_recipient'] ?? 'Patient (Me)'));
+        $apptFullName = trim((string)($appt['full_name'] ?? ''));
+        $ownerFullName = trim((string)($profile['full_name'] ?? ''));
+        $isOtherPatient = in_array(strtolower($recipientRaw), ['other patient', 'someone else / dependent'], true)
+            || ($apptFullName !== '' && $ownerFullName !== '' && strcasecmp($apptFullName, $ownerFullName) !== 0);
+        $resolvedPatientName = $apptFullName !== '' ? $apptFullName : $ownerFullName;
+        $forWhoSuffix = ($isOtherPatient && $resolvedPatientName !== '') ? " for {$resolvedPatientName}" : '';
 
         $item = [
             'id'                          => (int)$appt['id'],
+            'patient_id'                  => trim((string)($appt['patient_id'] ?? '')),
             'reference_no'                => $refNo,
             'patient_code'                => $refNo,
+            'patient_name'                => $resolvedPatientName,
+            'patient_type'                => $appt['patient_type'] ?? 'New',
+            'encoded_by'                  => trim((string)($appt['medical_history_recorded_by'] ?? '')) ?: (trim((string)($appt['receiver'] ?? '')) ?: 'Online Portal'),
+            'consult_type'                => $appt['consultation_nature'] ?: ((empty($appt['consultation_mode']) || strcasecmp((string)$appt['consultation_mode'], 'In-Person') === 0) ? 'Face-to-Face' : $appt['consultation_mode']),
+            'remarks'                     => $appt['chief_complaints'] ?? '',
+            'attended_date'               => !empty($appt['medical_history_date']) ? date('F j, Y g:i A', strtotime($appt['medical_history_date'])) : date('F j, Y', strtotime($apptDate)),
             'date'                        => date('M j, Y', strtotime($apptDate)),
             'date_raw'                    => $apptDate,
             'date_iso'                    => $apptDate,
@@ -569,7 +718,9 @@ try {
             'time_label'                  => $timeLabel,
             'time_iso'                    => $timeIso,
             'preferred_time_slot'         => $appt['preferred_time_slot'] ?? null,
-            'appointment_recipient'       => $appt['appointment_recipient'] ?? 'Patient (Me)',
+            'appointment_recipient'       => $isOtherPatient ? 'Other Patient' : $recipientRaw,
+            'is_other_patient'            => $isOtherPatient,
+            'relationship_to_patient'     => !empty($appt['relationship_to_patient']) ? trim((string)$appt['relationship_to_patient']) : null,
             'existing_medical_conditions' => $appt['existing_medical_conditions'] ?? null,
             'current_medications'         => $appt['current_medications'] ?? null,
             'referral_source'             => $appt['referral_source'] ?? null,
@@ -578,8 +729,8 @@ try {
             'detail'                    => $doctor . ' • ' . $timeLabel,
             'department'                => $deptLabel,
             'doctor'                    => $doctor,
-            'mode'                      => $appt['consultation_mode'] ?: 'Face-to-Face',
-            'consult_mode'              => $appt['consultation_mode'] ?: 'Face-to-Face',
+            'mode'                      => (empty($appt['consultation_mode']) || strcasecmp((string)$appt['consultation_mode'], 'In-Person') === 0) ? 'Face-to-Face' : $appt['consultation_mode'],
+            'consult_mode'              => (empty($appt['consultation_mode']) || strcasecmp((string)$appt['consultation_mode'], 'In-Person') === 0) ? 'Face-to-Face' : $appt['consultation_mode'],
             'chief_complaints'          => $appt['chief_complaints'] ?: 'General consultation',
             'diagnosis'                 => $diagText,
             'treatment'                 => $treatText,
@@ -592,23 +743,59 @@ try {
             'previous_patient_id'       => $appt['_prev_id'] ?? null,
             'status'                    => $displayStatus,
             'status_raw'                => $statusLower,
+            'visit_type'                => $visitType,
+            'is_rescheduled'            => $isRescheduledByStaff,
+            'rescheduled_by_staff'      => $isRescheduledByStaff,
+            'rescheduled_from_date'     => $reschedFromFormatted,
             'can_reschedule'            => (!$isPast && !$isExplicitCancelled && $displayStatus === 'For approval')
         ];
 
-        if ($isExplicitCancelled) {
+        if ($isRescheduledByStaff && !$isExplicitCancelled && !$isExplicitMissed) {
+            $rescheduled[] = $item;
+        }
+
+        if ($isExplicitCancelled || $isExplicitMissed) {
             $cancelled[] = $item;
-        } elseif ($isExplicitCompleted || $isExplicitMissed || $isPast) {
+        } elseif ($isExplicitCompleted || $isPast) {
             $past[] = $item;
         } else {
             $upcoming[] = $item;
         }
 
-        // Build notifications from real events
-        if ($displayStatus === 'Confirmed') {
+        // Build notifications strictly from appointment & appointment-progress events
+        if ($isRescheduledByStaff && !$isExplicitCancelled && !$isPast) {
+            $fromNote = $reschedFromFormatted ? " from {$reschedFromFormatted}" : '';
+            $notifications[] = [
+                'id'    => 'notif-resched-' . $appt['id'],
+                'title' => $deptLabel . ' Visit Rescheduled',
+                'text'  => "Hospital staff moved the visit{$forWhoSuffix}{$fromNote} to " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} ({$item['patient_code']}).",
+                'time'  => 'Rescheduled',
+                'view'  => 'appointments',
+                'warn'  => true
+            ];
+        } elseif ($displayStatus === 'In Consultation') {
+            $notifications[] = [
+                'id'    => 'notif-ongoing-' . $appt['id'],
+                'title' => $deptLabel . ' Consultation In Progress',
+                'text'  => "Your visit{$forWhoSuffix} with {$doctor} ({$item['patient_code']}) is currently in consultation.",
+                'time'  => 'In Progress',
+                'view'  => 'appointments',
+                'warn'  => false
+            ];
+        } elseif ($displayStatus === 'Checked In') {
+            $notifications[] = [
+                'id'    => 'notif-arrived-' . $appt['id'],
+                'title' => $deptLabel . ' Visit Checked In',
+                'text'  => "Checked in{$forWhoSuffix} for your " . date('M j, Y', strtotime($apptDate)) . " visit ({$item['patient_code']}). Please wait to be called.",
+                'time'  => 'Checked In',
+                'view'  => 'appointments',
+                'warn'  => false
+            ];
+        } elseif ($displayStatus === 'Confirmed') {
             $notifications[] = [
                 'id'    => 'notif-confirm-' . $appt['id'],
                 'title' => $deptLabel . ' Visit Confirmed',
-                'text'  => "{$doctor} on " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} ({$item['patient_code']}).",
+                'text'  => "{$doctor}{$forWhoSuffix} on " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} ({$item['patient_code']}).",
                 'time'  => 'Active Schedule',
                 'view'  => 'appointments',
                 'warn'  => false
@@ -617,8 +804,26 @@ try {
             $notifications[] = [
                 'id'    => 'notif-wait-' . $appt['id'],
                 'title' => 'Appointment Awaiting Approval',
-                'text'  => "{$deptLabel} visit on " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} ({$item['patient_code']}) is pending staff verification.",
+                'text'  => "{$deptLabel} visit{$forWhoSuffix} on " . date('M j, Y', strtotime($apptDate)) . " at {$timeLabel} ({$item['patient_code']}) is pending staff verification.",
                 'time'  => 'Pending Review',
+                'view'  => 'appointments',
+                'warn'  => true
+            ];
+        } elseif ($isExplicitCompleted) {
+            $notifications[] = [
+                'id'    => 'notif-done-' . $appt['id'],
+                'title' => $deptLabel . ' Visit Completed',
+                'text'  => "Your consultation{$forWhoSuffix} with {$doctor} on " . date('M j, Y', strtotime($apptDate)) . " ({$item['patient_code']}) has been completed.",
+                'time'  => date('M j, Y', strtotime($apptDate)),
+                'view'  => 'appointments',
+                'warn'  => false
+            ];
+        } elseif ($isExplicitCancelled) {
+            $notifications[] = [
+                'id'    => 'notif-cancel-' . $appt['id'],
+                'title' => $deptLabel . ' Visit Cancelled',
+                'text'  => "Your {$deptLabel} appointment{$forWhoSuffix} on " . date('M j, Y', strtotime($apptDate)) . " ({$item['patient_code']}) was cancelled.",
+                'time'  => 'Cancelled',
                 'view'  => 'appointments',
                 'warn'  => true
             ];
@@ -694,15 +899,6 @@ try {
                     'total_days'      => $totalDays,
                     'pct'             => $pct,
                     'status'          => 'Active'
-                ];
-
-                $notifications[] = [
-                    'id'    => 'notif-med-' . $appt['id'],
-                    'title' => 'Medication Prescribed: ' . $medName,
-                    'text'  => "Diagnosed with {$medDiag}. Dosage: " . ($medDosage ?: $dailyFreq) . ".",
-                    'time'  => date('M j, Y', strtotime($prescribedDateRaw)),
-                    'view'  => 'medications',
-                    'warn'  => false
                 ];
             }
         }
@@ -798,19 +994,22 @@ try {
             'birthdate'      => $profile['birthdate'] ?? '',
             'address'        => $profile['address'] ?? '',
             'profile_image'  => $profile['profile_image'] ?? ($_SESSION['patient_profile_image'] ?? null),
+            'is_otp_enabled' => !empty($profile['is_otp_enabled']),
             'total_visits'   => count($chronologicalAppts)
         ],
         'stats'         => [
-            'upcoming_count'  => count($upcoming),
-            'past_count'      => count($past),
-            'cancelled_count' => count($cancelled),
-            'active_meds'     => count($medications),
-            'total_visits'    => count($chronologicalAppts)
+            'upcoming_count'    => count($upcoming),
+            'past_count'        => count($past),
+            'cancelled_count'   => count($cancelled),
+            'rescheduled_count' => count($rescheduled),
+            'active_meds'       => count($medications),
+            'total_visits'      => count($chronologicalAppts)
         ],
         'departments'   => $departments,
         'upcoming'      => $upcoming,
         'past'          => $past,
         'cancelled'     => $cancelled,
+        'rescheduled'   => $rescheduled,
         'medications'   => $medications,
         'notifications' => array_slice($notifications, 0, 8)
     ]);

@@ -276,125 +276,138 @@ body.splash-active .chibi-widget-container,
   transform: translateY(0);
 }
 
-/* --- Header: Match Navbar Gradient --- */
+/* One solid LINGKOD green for Nurse Mika and Dr. Leo */
+.chibi-chat-window[data-assistant="girl"],
+.chibi-chat-window[data-assistant="boy"] {
+  --chibi-header: #15803d;
+  --chibi-bubble: #c5dfb8;
+  --chibi-user: #0a8d19;
+  --chibi-chip: #c4c4c4;
+}
+
 .chibi-chat-header {
-  background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
+  background-color: var(--chibi-header, #15803d);
+  background-image: none;
   color: #ffffff;
-  padding: 14px 18px 11px 18px;
+  padding: 12px 8px 12px 14px;
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-shrink: 0;
 }
 
-.chibi-close-btn {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  background: transparent;
-  border: none;
-  outline: none !important;
-  color: #ffffff;
-  width: 26px;
-  height: 26px;
+.chibi-header-identity {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  transition: opacity 0.15s ease;
-}
-
-.chibi-close-btn:hover {
-  opacity: 0.8;
-}
-
-.chibi-header-top {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: default;
+  gap: 10px;
+  min-width: 0;
 }
 
 .chibi-header-icon-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 44px;
-  margin-bottom: 2px;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+  flex-shrink: 0;
 }
 
-.chibi-icon-steth {
-  width: 44px;
-  height: 42px;
-}
-
+.chibi-header-icon-wrap svg,
+.chibi-icon-steth,
 .chibi-icon-cap {
-  width: 50px;
-  height: 35px;
+  width: 24px;
+  height: 24px;
 }
 
+.chibi-header-copy {
+  min-width: 0;
+}
+
+.chibi-header-copy h3,
 .chibi-header-top h3 {
   margin: 0;
-  font-size: 16.5px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   color: #ffffff;
   line-height: 1.2;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
-.chibi-header-divider {
-  width: 88%;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.85);
-  margin: 8px auto 7px auto;
-}
-
-.chibi-header-bottom {
-  width: 88%;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 20px;
-}
-
+.chibi-header-copy p,
 .chibi-header-bottom p {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: #ffffff;
-  letter-spacing: 0.03em;
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chibi-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.chibi-close-btn,
+.chibi-lang-trigger {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background-color 0.15s ease;
+}
+
+.chibi-close-btn {
+  position: static;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.chibi-close-btn:hover,
+.chibi-lang-trigger:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.chibi-close-btn:focus-visible,
+.chibi-lang-trigger:focus-visible,
+.chibi-lang-option:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 /* --- Language Dropdown (EN v) --- */
 .chibi-lang-dropdown {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  position: relative;
+  right: auto;
+  top: auto;
+  transform: none;
 }
 
 .chibi-lang-trigger {
-  background: transparent;
-  border: none;
-  outline: none !important;
-  color: #ffffff;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
-  padding: 2px 4px;
+  gap: 2px;
+  padding: 0 10px;
   line-height: 1;
-}
-
-.chibi-lang-trigger:hover {
-  opacity: 0.9;
 }
 
 .chibi-lang-menu {
@@ -500,7 +513,7 @@ body.splash-active .chibi-widget-container,
 }
 
 .chibi-msg-bubble.bot {
-  background: #c5dfb8;
+  background: var(--chibi-bubble, #c5dfb8);
   color: #111827;
   border: none;
   border-radius: 8px;
@@ -508,7 +521,7 @@ body.splash-active .chibi-widget-container,
 }
 
 .chibi-msg-bubble.user {
-  background: #0a8d19;
+  background: var(--chibi-user, #0a8d19);
   color: #ffffff;
   padding: 10px 14px;
   border-radius: 8px;
@@ -554,7 +567,7 @@ body.splash-active .chibi-widget-container,
   font-weight: 700;
   text-transform: uppercase;
   color: #111827;
-  background: #c4c4c4;
+  background: var(--chibi-chip, #c4c4c4);
   padding: 7px 12px;
   border-radius: 6px;
   margin: 0 0 8px 0;
@@ -652,7 +665,7 @@ body.splash-active .chibi-widget-container,
 }
 
 .chibi-typing-bubble {
-  background: #c5dfb8;
+  background: var(--chibi-bubble, #c5dfb8);
   border-radius: 6px;
   padding: 8px 12px;
   display: inline-flex;

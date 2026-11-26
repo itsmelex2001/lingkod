@@ -16,19 +16,39 @@ $sessionEmail     = $_SESSION['patient_email'] ?? '';
 $patient = [];
 if ($isLoggedIn && isset($pdo)) {
     try {
-        $stmt = $pdo->prepare("
-            SELECT id, patient_id, full_name, first_name, last_name, middle_initial,
-                   gender, birthdate, age, contact_number, email, address, with_companion, hrn
-            FROM patients
-            WHERE (patient_id != '' AND patient_id = :pid) OR (email != '' AND email = :pemail)
-            ORDER BY id DESC
-            LIMIT 1
-        ");
-        $stmt->execute([
-            ':pid'    => $sessionPatientId,
-            ':pemail' => $sessionEmail
-        ]);
-        $patient = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $sessionUserId = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? null;
+        if ($sessionUserId) {
+            $uOwnerStmt = $pdo->prepare("SELECT patient_id FROM users WHERE id = ? LIMIT 1");
+            $uOwnerStmt->execute([$sessionUserId]);
+            $ownerRowId = $uOwnerStmt->fetchColumn();
+            if ($ownerRowId && is_numeric($ownerRowId)) {
+                $stmtOwner = $pdo->prepare("
+                    SELECT id, patient_id, full_name, first_name, last_name, middle_initial,
+                           gender, birthdate, age, contact_number, email, address, with_companion, hrn
+                    FROM patients
+                    WHERE id = ?
+                    LIMIT 1
+                ");
+                $stmtOwner->execute([(int)$ownerRowId]);
+                $patient = $stmtOwner->fetch(PDO::FETCH_ASSOC) ?: [];
+            }
+        }
+        if (empty($patient)) {
+            $stmt = $pdo->prepare("
+                SELECT id, patient_id, full_name, first_name, last_name, middle_initial,
+                       gender, birthdate, age, contact_number, email, address, with_companion, hrn
+                FROM patients
+                WHERE ((patient_id != '' AND patient_id = :pid) OR (email != '' AND email = :pemail))
+                  AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
+                ORDER BY (password IS NOT NULL AND password <> '') DESC, id ASC
+                LIMIT 1
+            ");
+            $stmt->execute([
+                ':pid'    => $sessionPatientId,
+                ':pemail' => $sessionEmail
+            ]);
+            $patient = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        }
     } catch (Throwable $e) {
         $patient = [];
     }
@@ -131,61 +151,89 @@ $profileBootstrap = [
         <div class="privacy-modal-header">
           <div class="privacy-header-left">
             <div class="privacy-icon-badge" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <polyline points="9 12 11 14 15 10"></polyline>
               </svg>
             </div>
             <div>
               <h2 id="privacyModalTitle" class="privacy-title">Data Privacy Consent Notice</h2>
-              <p class="privacy-subtitle">Republic Act No. 10173 (Data Privacy Act of 2012)</p>
+              <p class="privacy-subtitle">Republic Act No. 10173 &middot; Data Privacy Act of 2012</p>
             </div>
           </div>
           <span id="privacyScrollPill" class="privacy-status-pill pending">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
-            Scroll Down
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+            <span>Scroll to read</span>
           </span>
         </div>
 
+        <div class="privacy-progress-track" aria-hidden="true">
+          <div id="privacyReadProgress" class="privacy-progress-fill"></div>
+        </div>
+
         <div id="modalPrivacyScrollBox" class="privacy-scroll-content custom-scrollbar">
-          <p class="privacy-section-lead">
-            Mariveles Mental Wellness and General Hospital (MMWGH) — LINGKOD Patient Appointment &amp; Triage Service
-          </p>
-          <p>
-            In strict compliance with Republic Act No. 10173, otherwise known as the <em>Data Privacy Act of 2012</em> of the Republic of the Philippines, and its Implementing Rules and Regulations, MMWGH is committed to upholding your privacy rights, clinical confidentiality, and the security of your personal health data.
-          </p>
-          <p class="privacy-section-heading">1. Collection and Scope of Personal Information</p>
-          <p>
-            By proceeding to fill out this consultation booking form, you acknowledge and authorize MMWGH to process personal details (such as your full name, contact number, birthdate, age, home address, and companion information if applicable) and sensitive clinical data (such as your chief complaints and clinical triage routing).
-          </p>
-          <p class="privacy-section-heading">2. Medical Confidentiality &amp; Purpose of Processing</p>
-          <p>
-            Your information is utilized solely for clinical schedule confirmation, physician triage assignment, and logistical SMS/Email notification reminders. Specific medical diagnoses and complaints will never be published in unencrypted communications or shared with unauthorized entities.
-          </p>
-          <p class="privacy-section-heading">3. Minor Consultation Guidelines</p>
-          <p>
-            For patients under eighteen (18) years of age, a designated parent or legal guardian must be verified and must accompany the minor patient to the hospital Outpatient Triage desk during the clinic schedule.
-          </p>
-          <p class="privacy-section-heading">4. Data Subject Rights</p>
-          <p>
-            Under R.A. 10173, you retain the right to be informed, review your clinical records, dispute inaccuracies, and request correction in accordance with policies enforced by the MMWGH Data Protection Officer.
-          </p>
+          <div class="privacy-doc-intro">
+            <div class="privacy-section-lead">Mariveles Mental Wellness and General Hospital (MMWGH)</div>
+            <div class="privacy-section-sublead">LINGKOD Patient Appointment &amp; Triage Service</div>
+            <p class="privacy-intro-copy">
+              In strict compliance with Republic Act No. 10173 (<em>Data Privacy Act of 2012</em>) and its Implementing Rules and Regulations, MMWGH is committed to upholding your privacy rights, clinical confidentiality, and the security of your personal health data.
+            </p>
+          </div>
+
+          <div class="privacy-clauses">
+            <div class="privacy-clause">
+              <span class="privacy-clause-num" aria-hidden="true">01</span>
+              <div class="privacy-clause-body">
+                <p class="privacy-section-heading">Collection and Scope of Personal Information</p>
+                <p>By proceeding with this consultation booking form, you authorize MMWGH to process personal details (full name, contact number, birthdate, age, home address, and companion information if applicable) and sensitive clinical data (chief complaints and triage routing).</p>
+              </div>
+            </div>
+
+            <div class="privacy-clause">
+              <span class="privacy-clause-num" aria-hidden="true">02</span>
+              <div class="privacy-clause-body">
+                <p class="privacy-section-heading">Medical Confidentiality &amp; Purpose of Processing</p>
+                <p>Your information is used solely for clinical schedule confirmation, physician triage assignment, and SMS/Email appointment reminders. Medical diagnoses and complaints are never published in unencrypted communications or shared with unauthorized parties.</p>
+              </div>
+            </div>
+
+            <div class="privacy-clause">
+              <span class="privacy-clause-num" aria-hidden="true">03</span>
+              <div class="privacy-clause-body">
+                <p class="privacy-section-heading">Minor Consultation Guidelines</p>
+                <p>For patients under eighteen (18) years of age, a designated parent or legal guardian must be verified and must accompany the minor patient to the hospital Outpatient Triage desk during the clinic schedule.</p>
+              </div>
+            </div>
+
+            <div class="privacy-clause">
+              <span class="privacy-clause-num" aria-hidden="true">04</span>
+              <div class="privacy-clause-body">
+                <p class="privacy-section-heading">Data Subject Rights</p>
+                <p>Under R.A. 10173, you retain the right to be informed, review your clinical records, dispute inaccuracies, and request corrections in accordance with policies enforced by the MMWGH Data Protection Officer.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="privacy-consent-row">
-          <label class="privacy-checkbox-label" id="modalPrivacyLabel">
-            <input type="checkbox" id="modalPrivacyConsentCheck" disabled />
-            <span>I have read and agree to the <strong>Data Privacy Policy</strong> and consent to the processing of my information.</span>
-          </label>
-          <p id="privacyHintText" class="privacy-hint-text">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            <span>Please scroll to the bottom of the statement to unlock this checkbox.</span>
-          </p>
-        </div>
+        <div class="privacy-modal-footer">
+          <div class="privacy-consent-row">
+            <label class="privacy-checkbox-label" id="modalPrivacyLabel">
+              <input type="checkbox" id="modalPrivacyConsentCheck" disabled />
+              <span>I have read and agree to the <strong>Data Privacy Policy</strong> and consent to the processing of my information.</span>
+            </label>
+            <p id="privacyHintText" class="privacy-hint-text">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              <span>Please scroll to the bottom of the notice to enable consent.</span>
+            </p>
+          </div>
 
-        <div class="privacy-modal-actions">
-          <button type="button" id="btnProceedBooking" class="btn-proceed-privacy" disabled>
-            Proceed
-          </button>
+          <div class="privacy-modal-actions">
+            <a href="/sdn/pages/patient-dashboard.php" class="btn-cancel-privacy">Back to Portal</a>
+            <button type="button" id="btnProceedBooking" class="btn-proceed-privacy" disabled>
+              <span>Agree &amp; Proceed</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -196,7 +244,6 @@ $profileBootstrap = [
         <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="Lingkod Logo" class="nav-logo-img" />
         <div class="nav-brand-text">
           <span class="brand-title-top">Mariveles Mental Wellness and General Hospital</span>
-          <span class="brand-title-bottom">LINGKOD</span>
         </div>
       </a>
 
@@ -260,7 +307,7 @@ $profileBootstrap = [
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                 </svg>
-                <span>
+                <span id="signedInBannerText">
                   <?php if ($isLoggedIn): ?>
                     <strong>Signed-in booking:</strong> Your saved profile is pre-filled. Clinic staff will call your active mobile number to confirm before placing you in the queue.
                   <?php else: ?>
@@ -692,7 +739,7 @@ $profileBootstrap = [
           </svg>
         </div>
         <h2 class="ba-success-title" id="successTitle">Appointment Submitted</h2>
-        <div class="ba-success-actions">
+        <div class="ba-success-actions" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
           <a href="/sdn/pages/patient-dashboard.php" class="ba-btn ba-btn-next">Go to Dashboard</a>
         </div>
       </div>
@@ -701,6 +748,7 @@ $profileBootstrap = [
     <script>
       window.BA_V2_PROFILE = <?= json_encode($profileBootstrap, JSON_UNESCAPED_UNICODE) ?>;
     </script>
+    <script src="/sdn/public/js/patient-slip.js?v=<?= time() ?>"></script>
     <script src="/sdn/assets/js/book-appointment-v2.js?v=<?= time() ?>"></script>
     <script>
       document.addEventListener('keydown', function (e) {

@@ -2,6 +2,7 @@
 /**
  * Patient reschedule. Allowed only while staff has not approved the visit.
  */
+date_default_timezone_set('Asia/Manila');
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
@@ -45,24 +46,37 @@ $patientName = strtolower(trim($_SESSION['patient_name'] ?? ''));
 $userId = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? null;
 
 try {
+    $ownerClauses = [];
+    $ownerParams  = [$recordId];
+    if ($userId !== null && $userId !== '') {
+        $ownerClauses[] = 'user_id = ?';
+        $ownerParams[]  = $userId;
+    }
+    if ($patientId !== '') {
+        $ownerClauses[] = 'patient_id = ?';
+        $ownerParams[]  = $patientId;
+    }
+    if ($patientEmail !== '') {
+        $ownerClauses[] = 'email = ?';
+        $ownerParams[]  = $patientEmail;
+    }
+    if ($patientName !== '') {
+        $ownerClauses[] = 'LOWER(TRIM(full_name)) = ?';
+        $ownerParams[]  = $patientName;
+    }
+    if (empty($ownerClauses)) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Please sign in again.']);
+        exit;
+    }
+
     $stmt = $pdo->prepare("
-        SELECT id, patient_id, full_name, department, status, appointment_date
+        SELECT id, patient_id, reference_no, full_name, department, status, appointment_date
         FROM patients
-        WHERE id = :id AND (
-            (:uid IS NOT NULL AND user_id = :uid)
-            OR (:pid != '' AND patient_id = :pid)
-            OR (:email != '' AND email = :email)
-            OR (:pname != '' AND LOWER(TRIM(full_name)) = :pname)
-        )
+        WHERE id = ? AND (" . implode(' OR ', $ownerClauses) . ")
         LIMIT 1
     ");
-    $stmt->execute([
-        ':id'    => $recordId,
-        ':uid'   => $userId,
-        ':pid'   => $patientId,
-        ':email' => $patientEmail,
-        ':pname' => $patientName
-    ]);
+    $stmt->execute($ownerParams);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$row) {
@@ -72,27 +86,48 @@ try {
     }
 
     $status = strtolower(trim($row['status'] ?? ''));
-    if (!in_array($status, ['pending', 'for_approval', 'for_processing'], true)) {
+    if (!in_array($status, ['pending', 'for_approval', 'for approval', 'for_processing'], true)) {
         http_response_code(409);
         echo json_encode(['success' => false, 'message' => 'This visit is already approved, so it can no longer be rescheduled here.']);
         exit;
     }
 
+    $slotLabel = ($newTime === '13:00:00' || $newTime === '15:00:00')
+        ? 'Afternoon (1:00 PM - 5:00 PM)'
+        : 'Morning (8:00 AM - 12:00 PM)';
+    $oldDate = trim((string)($row['appointment_date'] ?? ''));
+    $fromDateVal = ($oldDate !== '' && $oldDate !== $newDate) ? $oldDate : null;
+
     $upd = $pdo->prepare("
         UPDATE patients
-        SET appointment_date = ?, scheduled_time = ?, updated_at = NOW()
+        SET appointment_date = ?,
+            scheduled_time = ?,
+            preferred_time_slot = ?,
+            rescheduled_by_staff = 1,
+            rescheduled_from_date = COALESCE(?, rescheduled_from_date),
+            rescheduled_at = NOW(),
+            updated_at = NOW()
         WHERE id = ?
     ");
-    $upd->execute([$newDate, $newTime, $recordId]);
+    $upd->execute([$newDate, $newTime, $slotLabel, $fromDateVal, $recordId]);
 
     try {
         $end = date('H:i:s', strtotime($newTime . ' +30 minutes'));
-        $pdo->prepare("
-            UPDATE appointments
-            SET appointment_date = ?, start_time = ?, end_time = ?
-            WHERE patient_id = ? AND appointment_date = ?
-        ")->execute([$newDate, $newTime, $end, $row['patient_id'], $row['appointment_date']]);
-    } catch (Exception $e) {
+        $refNo = trim((string)($row['reference_no'] ?? ''));
+        if ($refNo !== '') {
+            $pdo->prepare("
+                UPDATE appointments
+                SET appointment_date = ?, start_time = ?, end_time = ?, preferred_time_slot = ?
+                WHERE reference_no = ? OR (patient_id = ? AND appointment_date = ?)
+            ")->execute([$newDate, $newTime, $end, $slotLabel, $refNo, $row['patient_id'], $row['appointment_date']]);
+        } else {
+            $pdo->prepare("
+                UPDATE appointments
+                SET appointment_date = ?, start_time = ?, end_time = ?, preferred_time_slot = ?
+                WHERE patient_id = ? AND appointment_date = ?
+            ")->execute([$newDate, $newTime, $end, $slotLabel, $row['patient_id'], $row['appointment_date']]);
+        }
+    } catch (Throwable $e) {
         // The portal list reads the patients row. The schedule mirror is optional.
     }
 
@@ -100,7 +135,7 @@ try {
         'success' => true,
         'message' => 'Your visit is rescheduled and still waiting for staff approval.'
     ]);
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     error_log('Patient reschedule error: ' . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Could not reschedule this visit.']);

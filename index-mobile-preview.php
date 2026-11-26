@@ -155,24 +155,12 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
           <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="Lingkod Logo" class="logo-ver2-img" />
           <span class="logo-text">
             <span class="logo-title-top">Mariveles Mental Wellness and General Hospital</span>
-            <span class="logo-title-bottom">LINGKOD</span>
           </span>
         </a>
 
         <ul class="nav-links" id="navLinks">
           <li><a href="/sdn/index.php" class="active-nav"><span data-i18n="nav_home">Home</span></a></li>
-          <li class="nav-dropdown">
-            <a href="#services-new" class="nav-dropdown-toggle" style="cursor: default;">
-              <span data-i18n="nav_services">Services</span>
-              <svg class="nav-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </a>
-            <div class="dropdown-content">
-              <a href="/sdn/pages/department-select.php" style="color: #047023;" data-i18n="nav_book">Book Appointment</a>
-              <a href="/sdn/pages/schedules.php" target="_blank" rel="noopener noreferrer" style="color: #047023;" data-i18n="nav_schedule">View Schedule</a>
-            </div>
-          </li>
+          <li><a href="#services-new"><span data-i18n="nav_services">Services</span></a></li>
           <li><a href="#about-new"><span data-i18n="nav_about">About</span></a></li>
           <li><a href="#location-new"><span data-i18n="nav_location">Location</span></a></li>
           <li><a href="#footer-new"><span data-i18n="nav_contact">Contact Us</span></a></li>

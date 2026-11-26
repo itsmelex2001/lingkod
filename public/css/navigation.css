@@ -71,6 +71,7 @@
 }
 
 .nav-links a {
+  position: relative;
   display: block;
   padding: 6px 4px;
   text-decoration: none;
@@ -94,12 +95,22 @@
   text-shadow: 0 0 1px rgba(255,255,255,0.3);
 }
 
-/* Remove underline / after decor to match target screenshot */
-.nav-links a::after,
-.nav-links a:hover::after,
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 2.5px;
+  background: #ffffff;
+  border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .nav-links a.active-nav::after {
-  display: none !important;
-  content: none !important;
+  transform: scaleX(1);
 }
 
 /* ── Login & Patient Portal button matching screenshot ── */
@@ -529,13 +540,23 @@
   transform: translateY(7px);
 }
 
+.logo img.logo-nav-mark {
+  height: 58px;
+  max-height: 58px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin: 0;
+  transform: none;
+}
+
 .logo-text {
   display: flex;
   flex-direction: column;
   justify-content: center;
   text-align: left;
   gap: 1px;
-  transform: translateY(2px);
+  transform: none;
 }
 
 .logo-title-top {
@@ -648,6 +669,11 @@
     margin-left: 0;
     margin-right: 0;
     transform: none;
+  }
+
+  .logo img.logo-nav-mark {
+    height: 36px;
+    max-height: 36px;
   }
 
   .logo-title-top {

@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/settings_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') respondErr('Method not allowed.', 405);
 
@@ -112,15 +113,11 @@ if (!empty($b['birthdate'])) {
     }
 }
 
-// MMWGH Advance Booking Policy: Online appointments must be booked at least 1 day in advance!
+// Enforce General Clinic Hours & Department Scheduling Rules (same-day toggle, cutoff, capacities)
 if (!empty($b['appointment_date']) && !$isInquiryOnly && !$isWalkinQuick) {
-    $minSched = date('Y-m-d', strtotime('+1 day'));
-    $maxSched = date('Y-m-d', strtotime('+1 year'));
-    if ($b['appointment_date'] < $minSched) {
-        respondErr("MMWGH Appointment Regulation: Online consultations require advance booking (at least 1 day in advance, starting $minSched). First-time patients are accepted by Appointment Only.");
-    }
-    if ($b['appointment_date'] > $maxSched) {
-        respondErr("Scheduled Date cannot be more than 1 year in the future (max $maxSched).");
+    $ruleErr = validateBookingAgainstRules($pdo, (string)$b['department'], (string)$b['appointment_date'], (string)($b['scheduled_time'] ?? '08:00:00'));
+    if ($ruleErr !== null) {
+        respondErr($ruleErr, 422);
     }
 }
 

@@ -19,3 +19,10 @@ Options -Indexes
     Deny from all
 </FilesMatch>
 
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^api/admin/(settings|faqs|system)(/.*)?$ api/admin-settings-router.php?route=/admin/$1$2 [QSA,L]
+    RewriteRule ^api/admin/users(/.*)?$ api/admin-users-router.php?route=/admin/users$1 [QSA,L]
+    RewriteRule ^api/public/chatbot-faqs$ api/admin-settings-router.php?route=/public/chatbot-faqs [QSA,L]
+</IfModule>
+

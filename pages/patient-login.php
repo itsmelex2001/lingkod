@@ -106,9 +106,6 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
       .portal-left {
         position: relative;
         background-color: var(--color-surface-left);
-        background-image: url('/sdn/public/assets/mmwgh_front.jpeg');
-        background-size: cover;
-        background-position: center;
         color: #ffffff;
         display: flex;
         flex-direction: column;
@@ -130,6 +127,37 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           rgba(10,70,30,0.30);
         box-shadow: inset 0 0 160px rgba(0, 0, 0, 0.35);
         pointer-events: none;
+      }
+
+      .portal-left-bg-slides {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .portal-bg-slide {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        opacity: 0;
+        z-index: 0;
+        transition: none;
+        will-change: opacity;
+      }
+
+      .portal-bg-slide.is-prev {
+        opacity: 1;
+        z-index: 1;
+        transition: none;
+      }
+
+      .portal-bg-slide.is-active {
+        opacity: 1;
+        z-index: 2;
+        transition: opacity 1.1s ease-in-out;
       }
 
       .portal-left-content {
@@ -189,7 +217,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
 
       .portal-left-tagline {
         font-family: var(--font-sans);
-        font-size: clamp(2.5rem, 3.8vw, 3.5rem);
+        font-size: clamp(3rem, 4.6vw, 4.35rem);
         font-weight: 700;
         line-height: 1.12;
         color: #ffffff;
@@ -199,7 +227,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
       .portal-left-translation {
         display: block;
         font-family: var(--font-sans);
-        font-size: 0.9rem;
+        font-size: clamp(1.2rem, 1.6vw, 1.5rem);
         font-weight: 400;
         color: #e5e7eb;
         margin-top: 0.65rem;
@@ -230,7 +258,24 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
       }
 
       .portal-bullet-icon {
-        display: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 17px;
+        height: 17px;
+        margin-top: 2px;
+        flex-shrink: 0;
+        color: #ffffff;
+        background: none;
+        border: none;
+      }
+
+      .portal-bullet-icon svg {
+        width: 17px;
+        height: 17px;
+        display: block;
+        fill: currentColor;
+        stroke: none;
       }
 
       /* ── Right Panel (Form) ── */
@@ -716,6 +761,233 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         color: #9ca3af;
       }
 
+      /* ── Step 2: Centered Minimalist OTP Verification ── */
+      .otp-step {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+
+      .otp-step.is-visible {
+        display: flex;
+      }
+
+      .otp-badge {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 1rem;
+        border-radius: 12px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #14532d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .otp-badge svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .otp-step-eyebrow {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #14532d;
+        margin-bottom: 0.25rem;
+      }
+
+      .otp-step-title {
+        font-size: 1.45rem;
+        font-weight: 600;
+        color: #111827;
+        letter-spacing: -0.025em;
+        line-height: 1.3;
+        margin: 0 0 0.4rem;
+      }
+
+      .otp-step-desc {
+        font-size: 0.84rem;
+        color: #4b5563;
+        line-height: 1.5;
+        margin: 0 0 1.5rem;
+      }
+
+      .otp-step-desc strong {
+        color: #111827;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+
+      .otp-field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .otp-field-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #374151;
+        text-align: center;
+      }
+
+      .otp-boxes {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+      }
+
+      .otp-digit-box {
+        width: 100%;
+        height: 52px;
+        padding: 0;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        background: #f9fafb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+        font-size: 1.45rem;
+        font-weight: 700;
+        text-align: center;
+        color: #111827;
+        outline: none;
+        caret-color: transparent;
+        user-select: text;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+      }
+
+      .otp-digit-box:hover {
+        border-color: #9ca3af;
+      }
+
+      .otp-digit-box.is-filled {
+        border-color: rgba(22, 101, 52, 0.55);
+        background: #f0fdf4;
+      }
+
+      .otp-digit-box:focus {
+        background: #ffffff;
+        border-color: #14532d;
+        box-shadow: 0 0 0 3px rgba(20, 83, 45, 0.15);
+      }
+
+      .otp-boxes.is-invalid .otp-digit-box {
+        border-color: var(--color-error);
+        background: #fef2f2;
+      }
+
+      .otp-boxes.is-invalid .otp-digit-box:focus {
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
+      }
+
+      @media (max-width: 420px) {
+        .otp-boxes {
+          gap: 6px;
+        }
+        .otp-digit-box {
+          height: 48px;
+          font-size: 1.3rem;
+        }
+      }
+
+      .otp-hint {
+        font-size: 0.76rem;
+        color: #6b7280;
+        line-height: 1.4;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .otp-hint.is-warning {
+        color: #b45309;
+        font-weight: 500;
+      }
+
+      .otp-hint.is-expired {
+        color: #dc2626;
+        font-weight: 600;
+      }
+
+      .otp-digit-box:disabled {
+        background: #f3f4f6;
+        border-color: #e5e7eb;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      .otp-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 1.1rem;
+      }
+
+      .otp-resend-btn {
+        min-height: 44px;
+        padding: 0.5rem 0.75rem;
+        border: none;
+        background: transparent;
+        font-family: var(--font-sans);
+        font-size: 0.85rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: #14532d;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: color 0.15s ease;
+      }
+
+      .otp-resend-btn:hover:not(:disabled) {
+        color: #166534;
+        text-decoration: underline;
+      }
+
+      .otp-resend-btn:focus-visible,
+      .otp-back-btn:focus-visible {
+        outline: 2px solid #15803d;
+        outline-offset: 2px;
+      }
+
+      .otp-resend-btn:disabled {
+        color: #9ca3af;
+        cursor: not-allowed;
+        text-decoration: none;
+      }
+
+      .otp-back-btn {
+        min-height: 40px;
+        padding: 0.35rem 0.75rem;
+        border: none;
+        background: transparent;
+        font-family: var(--font-sans);
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #6b7280;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: color 0.15s ease;
+      }
+
+      .otp-back-btn:hover {
+        color: #111827;
+        text-decoration: underline;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .otp-digit-box, .btn-submit, .otp-resend-btn, .otp-back-btn {
+          transition: none;
+        }
+        .shake {
+          animation: none;
+        }
+      }
+
       /* ── Functional Animation (Error Shake) ── */
       @keyframes inputShake {
         0%, 100% { transform: translateX(0); }
@@ -935,12 +1207,12 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         }
 
         .portal-left-tagline {
-          font-size: 1.15rem;
+          font-size: 1.55rem;
         }
 
         .portal-left-translation {
-          font-size: 0.8rem;
-          margin-top: 0.2rem;
+          font-size: 1rem;
+          margin-top: 0.25rem;
         }
 
         .portal-right {
@@ -981,6 +1253,12 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
     <div class="portal-layout">
       <!-- ── Left Panel ── -->
       <aside class="portal-left" aria-label="Hospital Overview">
+        <div class="portal-left-bg-slides" aria-hidden="true">
+          <div class="portal-bg-slide is-active" style="background-image: url('/sdn/public/assets/mmwgh_front.jpeg');"></div>
+          <div class="portal-bg-slide" style="background-image: url('/sdn/public/assets/mmwgh-images/image-login-clip.png');"></div>
+          <div class="portal-bg-slide" style="background-image: url('/sdn/public/assets/mmwgh-images/image-login-clip1.png');"></div>
+          <div class="portal-bg-slide" style="background-image: url('/sdn/public/assets/mmwgh-images/image-login-clip2.png');"></div>
+        </div>
         <div class="portal-left-content">
           <header class="portal-left-brand">
             <img
@@ -1005,9 +1283,8 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
             <ul class="portal-bullet-list" id="leftBullets">
               <li class="portal-bullet-item">
                 <span class="portal-bullet-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M4.5 3.75A2.75 2.75 0 0 0 1.75 6.5v8.25A2.75 2.75 0 0 0 4.5 17.5h2.25v2.75a.75.75 0 0 0 1.24.57L11.75 17.5H19.5a2.75 2.75 0 0 0 2.75-2.75V6.5a2.75 2.75 0 0 0-2.75-2.75h-15ZM11 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75V9.5h2.25a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75H13v2.25a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75V11.5H8.75a.75.75 0 0 1-.75-.75v-.5a.75.75 0 0 1 .75-.75H11V7.25Z" />
                   </svg>
                 </span>
                 <span class="bullet-text" data-en="Accessible digital consultations and healthcare guidance" data-fil="Madaling maabot na digital na konsultasyon at gabay pangkalusugan">
@@ -1016,9 +1293,9 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
               </li>
               <li class="portal-bullet-item">
                 <span class="portal-bullet-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.5 2a1 1 0 0 1 1 1v1h7V3a1 1 0 1 1 2 0v1H19a2.5 2.5 0 0 1 2.5 2.5v2h-19v-2A2.5 2.5 0 0 1 5 4h1.5V3a1 1 0 0 1 1-1Z" />
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 10h19v9a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 19v-9Zm13.28 3.22a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l1.47 1.47 3.72-3.72a.75.75 0 0 1 1.06 0Z" />
                   </svg>
                 </span>
                 <span class="bullet-text" data-en="Streamlined appointment scheduling and queue status" data-fil="Mabilis na pag-iskedyul ng konsultasyon at pagsubaybay sa pila">
@@ -1027,9 +1304,8 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
               </li>
               <li class="portal-bullet-item">
                 <span class="portal-bullet-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.516 2.17a.75.75 0 0 0-1.032 0 11.209 11.209 0 0 1-7.877 3.08.75.75 0 0 0-.722.515A12.74 12.74 0 0 0 2.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 0 0 .374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.39-.223-2.73-.635-3.985a.75.75 0 0 0-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08Zm3.094 8.016a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" />
                   </svg>
                 </span>
                 <span class="bullet-text" data-en="Secure and confidential electronic health records" data-fil="Ligtas at kumpidensyal na rekord ng kalusugan">
@@ -1200,34 +1476,72 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
             <!-- New Patient Link -->
             <div class="new-patient-prompt">
               <span id="textNewPatient">New patient?</span>
-              <a href="/sdn/pages/register.php" class="create-account-link" id="linkCreateAccount">
+              <a href="/sdn/pages/register.php" target="_blank" rel="noopener noreferrer" class="create-account-link" id="linkCreateAccount">
                 Create an account
               </a>
             </div>
           </form>
 
-          <!-- Email OTP Verification Step (First Sign-In) -->
-          <form id="otpVerifyView" style="display: none;" novalidate onsubmit="handleOtpVerify(event)">
-            <p id="otpNoticeText" style="margin: 0 0 14px; font-size: 0.88rem; color: #374151; line-height: 1.5;"></p>
-            <div class="form-group">
-              <label for="patientOtpInput" class="form-label">6-Digit Verification Code</label>
-              <input
-                type="text"
-                id="patientOtpInput"
-                class="form-input"
-                style="padding-left: 14px; letter-spacing: 0.35em; font-weight: 700; font-size: 1.15rem; text-align: center;"
-                placeholder="000000"
-                maxlength="6"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                required
-              />
-              <p class="field-error-msg" id="otpErrorMsg" role="alert" aria-live="polite"></p>
+          <!-- Step 2: Email OTP Verification -->
+          <form id="otpVerifyView" class="otp-step" novalidate onsubmit="handleOtpVerify(event)">
+            <div class="otp-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
             </div>
-            <button type="submit" id="btnVerifyOtp" class="btn-submit" style="margin-bottom: 10px;">Verify &amp; Sign In</button>
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.84rem;">
-              <button type="button" id="btnResendOtp" class="forgot-link" style="background: none; border: 0; padding: 6px 0; cursor: pointer;" onclick="resendPatientOtp()">Resend Code</button>
-              <button type="button" class="forgot-link" style="background: none; border: 0; padding: 6px 0; cursor: pointer; color: #4b5563;" onclick="backToPasswordLogin()">Back to Sign In</button>
+            <p class="otp-step-eyebrow">Two-Step Verification</p>
+            <h2 class="otp-step-title" id="otpStepTitle">Verify your identity</h2>
+            <p id="otpNoticeText" class="otp-step-desc">
+              Enter the 6-digit code sent to <strong id="otpMaskedEmail"></strong>.
+            </p>
+
+            <div id="otpErrorBanner" class="auth-alert auth-alert-error" style="display: none; text-align: left;" role="alert" aria-live="assertive">
+              <span class="auth-alert-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </span>
+              <span id="otpErrorMsg"></span>
+            </div>
+
+            <div id="otpStatusBanner" class="auth-alert auth-alert-success" style="display: none; text-align: left;" role="status" aria-live="polite">
+              <span class="auth-alert-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </span>
+              <span id="otpStatusText"></span>
+            </div>
+
+            <div class="otp-field-group">
+              <label for="patientOtpDigit0" id="otpBoxesLabel" class="otp-field-label">6-Digit Verification Code</label>
+              <div id="patientOtpBoxes" class="otp-boxes" role="group" aria-labelledby="otpBoxesLabel" aria-describedby="otpExpiryHint otpErrorMsg">
+                <input type="text" id="patientOtpDigit0" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1 of 6" required />
+                <input type="text" id="patientOtpDigit1" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 2 of 6" required />
+                <input type="text" id="patientOtpDigit2" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 3 of 6" required />
+                <input type="text" id="patientOtpDigit3" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 4 of 6" required />
+                <input type="text" id="patientOtpDigit4" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 5 of 6" required />
+                <input type="text" id="patientOtpDigit5" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="Digit 6 of 6" required />
+              </div>
+              <p id="otpExpiryHint" class="otp-hint">
+                Code expires in 5 minutes. You can paste all 6 digits at once.
+              </p>
+            </div>
+
+            <button type="submit" id="btnVerifyOtp" class="btn-submit" style="min-height: 44px;">
+              Verify &amp; Sign In
+            </button>
+
+            <div class="otp-actions">
+              <button type="button" id="btnResendOtp" class="otp-resend-btn" onclick="resendPatientOtp()" disabled>
+                Resend code in 60s
+              </button>
+              <button type="button" class="otp-back-btn" onclick="backToPasswordLogin()">
+                Back to Sign In
+              </button>
             </div>
           </form>
         </div>
@@ -1571,7 +1885,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           if (data.success) {
             window.location.href = '/sdn/pages/patient-dashboard.php';
           } else if (data.otp_required) {
-            window.location.href = data.redirect || '/sdn/pages/verify-otp.php';
+            enterOtpStep(data);
             return;
           } else {
             // Trigger failure shake & inline feedback
@@ -1585,25 +1899,296 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         }
       }
 
+      /* ── Step 2: OTP State, 5-Minute Expiry & 60-Second Resend Timer ── */
+      let otpCooldownTimer = null;
+      let otpCooldownLeft = 0;
+      let otpExpiryTimer = null;
+      let otpExpiryLeft = 0;
+      let otpIsExpired = false;
+
+      function formatOtpTime(totalSeconds) {
+        const s = Math.max(0, parseInt(totalSeconds, 10) || 0);
+        const mins = Math.floor(s / 60);
+        const secs = s % 60;
+        return `${mins}:${String(secs).padStart(2, '0')}`;
+      }
+
+      function setOtpExpiredState(expired, message) {
+        otpIsExpired = Boolean(expired);
+        const verifyBtn = document.getElementById('btnVerifyOtp');
+        const hintEl = document.getElementById('otpExpiryHint');
+
+        otpBoxInputs.forEach((el) => {
+          el.disabled = otpIsExpired;
+          if (otpIsExpired) el.value = '';
+        });
+        syncOtpBoxStyles();
+
+        if (verifyBtn) {
+          verifyBtn.disabled = otpIsExpired;
+        }
+
+        if (otpIsExpired) {
+          if (hintEl) {
+            hintEl.textContent = 'Verification code expired. Click Resend Code to get a new code.';
+            hintEl.classList.remove('is-warning');
+            hintEl.classList.add('is-expired');
+          }
+          showOtpError(message || 'Your verification code has expired. Please click Resend Code to request a new one.');
+        } else if (hintEl) {
+          hintEl.classList.remove('is-expired', 'is-warning');
+        }
+      }
+
+      function startOtpExpiryTimer(seconds = 300) {
+        if (otpExpiryTimer) {
+          clearInterval(otpExpiryTimer);
+          otpExpiryTimer = null;
+        }
+        otpExpiryLeft = Math.max(1, parseInt(seconds, 10) || 300);
+        setOtpExpiredState(false);
+
+        const hintEl = document.getElementById('otpExpiryHint');
+        const renderExpiry = () => {
+          if (!hintEl) return;
+          if (otpExpiryLeft <= 0) {
+            setOtpExpiredState(true);
+            return;
+          }
+          hintEl.textContent = `Code expires in ${formatOtpTime(otpExpiryLeft)}. You can paste all 6 digits at once.`;
+          hintEl.classList.toggle('is-warning', otpExpiryLeft <= 30);
+          hintEl.classList.remove('is-expired');
+        };
+
+        renderExpiry();
+        otpExpiryTimer = setInterval(() => {
+          otpExpiryLeft -= 1;
+          if (otpExpiryLeft <= 0) {
+            otpExpiryLeft = 0;
+            clearInterval(otpExpiryTimer);
+            otpExpiryTimer = null;
+          }
+          renderExpiry();
+        }, 1000);
+      }
+
+      function startOtpCooldown(seconds = 60) {
+        if (otpCooldownTimer) {
+          clearInterval(otpCooldownTimer);
+          otpCooldownTimer = null;
+        }
+        const btn = document.getElementById('btnResendOtp');
+        otpCooldownLeft = Math.max(0, parseInt(seconds, 10) || 0);
+
+        const renderBtn = () => {
+          if (!btn) return;
+          if (otpCooldownLeft > 0) {
+            btn.disabled = true;
+            btn.textContent = `Resend code in ${otpCooldownLeft}s`;
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Resend Code';
+          }
+        };
+
+        renderBtn();
+        if (otpCooldownLeft <= 0) return;
+
+        otpCooldownTimer = setInterval(() => {
+          otpCooldownLeft -= 1;
+          if (otpCooldownLeft <= 0) {
+            otpCooldownLeft = 0;
+            clearInterval(otpCooldownTimer);
+            otpCooldownTimer = null;
+          }
+          renderBtn();
+        }, 1000);
+      }
+
+      const otpBoxesContainer = document.getElementById('patientOtpBoxes');
+      const otpBoxInputs = Array.from(document.querySelectorAll('#patientOtpBoxes .otp-digit-box'));
+
+      function getOtpDigitsValue() {
+        return otpBoxInputs.map((el) => (el.value || '').replace(/\D/g, '')).join('');
+      }
+
+      function syncOtpBoxStyles() {
+        otpBoxInputs.forEach((el) => el.classList.toggle('is-filled', el.value !== ''));
+      }
+
+      function clearOtpErrorVisual() {
+        if (otpBoxesContainer) otpBoxesContainer.classList.remove('is-invalid', 'shake');
+        const errBanner = document.getElementById('otpErrorBanner');
+        if (errBanner) errBanner.style.display = 'none';
+      }
+
+      function clearOtpBoxes(focusFirst = false) {
+        otpBoxInputs.forEach((el) => { el.value = ''; });
+        syncOtpBoxStyles();
+        if (otpBoxesContainer) otpBoxesContainer.classList.remove('is-invalid', 'shake');
+        if (focusFirst && otpBoxInputs[0]) otpBoxInputs[0].focus();
+      }
+
+      function fillOtpBoxesFrom(startIdx, rawText) {
+        const digits = (rawText || '').replace(/\D/g, '').slice(0, otpBoxInputs.length - startIdx);
+        if (!digits) return;
+        for (let i = 0; i < digits.length; i++) {
+          otpBoxInputs[startIdx + i].value = digits[i];
+        }
+        syncOtpBoxStyles();
+        clearOtpErrorVisual();
+        const nextIdx = Math.min(startIdx + digits.length, otpBoxInputs.length - 1);
+        otpBoxInputs[nextIdx].focus();
+        otpBoxInputs[nextIdx].select();
+      }
+
+      otpBoxInputs.forEach((box, idx) => {
+        box.addEventListener('focus', () => box.select());
+
+        box.addEventListener('input', () => {
+          const clean = box.value.replace(/\D/g, '');
+          clearOtpErrorVisual();
+          if (clean.length > 1) {
+            fillOtpBoxesFrom(idx, clean);
+            return;
+          }
+          box.value = clean;
+          syncOtpBoxStyles();
+          if (clean && idx < otpBoxInputs.length - 1) {
+            otpBoxInputs[idx + 1].focus();
+          }
+        });
+
+        box.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace') {
+            clearOtpErrorVisual();
+            if (box.value) {
+              box.value = '';
+              syncOtpBoxStyles();
+            } else if (idx > 0) {
+              otpBoxInputs[idx - 1].value = '';
+              syncOtpBoxStyles();
+              otpBoxInputs[idx - 1].focus();
+            }
+            e.preventDefault();
+          } else if (e.key === 'ArrowLeft' && idx > 0) {
+            e.preventDefault();
+            otpBoxInputs[idx - 1].focus();
+          } else if (e.key === 'ArrowRight' && idx < otpBoxInputs.length - 1) {
+            e.preventDefault();
+            otpBoxInputs[idx + 1].focus();
+          } else if (e.key === 'Home') {
+            e.preventDefault();
+            otpBoxInputs[0].focus();
+          } else if (e.key === 'End') {
+            e.preventDefault();
+            otpBoxInputs[otpBoxInputs.length - 1].focus();
+          }
+        });
+
+        box.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const pasted = (e.clipboardData || window.clipboardData).getData('text');
+          const digits = pasted.replace(/\D/g, '');
+          if (!digits) return;
+          fillOtpBoxesFrom(digits.length >= otpBoxInputs.length ? 0 : idx, digits);
+        });
+      });
+
+      function showOtpError(msg, focusTarget) {
+        const errBanner = document.getElementById('otpErrorBanner');
+        const errText = document.getElementById('otpErrorMsg');
+        const statusBanner = document.getElementById('otpStatusBanner');
+        if (statusBanner) statusBanner.style.display = 'none';
+        if (errText) errText.textContent = msg;
+        if (errBanner) errBanner.style.display = 'flex';
+        if (otpBoxesContainer) {
+          otpBoxesContainer.classList.remove('shake');
+          void otpBoxesContainer.offsetWidth;
+          otpBoxesContainer.classList.add('is-invalid', 'shake');
+        }
+        const target = focusTarget || otpBoxInputs[0];
+        if (target) {
+          target.focus();
+          target.select();
+        }
+      }
+
+      function showOtpStatus(msg) {
+        const errBanner = document.getElementById('otpErrorBanner');
+        const statusBanner = document.getElementById('otpStatusBanner');
+        const statusText = document.getElementById('otpStatusText');
+        if (errBanner) errBanner.style.display = 'none';
+        if (otpBoxesContainer) otpBoxesContainer.classList.remove('is-invalid', 'shake');
+        if (statusText) statusText.textContent = msg;
+        if (statusBanner) statusBanner.style.display = 'flex';
+      }
+
+      function enterOtpStep(data) {
+        const brandHeader = document.querySelector('.brand-header');
+        const loginForm = document.getElementById('patientSignInForm');
+        const otpView = document.getElementById('otpVerifyView');
+        const maskedEl = document.getElementById('otpMaskedEmail');
+        const titleEl = document.getElementById('otpStepTitle');
+        const hintEl = document.getElementById('otpExpiryHint');
+
+        if (formError) formError.style.display = 'none';
+        const sysBanner = document.getElementById('systemAlertBanner');
+        if (sysBanner) sysBanner.style.display = 'none';
+        document.getElementById('otpErrorBanner').style.display = 'none';
+        document.getElementById('otpStatusBanner').style.display = 'none';
+
+        if (maskedEl) maskedEl.textContent = data.masked_email || emailInput.value.trim();
+        if (titleEl) {
+          titleEl.textContent = data.otp_mode === 'verify_account' ? 'Verify your account' : 'Verify your identity';
+        }
+
+        if (brandHeader) brandHeader.style.display = 'none';
+        if (loginForm) loginForm.style.display = 'none';
+        if (otpView) otpView.classList.add('is-visible');
+
+        clearOtpBoxes(false);
+        startOtpExpiryTimer(data.expires_in || 300);
+        startOtpCooldown(data.resend_cooldown || 60);
+        setTimeout(() => { if (otpBoxInputs[0] && !otpBoxInputs[0].disabled) otpBoxInputs[0].focus(); }, 50);
+      }
+
       function backToPasswordLogin() {
-        document.getElementById('otpVerifyView').style.display = 'none';
-        document.getElementById('patientSignInForm').style.display = 'block';
+        if (otpCooldownTimer) {
+          clearInterval(otpCooldownTimer);
+          otpCooldownTimer = null;
+        }
+        if (otpExpiryTimer) {
+          clearInterval(otpExpiryTimer);
+          otpExpiryTimer = null;
+        }
+        setOtpExpiredState(false);
+        const brandHeader = document.querySelector('.brand-header');
+        const loginForm = document.getElementById('patientSignInForm');
+        const otpView = document.getElementById('otpVerifyView');
+
+        if (otpView) otpView.classList.remove('is-visible');
+        if (brandHeader) brandHeader.style.display = '';
+        if (loginForm) loginForm.style.display = '';
+        clearOtpBoxes(false);
         passwordInput.focus();
       }
 
       async function handleOtpVerify(e) {
         e.preventDefault();
-        const otpInp = document.getElementById('patientOtpInput');
-        const otpErr = document.getElementById('otpErrorMsg');
-        const btn = document.getElementById('btnVerifyOtp');
-        const otp = otpInp.value.replace(/\D/g, '');
-        if (otp.length !== 6) {
-          otpErr.textContent = 'Enter the 6-digit verification code.';
-          otpErr.style.display = 'block';
-          otpInp.focus();
+        if (otpIsExpired || otpExpiryLeft <= 0) {
+          setOtpExpiredState(true);
           return;
         }
-        otpErr.style.display = 'none';
+        const btn = document.getElementById('btnVerifyOtp');
+        const otp = getOtpDigitsValue();
+        if (otp.length !== 6) {
+          const firstEmpty = otpBoxInputs.find((el) => !el.value) || otpBoxInputs[0];
+          showOtpError('Please enter all 6 digits of your verification code.', firstEmpty);
+          return;
+        }
+
+        clearOtpErrorVisual();
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>Verifying...</span>';
         try {
@@ -1615,25 +2200,31 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           const data = await res.json();
           if (data.success) {
             window.location.href = data.redirect || '/sdn/pages/patient-dashboard.php';
+          } else if (data.expired) {
+            if (otpExpiryTimer) {
+              clearInterval(otpExpiryTimer);
+              otpExpiryTimer = null;
+            }
+            otpExpiryLeft = 0;
+            setOtpExpiredState(true, data.message);
           } else {
-            otpErr.textContent = data.message || 'Invalid verification code.';
-            otpErr.style.display = 'block';
-            otpInp.focus();
+            clearOtpBoxes(false);
+            showOtpError(data.message || 'Invalid or expired verification code.', otpBoxInputs[0]);
           }
         } catch (err) {
-          otpErr.textContent = 'Unable to verify code. Please try again.';
-          otpErr.style.display = 'block';
+          showOtpError('Unable to verify code. Please try again.');
         } finally {
-          btn.disabled = false;
+          btn.disabled = otpIsExpired;
           btn.textContent = 'Verify & Sign In';
         }
       }
 
       async function resendPatientOtp() {
-        const otpErr = document.getElementById('otpErrorMsg');
-        const notice = document.getElementById('otpNoticeText');
+        if (otpCooldownLeft > 0) return;
         const btn = document.getElementById('btnResendOtp');
         btn.disabled = true;
+        btn.textContent = 'Sending code...';
+
         try {
           const res = await fetch('/sdn/api/patient_verify_otp.php', {
             method: 'POST',
@@ -1642,17 +2233,17 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           });
           const data = await res.json();
           if (data.success) {
-            otpErr.style.display = 'none';
-            notice.textContent = data.message;
+            startOtpExpiryTimer(data.expires_in || 300);
+            showOtpStatus(data.message || 'A new 6-digit verification code was sent.');
+            clearOtpBoxes(true);
+            startOtpCooldown(data.resend_cooldown || 60);
           } else {
-            otpErr.textContent = data.message || 'Could not resend code.';
-            otpErr.style.display = 'block';
+            showOtpError(data.message || 'Could not resend code.');
+            startOtpCooldown(data.retry_after || 0);
           }
         } catch (err) {
-          otpErr.textContent = 'Network error while resending code.';
-          otpErr.style.display = 'block';
-        } finally {
-          setTimeout(() => { btn.disabled = false; }, 3000);
+          showOtpError('Network error while resending code.');
+          startOtpCooldown(0);
         }
       }
 
@@ -1896,6 +2487,31 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
           closeForgotModal();
         }
       });
+
+      (function () {
+        const slides = Array.from(document.querySelectorAll('.portal-bg-slide'));
+        if (slides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        let current = 0;
+        let cleanupTimer = null;
+
+        setInterval(() => {
+          if (document.hidden) return;
+          const prev = current;
+          current = (current + 1) % slides.length;
+          if (cleanupTimer) clearTimeout(cleanupTimer);
+
+          slides.forEach((s, i) => {
+            s.classList.remove('is-prev', 'is-active');
+            if (i === prev) s.classList.add('is-prev');
+          });
+          void slides[current].offsetWidth;
+          slides[current].classList.add('is-active');
+
+          cleanupTimer = setTimeout(() => {
+            slides[prev].classList.remove('is-prev');
+          }, 1150);
+        }, 5000);
+      })();
     </script>
   </body>
 </html>

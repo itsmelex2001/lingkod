@@ -546,7 +546,7 @@ try {
           errBox.textContent = 'Network error while resending code.';
           errBox.style.display = 'block';
         } finally {
-          let left = 30;
+          let left = 60;
           btn.textContent = `Resend in ${left}s`;
           const timer = setInterval(() => {
             left--;

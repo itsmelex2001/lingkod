@@ -26,7 +26,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $isAdmin = false;
 if ($method === 'POST' || $method === 'DELETE') {
     requireAuth();
-    if (($_SESSION['role'] ?? 'staff') !== 'admin') {
+    if (!in_array(strtolower((string)($_SESSION['role'] ?? 'staff')), ['admin', 'superadmin'], true)) {
         respondErr('Access denied. Admin only.', 403);
     }
     $isAdmin = true;
@@ -53,8 +53,10 @@ try {
 // ── GET ──────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
     
-    // Admin: get all doctors with full details
+    // Admin: get all doctors with full details + today's live booking load
     if ($mode === 'manage') {
+        date_default_timezone_set('Asia/Manila');
+        $today = date('Y-m-d');
         $stmt = $pdo->query(
             "SELECT id, name, title, license_number, specialization, department, schedule_start, schedule_end,
                     total_slots, status, schedule_date, profile_image
@@ -62,14 +64,73 @@ if ($method === 'GET') {
              ORDER BY department, name ASC"
         );
         $data = $stmt->fetchAll();
-        
+
+        $normalizeDocKey = static function (?string $raw): string {
+            $clean = strtolower(trim((string)$raw));
+            $clean = preg_replace('/^dr\.?\s+/i', '', $clean);
+            $clean = preg_replace('/,\s*(md|fppa|fpna|dpbp|m\.d\.).*$/i', '', $clean);
+            return trim(preg_replace('/\s+/', ' ', (string)$clean));
+        };
+
+        $bookedByDoc = [];
+        try {
+            $pCols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+            $inqSql = in_array('inquiry_only', $pCols, true) ? ' AND COALESCE(inquiry_only, 0) = 0' : '';
+            $bStmt = $pdo->prepare(
+                "SELECT assigned_doctor, COUNT(*) AS cnt
+                 FROM patients
+                 WHERE CAST(appointment_date AS DATE) = ?
+                   $inqSql
+                   AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show', 'registered')
+                   AND TRIM(COALESCE(assigned_doctor, '')) <> ''
+                   AND LOWER(TRIM(assigned_doctor)) <> 'none'
+                 GROUP BY assigned_doctor"
+            );
+            $bStmt->execute([$today]);
+            foreach ($bStmt->fetchAll(PDO::FETCH_ASSOC) as $bRow) {
+                $k = $normalizeDocKey($bRow['assigned_doctor'] ?? '');
+                if ($k !== '') {
+                    $bookedByDoc[$k] = ($bookedByDoc[$k] ?? 0) + (int)$bRow['cnt'];
+                }
+            }
+        } catch (Throwable $ignoreLoad) {}
+
+        $onDuty = 0;
+        $offDuty = 0;
+        $totalBookedToday = 0;
+        $totalCapacityOnDuty = 0;
+
         foreach ($data as &$doc) {
-            $doc['total_slots'] = isset($doc['total_slots']) ? (int)$doc['total_slots'] : 20;
-            $doc['fill_percent'] = 0;
+            $slots = isset($doc['total_slots']) ? max(1, (int)$doc['total_slots']) : 20;
+            $key = $normalizeDocKey($doc['name'] ?? '');
+            $booked = $key !== '' ? (int)($bookedByDoc[$key] ?? 0) : 0;
+            $stRaw = strtolower(trim((string)($doc['status'] ?? 'in')));
+            $isIn = in_array($stRaw, ['in', 'available', 'active', 'on duty', 'in_clinic'], true);
+
+            if ($isIn) {
+                $onDuty++;
+                $totalCapacityOnDuty += $slots;
+            } else {
+                $offDuty++;
+            }
+            $totalBookedToday += $booked;
+
+            $doc['total_slots']  = $slots;
+            $doc['booked_today'] = $booked;
+            $doc['fill_percent'] = min(100, (int)round(($booked / $slots) * 100));
         }
         unset($doc);
-        
-        respondOk(['data' => $data]);
+
+        respondOk([
+            'data'    => $data,
+            'summary' => [
+                'total_doctors'  => count($data),
+                'on_duty'        => $onDuty,
+                'off_duty'       => $offDuty,
+                'booked_today'   => $totalBookedToday,
+                'total_capacity' => $totalCapacityOnDuty,
+            ],
+        ]);
     }
 
     // Assign-doctor dropdown (admin patient profile)

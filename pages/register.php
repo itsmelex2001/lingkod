@@ -180,6 +180,73 @@ session_start();
       font-weight: 600;
     }
 
+    /* Mobile Percentage Status */
+    .mobile-progress {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .mobile-progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mobile-progress-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .mobile-progress-step {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.25;
+    }
+
+    .mobile-progress-next {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1.25;
+    }
+
+    .mobile-progress-pct {
+      flex-shrink: 0;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      border: 1px solid #bbf7d0;
+      color: var(--brand);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.3;
+    }
+
+    .mobile-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .mobile-progress-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--brand-accent), var(--brand));
+      border-radius: 999px;
+      transform-origin: left center;
+      transform: scaleX(0.3333);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     /* ── Main Wizard Card ── */
     .card-wizard {
       background: var(--surface);
@@ -228,7 +295,7 @@ session_start();
 
     @media (prefers-reduced-motion: reduce) {
       .wizard-phase.active { animation: none; }
-      .stepper-line-fill, .step-circle, .input-ctrl, .btn-pill-next, .btn-pill-back { transition: none; }
+      .stepper-line-fill, .mobile-progress-fill, .step-circle, .input-ctrl, .btn-pill-next, .btn-pill-back { transition: none; }
     }
 
     /* ── Form Layout & Controls ── */
@@ -982,9 +1049,13 @@ session_start();
 
     /* ── Responsive ── */
     @media (max-width: 768px) {
+      html {
+        scroll-padding-top: 152px;
+      }
+
       #new-patient-registration-app {
         justify-content: flex-start;
-        padding: 84px 14px 32px;
+        padding: 150px 14px 32px;
       }
 
       .card-wizard {
@@ -1006,8 +1077,28 @@ session_start();
         font-size: 1rem;
       }
 
-      .step-text {
-        font-size: 0.72rem;
+      .stepper-container {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        max-width: none;
+        margin-bottom: 0;
+        padding: 10px 14px 12px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+        z-index: 150;
+      }
+
+      .stepper-track {
+        display: none;
+      }
+
+      .mobile-progress {
+        display: flex;
       }
 
       .actions-row {
@@ -1038,7 +1129,6 @@ session_start();
         <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="Lingkod Logo" class="logo-ver2-img" />
         <span class="logo-text">
           <span class="logo-title-top">Mariveles Mental Wellness and General Hospital</span>
-          <span class="logo-title-bottom">LINGKOD</span>
         </span>
       </a>
     </div>
@@ -1068,6 +1158,28 @@ session_start();
             <span class="step-circle" id="circleStep3">3</span>
             <span class="step-text">Confirmation &amp; Review</span>
           </button>
+        </div>
+
+        <div class="mobile-progress">
+          <div class="mobile-progress-head">
+            <div class="mobile-progress-meta">
+              <span id="mobileProgressStep" class="mobile-progress-step">Step 1 of 3</span>
+              <span id="mobileProgressNext" class="mobile-progress-next">Next: Register an Account</span>
+            </div>
+            <span id="mobileProgressPct" class="mobile-progress-pct">33%</span>
+          </div>
+          <div
+            id="mobileProgressBar"
+            class="mobile-progress-bar"
+            role="progressbar"
+            aria-label="Registration progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="33"
+            aria-valuetext="33% complete — Step 1 of 3: Personal Information"
+          >
+            <div id="mobileProgressFill" class="mobile-progress-fill"></div>
+          </div>
         </div>
       </nav>
 
@@ -1175,20 +1287,6 @@ session_start();
                 <label for="address">Home Address <span class="req-star" aria-hidden="true">*</span></label>
                 <input type="text" id="address" class="input-ctrl" placeholder="House No., Street, Barangay, Municipality/City" autocomplete="street-address" required aria-describedby="errAddress" />
                 <span id="errAddress" class="error-msg" role="alert">Home address is required.</span>
-              </div>
-
-              <div class="field-group">
-                <label>Accompanying Companion? <span class="req-star" aria-hidden="true">*</span></label>
-                <div class="radio-row" role="radiogroup" aria-label="Accompanying Companion">
-                  <label class="radio-lbl">
-                    <input type="radio" name="withCompanion" value="Yes" checked />
-                    <span>Yes</span>
-                  </label>
-                  <label class="radio-lbl">
-                    <input type="radio" name="withCompanion" value="No" />
-                    <span>No</span>
-                  </label>
-                </div>
               </div>
             </div>
           </section>
@@ -1360,10 +1458,6 @@ session_start();
                     <span class="summary-label">Home Address</span>
                     <span id="revAddress" class="summary-val"></span>
                   </div>
-                  <div class="summary-item">
-                    <span class="summary-label">Accompanying Companion</span>
-                    <span id="revCompanion" class="summary-val"></span>
-                  </div>
                   <div class="summary-item" id="revGuardianRow" style="display: none;">
                     <span class="summary-label">Parent / Guardian</span>
                     <span id="revGuardian" class="summary-val"></span>
@@ -1473,6 +1567,11 @@ session_start();
   <script>
     let currentStep = 1;
     const TOTAL_STEPS = 3;
+    const STEP_META = [
+      { title: 'Personal Information', next: 'Next: Register an Account' },
+      { title: 'Register an Account', next: 'Next: Confirmation & Review' },
+      { title: 'Confirmation & Review', next: 'Final step' }
+    ];
 
     const SVG_CHECK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     const SVG_EYE_OPEN = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
@@ -1663,7 +1762,6 @@ session_start();
       document.getElementById('revEmail').textContent = rawEmail;
       document.getElementById('revNoticeEmail').textContent = rawEmail;
       document.getElementById('revAddress').textContent = document.getElementById('address').value.trim();
-      document.getElementById('revCompanion').textContent = document.querySelector('input[name="withCompanion"]:checked')?.value || 'No';
       document.getElementById('revUsername').textContent = chosenUsername;
 
       const ageVal = parseInt(document.getElementById('age').value, 10);
@@ -1700,6 +1798,17 @@ session_start();
 
       const progressPct = ((currentStep - 1) / (TOTAL_STEPS - 1)) * 100;
       document.getElementById('stepLineFill').style.width = `${progressPct}%`;
+
+      const pctRatio = currentStep / TOTAL_STEPS;
+      const mobilePct = Math.round(pctRatio * 100);
+      const stepInfo = STEP_META[currentStep - 1];
+      document.getElementById('mobileProgressStep').textContent = `Step ${currentStep} of ${TOTAL_STEPS}`;
+      document.getElementById('mobileProgressNext').textContent = stepInfo.next;
+      document.getElementById('mobileProgressPct').textContent = `${mobilePct}%`;
+      document.getElementById('mobileProgressFill').style.transform = `scaleX(${pctRatio})`;
+      const mobileBar = document.getElementById('mobileProgressBar');
+      mobileBar.setAttribute('aria-valuenow', String(mobilePct));
+      mobileBar.setAttribute('aria-valuetext', `${mobilePct}% complete — Step ${currentStep} of ${TOTAL_STEPS}: ${stepInfo.title}`);
 
       document.getElementById('btnBack').style.display = currentStep > 1 ? 'inline-flex' : 'none';
       document.getElementById('btnNext').style.display = currentStep < TOTAL_STEPS ? 'inline-flex' : 'none';
@@ -1796,7 +1905,6 @@ session_start();
         guardian_contact_number: isSubMinor && subGuardContact ? '+63 ' + subGuardContact.replace(/^0/, '') : null,
         email: document.getElementById('email').value.trim(),
         address: document.getElementById('address').value.trim(),
-        with_companion: document.querySelector('input[name="withCompanion"]:checked')?.value || 'No',
         username: document.getElementById('regUsername').value.trim(),
         password: document.getElementById('regPassword').value,
         confirm_password: document.getElementById('regConfirmPassword').value

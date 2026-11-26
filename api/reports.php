@@ -15,6 +15,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+date_default_timezone_set('Asia/Manila');
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
 
@@ -45,6 +46,352 @@ function resolveTimeBlock(?string $preferredSlot, ?string $scheduledTime): strin
         return $hour >= 12 ? 'Afternoon' : 'Morning';
     }
     return 'Morning';
+}
+
+$category = strtolower(trim($_GET['category'] ?? ''));
+if ($category !== '') {
+    $allowedCategories = ['appointments', 'patients', 'doctors', 'medication', 'diagnosis'];
+    if (!in_array($category, $allowedCategories, true)) {
+        respondErr('Invalid report category.', 400);
+    }
+
+    $today = date('Y-m-d');
+    $from  = trim($_GET['from'] ?? $_GET['start_date'] ?? '');
+    $to    = trim($_GET['to'] ?? $_GET['end_date'] ?? '');
+    $dept  = trim($_GET['department'] ?? '');
+    $exportExcel = !empty($_GET['export_excel']);
+
+    $validDate = static function (string $d): bool {
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $d, $m)) return false;
+        return checkdate((int)$m[2], (int)$m[3], (int)$m[1]);
+    };
+    $allowFuture = ($category === 'appointments');
+    if (($from !== '' && !$validDate($from)) || ($to !== '' && !$validDate($to)) || ($from !== '' && $to !== '' && $from > $to)) {
+        respondErr('Select a valid date range (From date cannot be later than To date).', 422);
+    }
+    if (!$allowFuture && (($from !== '' && $from > $today) || ($to !== '' && $to > $today))) {
+        respondErr('Select a valid past or current date range.', 422);
+    }
+
+    $buildDateClause = static function (string $expr) use ($from, $to): array {
+        $conds = [];
+        $params = [];
+        if ($from !== '') {
+            $conds[] = "$expr >= ?";
+            $params[] = $from;
+        }
+        if ($to !== '') {
+            $conds[] = "$expr <= ?";
+            $params[] = $to;
+        }
+        return [$conds ? implode(' AND ', $conds) : '1=1', $params];
+    };
+
+    $deptCondSql = '';
+    if ($dept !== '' && strtolower($dept) !== 'all') {
+        $dLow = strtolower($dept);
+        if (str_contains($dLow, 'psych') || str_contains($dLow, 'opu')) {
+            $deptCondSql = " AND (LOWER(department) LIKE '%psych%' OR LOWER(department) LIKE '%opu%')";
+        } elseif (str_contains($dLow, 'neuro')) {
+            $deptCondSql = " AND LOWER(department) LIKE '%neuro%'";
+        } else {
+            $deptCondSql = " AND (LOWER(department) LIKE '%general%' OR LOWER(department) LIKE '%cardio%' OR LOWER(department) LIKE '%medical%')";
+        }
+    }
+
+    $pCols = [];
+    try {
+        $pCols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Throwable $ignore) {}
+    $hasCol = static fn(string $c): bool => in_array($c, $pCols, true);
+
+    $medDateExpr  = "NULLIF(DATE(medical_history_date), '0000-00-00')";
+    $apptDateExpr = "NULLIF(CAST(appointment_date AS DATE), '0000-00-00')";
+    $dateExpr     = "COALESCE($medDateExpr, $apptDateExpr, DATE(created_at))";
+    $refSel       = $hasCol('reference_no') ? 'COALESCE(NULLIF(reference_no, ""), patient_id)' : 'patient_id';
+    $inqCondSql   = $hasCol('inquiry_only') ? ' AND COALESCE(inquiry_only, 0) = 0' : '';
+    $genderSel    = $hasCol('gender') ? 'gender' : 'NULL';
+    $ageSel       = $hasCol('age') ? 'age' : 'NULL';
+    $birthSel     = $hasCol('birthdate') ? 'birthdate' : 'NULL';
+
+    $rows = [];
+    $columns = [];
+
+    if ($category === 'diagnosis') {
+        $columns = [
+            ['key' => 'date', 'label' => 'Date'],
+            ['key' => 'patient_name', 'label' => 'Patient'],
+            ['key' => 'department', 'label' => 'Department'],
+            ['key' => 'diagnosis', 'label' => 'Diagnosis'],
+            ['key' => 'doctor_name', 'label' => 'Attending Physician'],
+        ];
+        [$dateWhere, $dateParams] = $buildDateClause($dateExpr);
+        $sql = "SELECT id, $dateExpr AS rec_date, full_name, department, medical_history_diagnosis, assigned_doctor
+                FROM patients
+                WHERE $dateWhere
+                  AND TRIM(COALESCE(medical_history_diagnosis, '')) <> ''
+                  $deptCondSql
+                ORDER BY rec_date DESC, id DESC
+                LIMIT 500";
+        $st = $pdo->prepare($sql);
+        $st->execute($dateParams);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $doc = trim((string)($r['assigned_doctor'] ?? ''));
+            $rows[] = [
+                'id'           => (int)$r['id'],
+                'date'         => $r['rec_date'] ?: '—',
+                'patient_name' => $r['full_name'] ?: '—',
+                'department'   => normalizeDepartmentName($r['department'] ?? ''),
+                'diagnosis'    => trim((string)$r['medical_history_diagnosis']),
+                'doctor_name'  => ($doc !== '' && strcasecmp($doc, 'None') !== 0) ? $doc : 'Unassigned',
+            ];
+        }
+    } elseif ($category === 'appointments') {
+        $columns = [
+            ['key' => 'date', 'label' => 'Date'],
+            ['key' => 'reference_no', 'label' => 'Ref No.'],
+            ['key' => 'patient_name', 'label' => 'Patient'],
+            ['key' => 'department', 'label' => 'Department'],
+            ['key' => 'status', 'label' => 'Status'],
+        ];
+        $apptOnlyDate = "COALESCE($apptDateExpr, DATE(created_at))";
+        [$dateWhere, $dateParams] = $buildDateClause($apptOnlyDate);
+        $sql = "SELECT id, $apptOnlyDate AS appt_date, $refSel AS ref_no, full_name, department, status
+                FROM patients
+                WHERE $dateWhere
+                  $inqCondSql
+                  $deptCondSql
+                ORDER BY appt_date DESC, id DESC
+                LIMIT 500";
+        $st = $pdo->prepare($sql);
+        $st->execute($dateParams);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $rows[] = [
+                'id'           => (int)$r['id'],
+                'date'         => $r['appt_date'] ?: '—',
+                'reference_no' => $r['ref_no'] ?: ('APT-' . $r['id']),
+                'patient_name' => $r['full_name'] ?: '—',
+                'department'   => normalizeDepartmentName($r['department'] ?? ''),
+                'status'       => ucwords(str_replace(['_', '-'], ' ', (string)($r['status'] ?? 'Pending'))),
+            ];
+        }
+    } elseif ($category === 'patients') {
+        $columns = [
+            ['key' => 'patient_id', 'label' => 'Patient ID'],
+            ['key' => 'full_name', 'label' => 'Full Name'],
+            ['key' => 'gender', 'label' => 'Gender'],
+            ['key' => 'age', 'label' => 'Age'],
+            ['key' => 'registered_at', 'label' => 'Registered'],
+        ];
+        $emailSel = $hasCol('email') ? 'email' : 'NULL';
+        $userSel  = $hasCol('user_id') ? 'user_id' : 'NULL';
+        [$dateWhere, $dateParams] = $buildDateClause('DATE(created_at)');
+        $sql = "SELECT id, patient_id, full_name, $genderSel AS gender, $ageSel AS age, $birthSel AS birthdate,
+                       $emailSel AS email, $userSel AS user_id, DATE(created_at) AS reg_date
+                FROM patients
+                WHERE $dateWhere
+                  $deptCondSql
+                ORDER BY created_at ASC, id ASC
+                LIMIT 2000";
+        $st = $pdo->prepare($sql);
+        $st->execute($dateParams);
+
+        // Deduplicate returning patients (each appointment inserts a row in `patients`)
+        $uniquePatients = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $nameNorm = strtolower(preg_replace('/\s+/', ' ', trim((string)($r['full_name'] ?? ''))));
+            $birthVal = trim((string)($r['birthdate'] ?? ''));
+            $emailVal = strtolower(trim((string)($r['email'] ?? '')));
+            $genderVal = trim((string)($r['gender'] ?? ''));
+
+            if ($nameNorm !== '' && $birthVal !== '' && $birthVal !== '0000-00-00') {
+                $dedupKey = $nameNorm . '|b:' . $birthVal;
+            } elseif ($nameNorm !== '' && $emailVal !== '') {
+                $dedupKey = $nameNorm . '|e:' . $emailVal;
+            } elseif ($nameNorm !== '') {
+                $dedupKey = $nameNorm . '|g:' . strtolower($genderVal);
+            } else {
+                $dedupKey = 'id:' . $r['id'];
+            }
+
+            $ageVal = $r['age'];
+            if (($ageVal === null || $ageVal === '') && $birthVal !== '' && $birthVal !== '0000-00-00') {
+                try {
+                    $ageVal = (new DateTime($birthVal))->diff(new DateTime())->y;
+                } catch (Throwable $ignore) {}
+            }
+
+            if (!isset($uniquePatients[$dedupKey])) {
+                $pid = trim((string)($r['patient_id'] ?? ''));
+                $uniquePatients[$dedupKey] = [
+                    'id'            => (int)$r['id'],
+                    'patient_id'    => $pid !== '' ? $pid : ('PT-' . $r['id']),
+                    'full_name'     => trim((string)($r['full_name'] ?? '')) ?: '—',
+                    'gender'        => $genderVal !== '' ? $genderVal : '—',
+                    'age'           => ($ageVal !== null && $ageVal !== '') ? (string)$ageVal : '—',
+                    'registered_at' => $r['reg_date'] ?: '—',
+                ];
+            } else {
+                // Fill missing demographics if an earlier row lacked them
+                if ($uniquePatients[$dedupKey]['gender'] === '—' && $genderVal !== '') {
+                    $uniquePatients[$dedupKey]['gender'] = $genderVal;
+                }
+                if ($uniquePatients[$dedupKey]['age'] === '—' && $ageVal !== null && $ageVal !== '') {
+                    $uniquePatients[$dedupKey]['age'] = (string)$ageVal;
+                }
+            }
+        }
+
+        $rows = array_values($uniquePatients);
+        usort($rows, static fn(array $a, array $b): int =>
+            strcmp((string)$b['registered_at'], (string)$a['registered_at']) ?: ($b['id'] <=> $a['id'])
+        );
+        $rows = array_slice($rows, 0, 500);
+    } elseif ($category === 'doctors') {
+        $columns = [
+            ['key' => 'name', 'label' => 'Physician'],
+            ['key' => 'department', 'label' => 'Department'],
+            ['key' => 'specialization', 'label' => 'Specialization'],
+            ['key' => 'consultations_count', 'label' => 'Consultations'],
+            ['key' => 'status', 'label' => 'Status'],
+        ];
+        $consultDate = "COALESCE($medDateExpr, $apptDateExpr)";
+        [$dateWhere, $dateParams] = $buildDateClause($consultDate);
+        $tallyStmt = $pdo->prepare(
+            "SELECT assigned_doctor, COUNT(*) AS cnt
+             FROM patients
+             WHERE $dateWhere
+               $inqCondSql
+               $deptCondSql
+               AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show')
+               AND TRIM(COALESCE(assigned_doctor, '')) <> ''
+               AND LOWER(TRIM(assigned_doctor)) <> 'none'
+             GROUP BY assigned_doctor"
+        );
+        $tallyStmt->execute($dateParams);
+        $docCounts = [];
+        foreach ($tallyStmt->fetchAll(PDO::FETCH_ASSOC) as $t) {
+            $normKey = strtolower(trim(preg_replace('/^dr\.?\s*/i', '', (string)$t['assigned_doctor'])));
+            $docCounts[$normKey] = ($docCounts[$normKey] ?? 0) + (int)$t['cnt'];
+        }
+
+        $docSql = "SELECT id, name, specialization, department, status
+                   FROM doctors
+                   WHERE 1=1 $deptCondSql
+                   ORDER BY department ASC, name ASC";
+        foreach ($pdo->query($docSql)->fetchAll(PDO::FETCH_ASSOC) as $d) {
+            $normKey = strtolower(trim(preg_replace('/^dr\.?\s*/i', '', (string)$d['name'])));
+            $stRaw = strtolower(trim((string)($d['status'] ?? 'in')));
+            $rows[] = [
+                'id'                  => (int)$d['id'],
+                'name'                => $d['name'] ?: '—',
+                'department'          => normalizeDepartmentName($d['department'] ?? ''),
+                'specialization'      => $d['specialization'] ?: '—',
+                'consultations_count' => (string)($docCounts[$normKey] ?? 0),
+                'status'              => in_array($stRaw, ['in', 'available', 'active', 'on duty'], true) ? 'Available' : 'Unavailable',
+            ];
+        }
+    } elseif ($category === 'medication') {
+        $columns = [
+            ['key' => 'date', 'label' => 'Date'],
+            ['key' => 'patient_name', 'label' => 'Patient'],
+            ['key' => 'medication', 'label' => 'Medication'],
+            ['key' => 'dosage', 'label' => 'Dosage'],
+            ['key' => 'prescribed_by', 'label' => 'Prescribed By'],
+        ];
+        [$dateWhere, $dateParams] = $buildDateClause($dateExpr);
+        $sql = "SELECT id, $dateExpr AS rec_date, full_name, assigned_doctor, active_medications, medical_history_prescription
+                FROM patients
+                WHERE $dateWhere
+                  AND (TRIM(COALESCE(active_medications, '')) <> '' OR TRIM(COALESCE(medical_history_prescription, '')) <> '')
+                  $deptCondSql
+                ORDER BY rec_date DESC, id DESC
+                LIMIT 500";
+        $st = $pdo->prepare($sql);
+        $st->execute($dateParams);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $doc = trim((string)($r['assigned_doctor'] ?? ''));
+            $prescriber = ($doc !== '' && strcasecmp($doc, 'None') !== 0) ? $doc : 'Attending Physician';
+            $rawMeds = trim((string)($r['active_medications'] ?? ''));
+            $parsed = false;
+
+            if ($rawMeds !== '' && (str_starts_with($rawMeds, '{') || str_starts_with($rawMeds, '['))) {
+                $decoded = json_decode($rawMeds, true);
+                if (is_array($decoded)) {
+                    $items = isset($decoded['medicine_name']) || isset($decoded['name']) ? [$decoded] : $decoded;
+                    foreach ($items as $idx => $m) {
+                        $mName = is_array($m) ? trim((string)($m['medicine_name'] ?? $m['name'] ?? '')) : trim((string)$m);
+                        if ($mName === '') continue;
+                        $mDose = is_array($m) ? trim((string)($m['dosage'] ?? $m['frequency'] ?? '')) : '';
+                        $rows[] = [
+                            'id'            => $r['id'] . '-' . $idx,
+                            'date'          => $r['rec_date'] ?: '—',
+                            'patient_name'  => $r['full_name'] ?: '—',
+                            'medication'    => $mName,
+                            'dosage'        => $mDose !== '' ? $mDose : 'As directed',
+                            'prescribed_by' => $prescriber,
+                        ];
+                        $parsed = true;
+                    }
+                }
+            }
+
+            if (!$parsed) {
+                $rx = trim((string)($r['medical_history_prescription'] ?? $rawMeds));
+                if ($rx !== '') {
+                    $rows[] = [
+                        'id'            => (int)$r['id'],
+                        'date'          => $r['rec_date'] ?: '—',
+                        'patient_name'  => $r['full_name'] ?: '—',
+                        'medication'    => $rx,
+                        'dosage'        => 'As prescribed',
+                        'prescribed_by' => $prescriber,
+                    ];
+                }
+            }
+        }
+    }
+
+    if ($exportExcel) {
+        if (ob_get_length()) ob_end_clean();
+        $catTitle = ucfirst($category);
+        $deptLabel = ($dept === '' || strtolower($dept) === 'all') ? 'All Departments' : normalizeDepartmentName($dept);
+        if ($from !== '' && $to !== '') {
+            $rangeLabel = "$from to $to";
+            $rangeSlug = "{$from}_to_{$to}";
+        } elseif ($from !== '') {
+            $rangeLabel = "From $from";
+            $rangeSlug = "from_{$from}";
+        } elseif ($to !== '') {
+            $rangeLabel = "Up to $to";
+            $rangeSlug = "to_{$to}";
+        } else {
+            $rangeLabel = 'All Dates';
+            $rangeSlug = 'All_Dates';
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="MMWGH_' . $catTitle . '_Report_' . $rangeSlug . '.csv"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['MARIVELES MENTAL WELLNESS AND GENERAL HOSPITAL'], ',', '"', '\\');
+        fputcsv($out, [strtoupper($catTitle) . ' REPORT'], ',', '"', '\\');
+        fputcsv($out, ['Date Range', $rangeLabel, 'Department', $deptLabel, 'Generated', date('M d, Y h:i A')], ',', '"', '\\');
+        fputcsv($out, [], ',', '"', '\\');
+        fputcsv($out, array_column($columns, 'label'), ',', '"', '\\');
+        foreach ($rows as $row) {
+            fputcsv($out, array_map(static fn($c) => $row[$c['key']] ?? '', $columns), ',', '"', '\\');
+        }
+        fclose($out);
+        exit;
+    }
+
+    respondOk([
+        'category' => $category,
+        'from'     => $from,
+        'to'       => $to,
+        'columns'  => $columns,
+        'data'     => $rows,
+    ]);
 }
 
 $range      = trim($_GET['range'] ?? 'today'); // 'today', 'past_7', 'past_30', 'past_month', 'next_7', 'next_30', 'monthly', 'custom', 'all'

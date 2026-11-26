@@ -35,9 +35,6 @@
         <span class="text-[10px] leading-tight font-medium text-[#6b7280] truncate" style="font-size: 10px; color: #6b7280; line-height: 1.2;">
           Mariveles Mental Wellness & General Hospital
         </span>
-        <span class="text-sm font-bold text-[#166534] tracking-wide mt-0.5" style="font-size: 14px; font-weight: 700; color: #166534; letter-spacing: 0.025em; margin-top: 2px;">
-          LINGKOD
-        </span>
       </div>
     </div>
 

@@ -186,9 +186,9 @@ if ($token === '') {
 
       .portal-left-tagline {
         font-family: var(--font-serif);
-        font-size: clamp(1.4rem, 2.1vw, 2.1rem);
+        font-size: clamp(3rem, 4.6vw, 4.35rem);
         font-weight: 600;
-        line-height: 1.25;
+        line-height: 1.15;
         color: #ffffff;
         margin-bottom: 0.35rem;
       }
@@ -196,10 +196,10 @@ if ($token === '') {
       .portal-left-translation {
         display: block;
         font-family: var(--font-sans);
-        font-size: 0.9rem;
+        font-size: clamp(1.2rem, 1.6vw, 1.5rem);
         font-weight: 400;
         color: rgba(255, 255, 255, 0.75);
-        margin-top: 0.25rem;
+        margin-top: 0.45rem;
       }
 
       .portal-left-divider {
@@ -750,12 +750,12 @@ if ($token === '') {
         }
 
         .portal-left-tagline {
-          font-size: 1.15rem;
+          font-size: 1.55rem;
         }
 
         .portal-left-translation {
-          font-size: 0.8rem;
-          margin-top: 0.2rem;
+          font-size: 1rem;
+          margin-top: 0.25rem;
         }
 
         .portal-right {

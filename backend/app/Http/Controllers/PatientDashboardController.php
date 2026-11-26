@@ -276,16 +276,21 @@ class PatientDashboardController extends Controller
 
             $hashed = Hash::make($newPass);
 
+            $updateData = [
+                'password'   => $hashed,
+                'updated_at' => Carbon::now('Asia/Manila'),
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('patients', 'must_change_password')) {
+                $updateData['must_change_password'] = 0;
+            }
+
             DB::table('patients')
                 ->where(function ($q) use ($patientId, $email, $userId) {
                     if ($patientId) $q->where('patient_id', $patientId);
                     if ($email) $q->orWhere('email', $email);
                     if ($userId) $q->orWhere('user_id', $userId);
                 })
-                ->update([
-                    'password'   => $hashed,
-                    'updated_at' => Carbon::now('Asia/Manila')
-                ]);
+                ->update($updateData);
 
             return response()->json([
                 'success' => true,

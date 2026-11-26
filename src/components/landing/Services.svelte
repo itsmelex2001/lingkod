@@ -1,6 +1,7 @@
 <script>
   import { slide, fade, fly } from 'svelte/transition';
   import { onMount, onDestroy } from 'svelte';
+  import HowToUseLingkod from './HowToUseLingkod.svelte';
   
   const departments = [
     {
@@ -59,14 +60,8 @@
   });
 </script>
 
-<!-- Intro Section (White background) -->
-<section class="intro-section" data-aos="fade-up">
-  <div class="container">
-    <h1 class="hospital-heading">MARIVELES MENTAL WELLNESS AND GENERAL HOSPITAL</h1>
-    <p class="hospital-sub">Dedicated to your health, driven by excellence. Your seamless journey to professional care starts here.</p>
-    <p class="text-make-appt">MAKE AN APPOINTMENT</p>
-  </div>
-</section>
+<!-- How to Use Lingkod 4-Step Interactive Stepper -->
+<HowToUseLingkod />
 
 <!-- Services Section (Green chevron shape) -->
 <section id="services" class="services-section">

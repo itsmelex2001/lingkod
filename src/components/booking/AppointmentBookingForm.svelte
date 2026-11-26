@@ -268,7 +268,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <label class="flex items-center gap-2 min-h-12 sm:min-h-0 p-2.5 border rounded-xl cursor-pointer text-sm sm:text-xs transition {consultationMode === 'Face-to-Face' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}">
             <input type="radio" bind:group={consultationMode} value="Face-to-Face" class="text-emerald-600 focus:ring-emerald-500" />
-            <span>In-Person (Hospital)</span>
+            <span>Face-to-Face (Hospital)</span>
           </label>
           <label class="flex items-center gap-2 min-h-12 sm:min-h-0 p-2.5 border rounded-xl cursor-pointer text-sm sm:text-xs transition {consultationMode === 'Online Teleconsultation' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}">
             <input type="radio" bind:group={consultationMode} value="Online Teleconsultation" class="text-emerald-600 focus:ring-emerald-500" />

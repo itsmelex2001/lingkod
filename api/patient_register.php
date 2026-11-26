@@ -17,6 +17,7 @@ ini_set('log_errors', 1);
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/patient_otp.php';
+require_once __DIR__ . '/config/settings_helper.php';
 
 // Load environment variables from .env
 $envFile = __DIR__ . '/../.env';
@@ -139,8 +140,11 @@ if ($isDependent && $relationshipToPatient === '') {
 
 if ($username === '') {
     $errors[] = 'Username is required.';
-} elseif (!preg_match('/^[a-zA-Z0-9._-]{3,30}$/', $username)) {
-    $errors[] = 'Username must be 3 to 30 characters and contain only letters, numbers, dots, underscores, or hyphens.';
+} else {
+    $usernameErr = validatePatientUsername($pdo, $username);
+    if ($usernameErr !== null) {
+        $errors[] = $usernameErr;
+    }
 }
 
 if ($password === '') {

@@ -182,6 +182,12 @@ document.addEventListener('DOMContentLoaded', () => {
     clearAllFieldErrors(document.getElementById('phaseStep1'));
 
     if (profile.isLoggedIn) {
+      const signedInBannerText = document.getElementById('signedInBannerText');
+      if (signedInBannerText) {
+        signedInBannerText.innerHTML = isOther
+          ? '<strong>Booking for another patient:</strong> Enter the patient&#39;s personal details below. This appointment will appear in your dashboard labeled as Other Patient.'
+          : '<strong>Signed-in booking:</strong> Your saved profile is pre-filled. Clinic staff will call your active mobile number to confirm before placing you in the queue.';
+      }
       if (isOther) {
         inputFirstName.value = '';
         inputLastName.value = '';
@@ -217,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateModeCards() {
     const val = document.querySelector('input[name="consultation_mode"]:checked')?.value || '';
-    if (cardModeF2F) cardModeF2F.classList.toggle('is-selected', val === 'In-Person');
+    if (cardModeF2F) cardModeF2F.classList.toggle('is-selected', val === 'Face-to-Face');
     if (cardModeTele) cardModeTele.classList.toggle('is-selected', val === 'Teleconsultation');
     const errEl = document.getElementById('errConsultationMode');
     if (errEl && val) {
@@ -286,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (radioModeF2F) radioModeF2F.checked = true;
       if (radioModeTele) radioModeTele.checked = false;
       updateModeCards();
-      showAlert('First-time patients are required to have an initial In-Person (Face-to-Face) consultation. Teleconsultation is only available for returning patients.');
+      showAlert('First-time patients are required to have an initial Face-to-Face consultation. Teleconsultation is only available for returning patients.');
     });
   }
 
@@ -295,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (radioModeF2F) radioModeF2F.checked = true;
       r.checked = false;
       updateModeCards();
-      showAlert('First-time patients are required to have an initial In-Person (Face-to-Face) consultation. Teleconsultation is only available for returning patients.');
+      showAlert('First-time patients are required to have an initial Face-to-Face consultation. Teleconsultation is only available for returning patients.');
       return;
     }
     updateModeCards();
@@ -494,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (isFirstTimePatient && modeVal === 'Teleconsultation') {
       applyPatientTypeModeLock();
-      showAlert('First-time patients are required to have an initial In-Person (Face-to-Face) consultation. Teleconsultation is only available for returning patients.');
+      showAlert('First-time patients are required to have an initial Face-to-Face consultation. Teleconsultation is only available for returning patients.');
       return false;
     }
     if (modeErrEl) modeErrEl.closest('.ba-field')?.classList.remove('has-error');
@@ -602,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('revMedications').textContent = inputCurrentMedications.value.trim() || 'None';
     document.getElementById('revReferral').textContent = inputReferralSource.value.trim() || 'None';
 
-    const modeVal = document.querySelector('input[name="consultation_mode"]:checked')?.value || 'In-Person';
+    const modeVal = document.querySelector('input[name="consultation_mode"]:checked')?.value || 'Face-to-Face';
     const slotVal = document.querySelector('input[name="preferred_time_slot"]:checked')?.value || '';
 
     if (inquiry) {
@@ -724,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setSubmitLoading(true);
 
       const recipient = document.querySelector('input[name="booking_for"]:checked')?.value || 'Patient (Me)';
-      const modeVal = document.querySelector('input[name="consultation_mode"]:checked')?.value || 'In-Person';
+      const modeVal = document.querySelector('input[name="consultation_mode"]:checked')?.value || 'Face-to-Face';
       const slotVal = document.querySelector('input[name="preferred_time_slot"]:checked')?.value || '';
       const scheduledTime = slotVal.startsWith('Afternoon') ? '13:00:00' : '08:00:00';
 
@@ -842,12 +848,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const privacyReadProgress = document.getElementById('privacyReadProgress');
+
+  function updatePrivacyScrollState() {
+    if (!modalPrivacyScrollBox) return;
+    const maxScroll = modalPrivacyScrollBox.scrollHeight - modalPrivacyScrollBox.clientHeight;
+    const pct = maxScroll <= 0 ? 100 : Math.min(100, Math.round((modalPrivacyScrollBox.scrollTop / maxScroll) * 100));
+    if (privacyReadProgress) privacyReadProgress.style.width = `${pct}%`;
+    if (maxScroll <= 8 || modalPrivacyScrollBox.scrollTop + modalPrivacyScrollBox.clientHeight >= modalPrivacyScrollBox.scrollHeight - 8) {
+      unlockPrivacyConsent();
+    }
+  }
+
   if (modalPrivacyScrollBox) {
-    modalPrivacyScrollBox.addEventListener('scroll', () => {
-      if (modalPrivacyScrollBox.scrollTop + modalPrivacyScrollBox.clientHeight >= modalPrivacyScrollBox.scrollHeight - 8) {
-        unlockPrivacyConsent();
-      }
-    });
+    modalPrivacyScrollBox.addEventListener('scroll', updatePrivacyScrollState);
+    updatePrivacyScrollState();
   }
 
   if (modalPrivacyConsentCheck) {

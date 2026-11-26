@@ -46,7 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 16px 28px rgba(34, 108, 29, 0.16)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.05));
+  filter: drop-shadow(0 6px 0 rgba(20, 65, 32, 0.14)) drop-shadow(0 16px 26px rgba(34, 108, 29, 0.16));
   animation: logoOrganicMotion 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) 1.85s infinite;
   transform-origin: 50% 48%;
   will-change: transform;
@@ -60,6 +60,9 @@
   height: 100%;
   object-fit: contain;
   display: block;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
   user-select: none;
   -webkit-user-drag: none;
   transform: translate3d(0, 12px, 0);
@@ -97,9 +100,16 @@
   z-index: 3;
 }
 
+.splash-layer-steth,
+.splash-layer-ingk,
+.splash-layer-d {
+  display: none;
+}
+
 .splash-layer-original {
   opacity: 0;
-  animation: originalLogoLock 0.4s ease 1.78s forwards;
+  transform-origin: 50% 48%;
+  animation: stethSmoothJourney 1.8s cubic-bezier(0.37, 0, 0.63, 1) forwards;
   z-index: 4;
 }
 
@@ -112,8 +122,8 @@
   pointer-events: none;
   overflow: hidden;
   transform: translate3d(0, 12px, 0);
-  -webkit-mask-image: url('/sdn/public/assets/v2_lingkod_logo_splash.png');
-  mask-image: url('/sdn/public/assets/v2_lingkod_logo_splash.png');
+  -webkit-mask-image: url('/sdn/public/assets/v2_lingkod_logo_splash_pixel.png');
+  mask-image: url('/sdn/public/assets/v2_lingkod_logo_splash_pixel.png');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -139,7 +149,9 @@
   );
   pointer-events: none;
   mix-blend-mode: overlay;
-  animation: sheenGlance 2.6s cubic-bezier(0.4, 0, 0.2, 1) 1.75s infinite;
+  opacity: 0;
+  transform: translate3d(-110%, 0, 0) rotateZ(25deg);
+  animation: sheenGlance 2.6s cubic-bezier(0.4, 0, 0.2, 1) 1.85s infinite backwards;
   will-change: transform, opacity;
 }
 
@@ -233,6 +245,19 @@
   .splash-logo-art-wrap {
     width: min(420px, 92vw);
     height: min(420px, 92vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-layer-original,
+  .splash-logo-art-wrap,
+  .splash-sheen-beam {
+    animation: none;
+  }
+
+  .splash-layer-original {
+    opacity: 1;
+    transform: translate3d(0, 12px, 0);
   }
 }
 

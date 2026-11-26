@@ -13,6 +13,7 @@ require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/patient_remember.php';
 require_once __DIR__ . '/config/patient_otp.php';
+require_once __DIR__ . '/config/settings_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -40,11 +41,15 @@ try {
     ensurePatientOtpColumns($pdo);
 
     $stmt = $pdo->prepare("
-        SELECT id, patient_id, full_name, email, username, password, is_verified, status, otp_hash, otp_expires_at, otp_attempts
+        SELECT id, patient_id, full_name, email, username, password, is_verified, status,
+               COALESCE(account_status, 'active') AS account_status,
+               COALESCE(must_change_password, 0) AS must_change_password,
+               otp_code, otp_hash, otp_expires_at, otp_attempts, is_otp_enabled
         FROM patients
         WHERE (LOWER(username) = LOWER(:ident_user) OR LOWER(email) = LOWER(:ident_email))
+          AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
           AND password IS NOT NULL AND password <> ''
-        ORDER BY is_verified DESC, id DESC
+        ORDER BY is_verified DESC, id ASC
         LIMIT 1
     ");
     $stmt->execute([':ident_user' => $username, ':ident_email' => $username]);
@@ -68,6 +73,16 @@ try {
         exit;
     }
 
+    if (strtolower((string)($patient['account_status'] ?? 'active')) === 'suspended') {
+        http_response_code(403);
+        echo json_encode([
+            'success'   => false,
+            'suspended' => true,
+            'message'   => 'This patient account has been suspended. Please contact the hospital administration desk.'
+        ]);
+        exit;
+    }
+
     // Check verification status: require 6-digit email OTP on first sign-in
     if ((int)$patient['is_verified'] !== 1) {
         if (empty($patient['email']) || !filter_var($patient['email'], FILTER_VALIDATE_EMAIL)) {
@@ -80,40 +95,73 @@ try {
             exit;
         }
 
-        $hasActiveOtp = !empty($patient['otp_hash'])
-            && !empty($patient['otp_expires_at'])
-            && strtotime($patient['otp_expires_at']) > time()
-            && (int)($patient['otp_attempts'] ?? 0) < 5;
+        $otpExpiryMin  = max(1, (int)getSettingValue($pdo, 'otp_expiry_minutes', 10));
+        $otpTtlSeconds = $otpExpiryMin * 60;
+        $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
 
-        $otp = null;
-        if (!$hasActiveOtp) {
-            $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
-            $otpExpires = date('Y-m-d H:i:s', strtotime('+30 minutes'));
-
-            $pdo->prepare("UPDATE patients SET otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
-                ->execute([$otpHash, $otpExpires, $patient['id']]);
-            $_SESSION['pending_otp_sent_at'] = time();
-        }
+        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), otp_attempts = 0 WHERE id = ?")
+            ->execute([$otpHash, $otpHash, $otpTtlSeconds, $patient['id']]);
 
         $_SESSION['pending_otp_patient_id'] = (int)$patient['id'];
         $_SESSION['pending_otp_mode']       = 'login';
         $_SESSION['pending_otp_remember']   = $remember ? 1 : 0;
+        $_SESSION['pending_otp_sent_at']    = time();
+        $_SESSION['pending_otp_expires_at'] = time() + $otpTtlSeconds;
 
         flushJsonAndContinue([
-            'success'      => false,
-            'otp_required' => true,
-            'email_sent'   => $otp !== null,
-            'masked_email' => maskEmail($patient['email']),
-            'redirect'     => '/sdn/pages/verify-otp.php',
-            'message'      => $otp !== null
-                ? 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
-                : 'Enter the 6-digit verification code sent to ' . maskEmail($patient['email']) . '.'
+            'success'         => false,
+            'otp_required'    => true,
+            'otp_mode'        => 'verify_account',
+            'email_sent'      => true,
+            'masked_email'    => maskEmail($patient['email']),
+            'expires_in'      => $otpTtlSeconds,
+            'resend_cooldown' => 60,
+            'redirect'        => '/sdn/pages/verify-otp.php',
+            'message'         => 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
         ]);
 
-        if ($otp !== null) {
-            sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp);
+        sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $otpExpiryMin);
+        exit;
+    }
+
+    // Two-Step Verification (Email OTP) when enabled by the patient
+    if ((int)($patient['is_otp_enabled'] ?? 0) === 1) {
+        if (empty($patient['email']) || !filter_var($patient['email'], FILTER_VALIDATE_EMAIL)) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Two-step verification is enabled, but no valid email is registered on your account.'
+            ]);
+            exit;
         }
+
+        $otpExpiryMin  = max(1, (int)getSettingValue($pdo, 'otp_expiry_minutes', 10));
+        $otpTtlSeconds = $otpExpiryMin * 60;
+        $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
+
+        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), otp_attempts = 0 WHERE id = ?")
+            ->execute([$otpHash, $otpHash, $otpTtlSeconds, $patient['id']]);
+
+        $_SESSION['pending_otp_patient_id'] = (int)$patient['id'];
+        $_SESSION['pending_otp_mode']       = 'login_2fa';
+        $_SESSION['pending_otp_remember']   = $remember ? 1 : 0;
+        $_SESSION['pending_otp_sent_at']    = time();
+        $_SESSION['pending_otp_expires_at'] = time() + $otpTtlSeconds;
+
+        flushJsonAndContinue([
+            'success'         => false,
+            'otp_required'    => true,
+            'otp_mode'        => 'login_2fa',
+            'email_sent'      => true,
+            'masked_email'    => maskEmail($patient['email']),
+            'expires_in'      => $otpTtlSeconds,
+            'resend_cooldown' => 60,
+            'message'         => 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
+        ]);
+
+        sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $otpExpiryMin);
         exit;
     }
 

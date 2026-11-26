@@ -131,10 +131,18 @@
     return 'Good evening';
   })();
 
-  $: firstName = (() => {
-    const name = profile.full_name || patientName || 'Patient';
-    return name.trim().split(/\s+/)[0];
-  })();
+  $: displayName = (profile.full_name || patientName || 'Patient').trim();
+
+  // Dynamic counts from database-backed appointment buckets
+  $: upcomingCount = appointments.upcoming.length;
+  $: pastCount = appointments.past.length;
+  $: cancelledCount = appointments.cancelled.length;
+
+  $: appointmentTabs = [
+    { id: 'upcoming', label: 'Upcoming', count: upcomingCount },
+    { id: 'past', label: 'Past / Completed', count: pastCount },
+    { id: 'cancelled', label: 'Cancelled', count: cancelledCount }
+  ];
 
   // Filtered Appointments based on Tab, Search, and Date Range
   $: filteredAppointments = (() => {
@@ -231,21 +239,55 @@
 <!-- Global Toast Notification -->
 {#if toastMessage}
   <div
-    class="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-lg text-xs font-medium transition-all {toastType === 'success' ? 'bg-[#166534] text-white' : 'bg-[#dc2626] text-white'}"
-    role="status"
+    class="fixed bottom-6 right-6 z-50 flex items-start gap-3 min-w-[300px] max-w-[380px] rounded-xl bg-white border border-slate-200 px-3.5 pt-3.5 pb-4 shadow-[0_12px_32px_-4px_rgba(15,23,42,0.12),0_4px_10px_-2px_rgba(15,23,42,0.05)] overflow-hidden transition-all motion-reduce:transition-none"
+    role={toastType === 'error' ? 'alert' : 'status'}
+    aria-live="polite"
   >
-    {#if toastType === 'success'}
-      <svg width="16" height="16" class="w-4 h-4 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
-        <polyline points="20 6 9 17 4 12"></polyline>
+    <span
+      class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border {toastType === 'error'
+        ? 'bg-red-50 border-red-200 text-red-600'
+        : toastType === 'muted'
+          ? 'bg-slate-50 border-slate-200 text-slate-600'
+          : 'bg-green-50 border-green-200 text-green-900'}"
+      aria-hidden="true"
+    >
+      {#if toastType === 'error'}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      {:else}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      {/if}
+    </span>
+    <div class="flex-1 min-w-0 pt-0.5">
+      <div class="text-[13px] font-semibold text-slate-900 leading-tight">
+        {toastType === 'error' ? 'Action Failed' : 'Success'}
+      </div>
+      <div class="mt-0.5 text-xs text-slate-500 leading-relaxed break-words">{toastMessage}</div>
+    </div>
+    <button
+      type="button"
+      on:click={() => { toastMessage = ''; if (toastTimer) clearTimeout(toastTimer); }}
+      aria-label="Dismiss notification"
+      class="-mt-0.5 -mr-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 cursor-pointer"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
-    {:else}
-      <svg width="16" height="16" class="w-4 h-4 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="8" x2="12" y2="12"></line>
-        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-      </svg>
-    {/if}
-    <span>{toastMessage}</span>
+    </button>
+    <div
+      class="absolute inset-x-0 bottom-0 h-[3px] {toastType === 'error'
+        ? 'bg-red-600'
+        : toastType === 'muted'
+          ? 'bg-slate-400'
+          : 'bg-green-700'}"
+      aria-hidden="true"
+    ></div>
   </div>
 {/if}
 
@@ -295,7 +337,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
           <div>
             <h1 class="text-xl md:text-2xl font-bold text-[#111827]">
-              {greeting}, {firstName}!
+              {greeting}, {displayName}!
             </h1>
             <p class="text-xs md:text-sm text-[#6b7280] mt-0.5">
               Manage your clinical consultations, schedule appointments, and review medical records.
@@ -443,6 +485,7 @@
               {#each appointments.upcoming.slice(0, 3) as appt}
                 <AppointmentRow
                   appointment={appt}
+                  isUpcomingTab={true}
                   onView={handleViewDetails}
                   onReschedule={handleReschedule}
                 />
@@ -474,40 +517,26 @@
             </button>
           </div>
 
-          <!-- Status Tabs -->
-          <div class="flex items-center gap-2 border-b border-[#e5e7eb] pb-px">
-            <button
-              type="button"
-              class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px flex items-center gap-2 {apptFilterTab === 'upcoming' ? 'border-[#166534] text-[#166534]' : 'border-transparent text-[#6b7280] hover:text-[#111827]'}"
-              on:click={() => apptFilterTab = 'upcoming'}
-            >
-              <span>Upcoming</span>
-              <span class="px-1.5 py-0.5 rounded-full text-[10px] {apptFilterTab === 'upcoming' ? 'bg-[#f0fdf4] text-[#166534] font-bold' : 'bg-[#f3f4f6] text-[#6b7280]'}">
-                {appointments.upcoming.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px flex items-center gap-2 {apptFilterTab === 'past' ? 'border-[#166534] text-[#166534]' : 'border-transparent text-[#6b7280] hover:text-[#111827]'}"
-              on:click={() => apptFilterTab = 'past'}
-            >
-              <span>Past & Completed</span>
-              <span class="px-1.5 py-0.5 rounded-full text-[10px] {apptFilterTab === 'past' ? 'bg-[#f0fdf4] text-[#166534] font-bold' : 'bg-[#f3f4f6] text-[#6b7280]'}">
-                {appointments.past.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              class="px-4 py-2.5 text-xs font-semibold transition border-b-2 -mb-px flex items-center gap-2 {apptFilterTab === 'cancelled' ? 'border-[#166534] text-[#166534]' : 'border-transparent text-[#6b7280] hover:text-[#111827]'}"
-              on:click={() => apptFilterTab = 'cancelled'}
-            >
-              <span>Cancelled</span>
-              <span class="px-1.5 py-0.5 rounded-full text-[10px] {apptFilterTab === 'cancelled' ? 'bg-[#f0fdf4] text-[#166534] font-bold' : 'bg-[#f3f4f6] text-[#6b7280]'}">
-                {appointments.cancelled.length}
-              </span>
-            </button>
+          <!-- Timeline Tabs -->
+          <div
+            class="flex items-center gap-6 border-b border-gray-200 overflow-x-auto"
+            role="tablist"
+            aria-label="Appointment categories"
+          >
+            {#each appointmentTabs as tab (tab.id)}
+              {@const isActive = apptFilterTab === tab.id}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                class="relative py-3 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] focus-visible:ring-offset-2 {isActive
+                  ? 'border-[#166534] text-[#166534] font-semibold'
+                  : 'border-transparent text-gray-500 font-medium hover:text-gray-900 hover:border-gray-300'}"
+                on:click={() => (apptFilterTab = tab.id)}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            {/each}
           </div>
 
           <!-- Filter & Search Bar -->
@@ -602,6 +631,7 @@
                 {#each filteredAppointments as appt}
                   <AppointmentRow
                     appointment={appt}
+                    isUpcomingTab={apptFilterTab === 'upcoming'}
                     onView={handleViewDetails}
                     onReschedule={handleReschedule}
                   />

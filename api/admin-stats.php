@@ -21,17 +21,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $todayStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE DATE(created_at) = CURDATE()");
     $todaysPatients = $todayStmt->fetchColumn() ?? 0;
 
-    // For "Pending Actions" (pending registrations and inquiries)
-    $pendingStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE status IN ('pending', 'for_approval', 'for_processing')");
+    // Pending approvals are real bookings or inquiries. Account profiles
+    // (status leftover as pending, with no visit details) are not appointments.
+    $pendingStatusSql = "LOWER(TRIM(COALESCE(status, ''))) IN ('pending', 'for_approval', 'for_processing', 'for approval')";
+    $realBookingSql = "(
+        (appointment_date IS NOT NULL AND appointment_date <> '0000-00-00')
+        OR (department IS NOT NULL AND TRIM(department) <> '')
+        OR (chief_complaints IS NOT NULL AND TRIM(chief_complaints) <> '')
+        OR (consultation_nature IS NOT NULL AND TRIM(consultation_nature) <> '')
+        OR COALESCE(unscheduled_walkin, 0) = 1
+        OR COALESCE(inquiry_only, 0) = 1
+    )";
+
+    $pendingStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE $pendingStatusSql AND $realBookingSql");
     $pendingActions = (int)($pendingStmt->fetchColumn() ?? 0);
 
-    $pendingApptStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE status IN ('pending', 'for_approval', 'for_processing') AND COALESCE(inquiry_only, 0) = 0");
+    $pendingApptStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE $pendingStatusSql AND $realBookingSql AND COALESCE(inquiry_only, 0) = 0");
     $pendingAppointments = (int)($pendingApptStmt->fetchColumn() ?? 0);
 
-    $pendingInqStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE status IN ('pending', 'for_approval', 'for_processing') AND COALESCE(inquiry_only, 0) = 1");
+    $pendingInqStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE $pendingStatusSql AND COALESCE(inquiry_only, 0) = 1");
     $pendingInquiries = (int)($pendingInqStmt->fetchColumn() ?? 0);
 
-    $unassignedStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE COALESCE(inquiry_only, 0) = 0 AND status NOT IN ('completed', 'cancelled', 'rejected', 'no-show', 'transferred') AND (assigned_doctor IS NULL OR TRIM(assigned_doctor) = '' OR LOWER(TRIM(assigned_doctor)) = 'none')");
+    $unassignedStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE COALESCE(inquiry_only, 0) = 0 AND $realBookingSql AND LOWER(TRIM(COALESCE(status, ''))) NOT IN ('completed', 'cancelled', 'rejected', 'no-show', 'transferred', 'registered') AND (assigned_doctor IS NULL OR TRIM(assigned_doctor) = '' OR LOWER(TRIM(assigned_doctor)) = 'none')");
     $unassignedUpcoming = (int)($unassignedStmt->fetchColumn() ?? 0);
 
     // Overall Patients
@@ -132,12 +143,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Logs for Audit view
     $auditLogs = getAdminActivity($pdo, 50);
 
+    // Today's OPD summary (scheduled for today)
+    $todaySummary = ['total' => 0, 'waiting' => 0, 'ongoing' => 0, 'completed' => 0];
+    try {
+        $tsStmt = $pdo->query("
+            SELECT LOWER(COALESCE(status, '')) AS st, COUNT(*) AS cnt
+            FROM patients
+            WHERE appointment_date = CURDATE() AND COALESCE(inquiry_only, 0) = 0
+            GROUP BY st
+        ");
+        foreach ($tsStmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $st  = $r['st'];
+            $cnt = (int)$r['cnt'];
+            if (in_array($st, ['cancelled', 'rejected', 'cancelled_by_patient', 'no-show'], true)) continue;
+            $todaySummary['total'] += $cnt;
+            if (in_array($st, ['pending', 'for_approval', 'for_processing', 'approved', 'confirmed', 'arrived', 'checked in', 'rescheduled'], true)) {
+                $todaySummary['waiting'] += $cnt;
+            } elseif (in_array($st, ['in_clinic', 'ongoing', 'in_consultation', 'in consultation'], true)) {
+                $todaySummary['ongoing'] += $cnt;
+            } elseif ($st === 'completed') {
+                $todaySummary['completed'] += $cnt;
+            }
+        }
+    } catch (Throwable $ignore) {}
+
+    // Live Today's Department Capacity vs Scheduling Rules
+    $deptLimits = [
+        'general'    => ['name' => 'General Medical', 'limit' => 60],
+        'neurology'  => ['name' => 'Neurology',       'limit' => 30],
+        'psychiatry' => ['name' => 'Psychiatry',      'limit' => 40],
+    ];
+    try {
+        $ruleRows = $pdo->query("SELECT department_code, display_name, daily_capacity_limit FROM department_scheduling_rules")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($ruleRows as $rr) {
+            $code = strtolower(trim((string)$rr['department_code']));
+            if (isset($deptLimits[$code])) {
+                $deptLimits[$code]['name']  = $rr['display_name'] ?: $deptLimits[$code]['name'];
+                $deptLimits[$code]['limit'] = max(1, (int)$rr['daily_capacity_limit']);
+            }
+        }
+    } catch (Throwable $ignore) {}
+
+    $bookedTodayByDept = ['general' => 0, 'neurology' => 0, 'psychiatry' => 0];
+    try {
+        $bkStmt = $pdo->query("
+            SELECT department, COUNT(*) AS cnt
+            FROM patients
+            WHERE appointment_date = CURDATE()
+              AND COALESCE(inquiry_only, 0) = 0
+              AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show')
+            GROUP BY department
+        ");
+        foreach ($bkStmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $dk = $classifyDept($r['department']);
+            $bookedTodayByDept[$dk] = ($bookedTodayByDept[$dk] ?? 0) + (int)$r['cnt'];
+        }
+    } catch (Throwable $ignore) {}
+
+    $deptCapacityToday = [];
+    foreach ($deptLimits as $code => $meta) {
+        $booked = $bookedTodayByDept[$code] ?? 0;
+        $limit  = $meta['limit'];
+        $deptCapacityToday[] = [
+            'code'    => $code,
+            'name'    => $meta['name'],
+            'booked'  => $booked,
+            'limit'   => $limit,
+            'percent' => min(100, (int)round(($booked / max(1, $limit)) * 100)),
+        ];
+    }
+
     respondOk([
         'chart_labels' => $chartLabels,
         'chart_data' => $chartData,
         'chart_datasets' => $deptSeries,
         'active_staff' => $staffStats['active_staff'] ?? 0,
         'todays_patients' => $todaysPatients,
+        'today_summary' => $todaySummary,
+        'department_capacity_today' => $deptCapacityToday,
         'pending_actions' => $pendingActions,
         'pending_appointments' => $pendingAppointments,
         'pending_inquiries' => $pendingInquiries,

@@ -25,6 +25,18 @@ if (empty($_SESSION['patient_logged_in']) || (empty($_SESSION['patient_id']) && 
     header('Location: /sdn/pages/patient-login.php');
     exit;
 }
+try {
+    if (!isset($pdo) && file_exists(__DIR__ . '/../api/config/db.php')) {
+        require_once __DIR__ . '/../api/config/db.php';
+    }
+    if (file_exists(__DIR__ . '/../api/config/settings_helper.php')) {
+        require_once __DIR__ . '/../api/config/settings_helper.php';
+        if (enforcePortalSessionTimeout($pdo ?? null, 'patient')) {
+            header('Location: /sdn/pages/patient-login.php?timeout=1');
+            exit;
+        }
+    }
+} catch (Throwable $ignore) {}
 
 $patientName  = $_SESSION['patient_name'] ?? 'Patient';
 $patientId    = $_SESSION['patient_id'] ?? '';
@@ -102,7 +114,7 @@ $initials  = count($nameParts) >= 2
         overflow: hidden;
       }
 
-      /* â”€â”€ Sidebar â”€â”€ */
+      /* ── Sidebar ── */
       .sidebar {
         width: 268px;
         height: 100vh;
@@ -119,6 +131,7 @@ $initials  = count($nameParts) >= 2
         overflow: hidden;
         z-index: 50;
         color: #ffffff;
+        transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding 0.22s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .sidebar-brand {
@@ -128,10 +141,37 @@ $initials  = count($nameParts) >= 2
         padding: 0.1rem 0 1.15rem 0;
         border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       }
+      .sidebar-toggle-btn {
+        margin-left: auto;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.2s ease;
+      }
+      .sidebar-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.22);
+        border-color: rgba(255, 255, 255, 0.38);
+      }
+      .sidebar-toggle-btn:focus-visible {
+        outline: 2px solid #ffffff;
+        outline-offset: 2px;
+      }
+      .sidebar-toggle-btn svg {
+        transition: transform 0.22s ease;
+      }
       .sidebar-brand-box {
-        width: 56px;
-        height: 56px;
-        min-width: 56px;
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -147,6 +187,8 @@ $initials  = count($nameParts) >= 2
         display: flex;
         flex-direction: column;
         line-height: 1.25;
+        min-width: 0;
+        flex: 1;
       }
       .brand-sub {
         font-size: 0.67rem;
@@ -657,10 +699,10 @@ $initials  = count($nameParts) >= 2
         color: #ffffff;
       }
       .hero-banner p {
-        font-size: 0.94rem;
+        font-size: 0.875rem;
         line-height: 1.45;
         color: rgba(255, 255, 255, 0.9);
-        max-width: 520px;
+        max-width: none;
       }
       .hero-actions {
         display: flex;
@@ -978,6 +1020,13 @@ $initials  = count($nameParts) >= 2
         font-weight: 700;
         color: var(--text-primary);
       }
+      .appt-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 2px;
+      }
       .appt-code-tag {
         font-size: 0.72rem;
         font-weight: 700;
@@ -985,6 +1034,24 @@ $initials  = count($nameParts) >= 2
         background: #f1f5f9;
         padding: 2px 7px;
         border-radius: 6px;
+      }
+      .appt-other-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #5b21b6;
+        background: #f5f3ff;
+        border: 1px solid #ddd6fe;
+        padding: 2px 8px;
+        border-radius: 999px;
+        line-height: 1.3;
+        width: fit-content;
+      }
+      .appt-other-badge svg {
+        flex-shrink: 0;
+        color: #6d28d9;
       }
       .appt-doc {
         font-size: 0.82rem;
@@ -1044,6 +1111,53 @@ $initials  = count($nameParts) >= 2
         color: #b91c1c;
       }
       .status-cancelled .status-dot { background: #dc2626; }
+      .status-rescheduled {
+        background: #ede9fe;
+        color: #6d28d9;
+      }
+      .status-rescheduled .status-dot { background: #7c3aed; }
+      .appt-resched-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        line-height: 1.3;
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        white-space: nowrap;
+      }
+      .appt-visit-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        line-height: 1.3;
+        white-space: nowrap;
+      }
+      .appt-visit-badge.is-initial {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+      }
+      .appt-visit-badge.is-followup {
+        background: #e0f2fe;
+        color: #075985;
+        border: 1px solid #bae6fd;
+      }
+      .appt-resched-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #92400e;
+        margin-top: 2px;
+      }
 
       .btn-outline-sm {
         display: inline-flex;
@@ -1065,7 +1179,481 @@ $initials  = count($nameParts) >= 2
         background: var(--brand-green-light);
       }
 
-      /* â”€â”€ Appointments Date Range Filter Controls â”€â”€ */
+      /* ── Appointments Workspace (Clean, Minimal Clinical Table Layout) ── */
+      .appt-schedule-col {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .appt-sched-line {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        color: #334155;
+        font-weight: 500;
+      }
+
+      .appt-sched-sub {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.77rem;
+        color: #64748b;
+      }
+
+      .appt-sched-line svg,
+      .appt-sched-sub svg {
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+
+      .appt-status-col {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: nowrap;
+      }
+
+      .row-actions-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        background: #f8fafc;
+        color: #0f172a;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .row-actions-btn:hover,
+      .row-actions-btn[aria-expanded="true"] {
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+      }
+      .row-actions-btn:focus-visible {
+        outline: 2px solid var(--brand-green);
+        outline-offset: 2px;
+      }
+
+      .row-action-menu {
+        position: fixed;
+        z-index: 10020;
+        min-width: 168px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+        padding: 6px;
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .row-action-menu.open {
+        display: flex;
+      }
+      .row-action-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: #0f172a;
+        font-family: inherit;
+        font-size: 0.84rem;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.12s ease;
+      }
+      .row-action-item:hover {
+        background: #f1f5f9;
+      }
+      .row-action-item svg {
+        color: #64748b;
+        flex-shrink: 0;
+      }
+
+      @media (min-width: 769px) {
+      #view-appointments .view-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 0.25rem;
+      }
+      #view-appointments .view-header h1 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+      }
+      #view-appointments .view-header p {
+        font-size: 0.86rem;
+        color: #64748b;
+        margin-top: 3px;
+      }
+      #view-appointments .btn-primary-action {
+        height: 40px;
+        padding: 0 18px;
+        border-radius: 10px;
+        font-size: 0.84rem;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(21, 128, 61, 0.22);
+      }
+
+      .appt-workspace-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+      }
+
+      #view-appointments .toolbar-row {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+      }
+
+      .appt-panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 20px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+        flex-wrap: wrap;
+      }
+
+      #view-appointments .filter-pills-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 20px;
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+      }
+
+      #view-appointments .filter-pill {
+        position: relative;
+        padding: 14px 2px;
+        border-radius: 0;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        background: transparent;
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: color 0.16s ease, border-color 0.16s ease;
+      }
+
+      #view-appointments .filter-pill:hover {
+        color: #0f172a;
+        background: transparent;
+      }
+
+      #view-appointments .filter-pill.active {
+        background: transparent;
+        color: #15803d;
+        border-bottom-color: #15803d;
+        font-weight: 700;
+        box-shadow: none;
+      }
+
+      .appt-filter-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 20px;
+        background: #f8fafc;
+        border-bottom: 1px solid #f1f5f9;
+        flex-wrap: wrap;
+      }
+
+      #view-appointments .search-input-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 220px;
+        max-width: 300px;
+      }
+
+      #view-appointments .search-input-wrap svg {
+        position: absolute;
+        left: 11px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        pointer-events: none;
+      }
+
+      #view-appointments .search-input-wrap input {
+        width: 100%;
+        height: 36px;
+        padding: 0 12px 0 34px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.82rem;
+        outline: none;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      #view-appointments .search-input-wrap input::placeholder {
+        color: #94a3b8;
+      }
+
+      #view-appointments .search-input-wrap input:focus {
+        border-color: var(--brand-green);
+        box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.08);
+      }
+
+      #view-appointments .toolbar-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      #view-appointments .date-range-filter-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        border: none;
+        padding: 0;
+        box-shadow: none;
+        flex-wrap: wrap;
+      }
+
+      .appt-date-pill {
+        display: inline-flex;
+        align-items: center;
+        height: 36px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0 10px;
+        gap: 8px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .appt-date-pill:focus-within {
+        border-color: var(--brand-green);
+        box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.08);
+      }
+
+      #view-appointments .date-filter-field {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        height: auto;
+      }
+
+      #view-appointments .date-filter-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #94a3b8;
+        letter-spacing: 0.04em;
+      }
+
+      #view-appointments .date-filter-field input[type="date"] {
+        border: none;
+        background: transparent;
+        font-size: 0.8rem;
+        color: #334155;
+        font-family: inherit;
+        outline: none;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      #view-appointments .date-range-sep {
+        width: 1px;
+        height: 16px;
+        background: #e2e8f0;
+        font-size: 0;
+        color: transparent;
+        user-select: none;
+      }
+
+      #view-appointments .btn-apply-date {
+        height: 36px;
+        padding: 0 13px;
+        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #0f172a;
+        font-size: 0.79rem;
+        font-weight: 600;
+      }
+
+      #view-appointments .btn-apply-date:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #0f172a;
+      }
+
+      #view-appointments .btn-refresh-date {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        justify-content: center;
+        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+      }
+
+      #view-appointments .btn-refresh-date span {
+        display: none;
+      }
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 0.76rem;
+        font-weight: 600;
+      }
+
+      #view-appointments .btn-refresh-date:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #0f172a;
+      }
+
+      .appt-count-meta {
+        font-size: 0.77rem;
+        font-weight: 500;
+        color: #64748b;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .appt-list-header {
+        display: grid;
+        grid-template-columns: minmax(250px, 1.35fr) minmax(220px, 1.15fr) minmax(185px, auto);
+        align-items: center;
+        gap: 16px;
+        padding: 10px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #ffffff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
+      }
+
+      .appt-list-header span:last-child {
+        text-align: right;
+      }
+
+      #view-appointments .section-card {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+
+      #fullApptsList {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      #fullApptsList .item-row {
+        display: grid;
+        grid-template-columns: minmax(250px, 1.35fr) minmax(220px, 1.15fr) minmax(185px, auto);
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        border: none;
+        border-bottom: 1px solid #f1f5f9;
+        border-radius: 0;
+        background: #ffffff;
+        box-shadow: none;
+        transition: background 0.14s ease;
+      }
+
+      #fullApptsList .item-row:last-child {
+        border-bottom: none;
+      }
+
+      #fullApptsList .item-row:hover {
+        background: #f8fafc;
+        border-color: #f1f5f9;
+        box-shadow: none;
+      }
+
+      #fullApptsList .appt-info-left {
+        align-items: center;
+        gap: 14px;
+      }
+
+      #fullApptsList .date-badge {
+        width: 46px;
+        height: 48px;
+        border-radius: 10px;
+        background: #f0fdf4;
+        border: 1px solid #dcfce7;
+      }
+
+      #fullApptsList .date-month {
+        font-size: 0.64rem;
+        letter-spacing: 0.06em;
+      }
+
+      #fullApptsList .date-day {
+        font-size: 1.15rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #fullApptsList .appt-title {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      #fullApptsList .appt-code-tag {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.71rem;
+        font-weight: 600;
+        color: #475569;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 1px 7px;
+        border-radius: 6px;
+        width: fit-content;
+      }
+
+      #fullApptsList .empty-state-box {
+        padding: 3rem 1.5rem;
+      }
+      }
+
+      /* ── Shared Date / View Header / Filter Pills Defaults ── */
       .toolbar-controls {
         display: flex;
         align-items: center;
@@ -1214,28 +1802,41 @@ $initials  = count($nameParts) >= 2
       .filter-pills-row {
         display: flex;
         align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
+        gap: 18px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-bottom: 1px solid #e2e8f0;
+        scrollbar-width: none;
+      }
+      .filter-pills-row::-webkit-scrollbar {
+        display: none;
       }
       .filter-pill {
-        padding: 7px 16px;
-        border-radius: 999px;
-        border: 1px solid var(--border-color);
-        background: #ffffff;
+        position: relative;
+        padding: 12px 2px;
+        border-radius: 0;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        background: transparent;
         font-size: 0.84rem;
         font-weight: 600;
-        color: var(--text-secondary);
+        color: #64748b;
         cursor: pointer;
-        transition: all 0.16s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+        transition: color 0.16s ease, border-color 0.16s ease;
       }
       .filter-pill:hover {
-        background: #f8fafc;
+        background: transparent;
         color: var(--text-primary);
       }
       .filter-pill.active {
-        background: var(--brand-green);
-        border-color: var(--brand-green);
-        color: #ffffff;
+        background: transparent;
+        border-bottom-color: var(--brand-green);
+        color: var(--brand-green);
         font-weight: 700;
       }
       .search-input-wrap {
@@ -1398,6 +1999,168 @@ $initials  = count($nameParts) >= 2
         transform: translateX(-20px);
       }
 
+      .otp-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        vertical-align: middle;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+      .otp-status-pill.is-enabled {
+        background: #f0fdf4;
+        color: #14532d;
+        border-color: #bbf7d0;
+      }
+
+      .portal-toast {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 2000;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        width: max-content;
+        min-width: 300px;
+        max-width: 380px;
+        padding: 13px 14px 15px;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05);
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+        pointer-events: none;
+        transition: opacity 0.15s ease-in, transform 0.15s ease-in;
+      }
+      .portal-toast.is-visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+        transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .portal-toast-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+        flex-shrink: 0;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #14532d;
+      }
+      .portal-toast.is-muted .portal-toast-icon {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        color: #475569;
+      }
+      .portal-toast.is-error .portal-toast-icon {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #dc2626;
+      }
+      .portal-toast-body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-top: 1px;
+      }
+      .portal-toast-title {
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #0f172a;
+        line-height: 1.3;
+      }
+      .portal-toast-desc {
+        font-size: 0.76rem;
+        font-weight: 400;
+        color: #64748b;
+        line-height: 1.4;
+      }
+      .portal-toast-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin: -3px -4px 0 0;
+        border: none;
+        border-radius: 7px;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .portal-toast-close:hover {
+        background: #f1f5f9;
+        color: #334155;
+      }
+      .portal-toast-close:focus-visible {
+        outline: 2px solid #15803d;
+        outline-offset: 1px;
+      }
+      .portal-toast-progress {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 3px;
+        background: #15803d;
+        transform-origin: left center;
+        transform: scaleX(0);
+      }
+      .portal-toast.is-muted .portal-toast-progress {
+        background: #94a3b8;
+      }
+      .portal-toast.is-error .portal-toast-progress {
+        background: #dc2626;
+      }
+      .portal-toast.is-visible .portal-toast-progress {
+        animation: portalToastDrain 3.8s linear forwards;
+      }
+      .portal-toast:hover .portal-toast-progress {
+        animation-play-state: paused;
+      }
+      @keyframes portalToastDrain {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(0); }
+      }
+      @media (max-width: 640px) {
+        .portal-toast {
+          left: 16px;
+          right: 16px;
+          bottom: 76px;
+          width: auto;
+          min-width: 0;
+          max-width: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .portal-toast,
+        .portal-toast.is-visible,
+        .portal-toast-close {
+          transition: none;
+        }
+        .portal-toast.is-visible .portal-toast-progress {
+          animation: none;
+          transform: scaleX(1);
+        }
+      }
+
       /* â”€â”€ Empty State Styling â”€â”€ */
       .empty-state-box {
         display: flex;
@@ -1447,7 +2210,7 @@ $initials  = count($nameParts) >= 2
       .empty-state-desc {
         font-size: 0.85rem;
         color: var(--text-secondary);
-        max-width: 420px;
+        max-width: none;
         line-height: 1.5;
         margin-bottom: 1.15rem;
       }
@@ -1547,34 +2310,267 @@ $initials  = count($nameParts) >= 2
         align-items: center;
       }
 
-      @media (min-width: 1024px) {
+      @media (min-width: 769px) {
         #view-dashboard.active {
-          display: grid;
-          grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.78fr);
-          gap: 1.15rem;
-          align-items: start;
-        }
-        #view-dashboard .hero-banner {
-          grid-column: 1 / -1;
-        }
-        #view-dashboard .content-grid {
-          grid-column: 1;
-          grid-row: 2;
-        }
-        #view-dashboard .metrics-row {
-          grid-column: 2;
-          grid-row: 2;
           display: flex;
           flex-direction: column;
-          gap: 0.85rem;
+          gap: 1.25rem;
+        }
+        #view-dashboard .hero-banner {
+          order: 1;
+          padding: 1.45rem 1.75rem;
+          flex-wrap: nowrap;
+        }
+        #view-dashboard .hero-banner-left {
+          min-width: 0;
+        }
+        #view-dashboard .hero-banner p {
+          max-width: none;
+          white-space: nowrap;
+        }
+        #view-dashboard .hero-actions {
+          flex-shrink: 0;
+        }
+      }
+      @media (min-width: 769px) and (max-width: 1180px) {
+        #view-dashboard .hero-banner {
+          flex-wrap: wrap;
+        }
+        #view-dashboard .hero-banner p {
+          white-space: normal;
+        }
+      }
+      @media (min-width: 769px) {
+        #view-dashboard .metrics-row {
+          order: 2;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1rem;
+        }
+        #view-dashboard .metric-card {
+          padding: 1.15rem 1.25rem;
+          border-radius: 14px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+          transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+        #view-dashboard .metric-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+        }
+        #view-dashboard .metric-lbl {
+          font-size: 0.72rem;
+          letter-spacing: 0.05em;
+          color: #64748b;
+        }
+        #view-dashboard .metric-value {
+          font-size: 1.45rem;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          font-variant-numeric: tabular-nums;
+          margin: 6px 0 3px;
+        }
+        #view-dashboard .metric-sub {
+          font-size: 0.78rem;
+          color: #64748b;
+        }
+        #view-dashboard .metric-icon-box {
+          width: auto;
+          height: auto;
+          border-radius: 0;
+          background: transparent;
+        }
+        #view-dashboard .metric-icon-box.green {
+          background: transparent;
+          color: #15803d;
+        }
+        #view-dashboard .metric-icon-box.blue {
+          background: transparent;
+          color: #2563eb;
+        }
+        #view-dashboard .metric-icon-box.amber {
+          background: transparent;
+          color: #475569;
+        }
+        #view-dashboard .content-grid {
+          order: 3;
+        }
+        #view-dashboard .section-card {
+          padding: 0;
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+          overflow: hidden;
+        }
+        #view-dashboard .section-header {
+          padding: 16px 20px;
+          margin-bottom: 0;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        #view-dashboard .section-title-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 9px;
+          background: #f0fdf4;
+          color: #15803d;
+        }
+        #dashUpcomingList {
+          gap: 0;
+        }
+        #dashUpcomingList .item-row {
+          display: grid;
+          grid-template-columns: minmax(250px, 1.35fr) minmax(220px, 1.15fr) minmax(185px, auto);
+          align-items: center;
+          gap: 16px;
+          padding: 16px 20px;
+          border: none;
+          border-bottom: 1px solid #f1f5f9;
+          border-radius: 0;
+          background: #ffffff;
+          box-shadow: none;
+          transition: background 0.14s ease;
+        }
+        #dashUpcomingList .item-row:last-child {
+          border-bottom: none;
+        }
+        #dashUpcomingList .item-row:hover {
+          background: #f8fafc;
+          box-shadow: none;
+        }
+        #dashUpcomingList .appt-info-left {
+          align-items: center;
+          gap: 14px;
+        }
+        #dashUpcomingList .date-badge {
+          width: 46px;
+          height: 48px;
+          border-radius: 10px;
+          background: #f0fdf4;
+          border: 1px solid #dcfce7;
+        }
+        #dashUpcomingList .date-month {
+          font-size: 0.64rem;
+          letter-spacing: 0.06em;
+        }
+        #dashUpcomingList .date-day {
+          font-size: 1.15rem;
+          font-variant-numeric: tabular-nums;
+        }
+        #dashUpcomingList .appt-title {
+          font-size: 0.92rem;
+          font-weight: 600;
+          color: #0f172a;
+        }
+        #dashUpcomingList .appt-code-tag {
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 0.71rem;
+          font-weight: 600;
+          color: #475569;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          padding: 1px 7px;
+          border-radius: 6px;
+          width: fit-content;
+        }
+        #dashUpcomingList .empty-state-box {
+          padding: 2.5rem 1.5rem;
         }
       }
       @media (max-width: 1024px) {
         .metrics-row { grid-template-columns: repeat(2, 1fr); }
         .dept-cards-grid, .content-grid { grid-template-columns: 1fr; }
       }
+      @media (min-width: 768px) {
+        .sidebar.is-collapsed {
+          width: 80px;
+          padding: 1.2rem 0.75rem;
+          overflow: visible;
+        }
+        .sidebar.is-collapsed .sidebar-brand {
+          flex-direction: column;
+          justify-content: center;
+          gap: 10px;
+          padding: 0 0 1rem 0;
+        }
+        .sidebar.is-collapsed .sidebar-brand-box {
+          width: 40px;
+          height: 40px;
+          min-width: 40px;
+        }
+        .sidebar.is-collapsed .sidebar-toggle-btn {
+          margin-left: 0;
+          width: 40px;
+          height: 40px;
+        }
+        .sidebar.is-collapsed .sidebar-toggle-btn svg {
+          transform: rotate(180deg);
+        }
+        .sidebar.is-collapsed .brand-text-block,
+        .sidebar.is-collapsed .sidebar-section-lbl,
+        .sidebar.is-collapsed .sidebar-help-card,
+        .sidebar.is-collapsed .nav-link-left > span {
+          display: none;
+        }
+        .sidebar.is-collapsed .sidebar-nav {
+          margin-top: 0.85rem;
+          align-items: center;
+          overflow: visible;
+        }
+        .sidebar.is-collapsed .sidebar-footer {
+          align-items: center;
+        }
+        .sidebar.is-collapsed .nav-link {
+          width: 46px;
+          height: 46px;
+          padding: 0;
+          justify-content: center;
+          position: relative;
+        }
+        .sidebar.is-collapsed .nav-link-left {
+          gap: 0;
+        }
+        .sidebar.is-collapsed .nav-pill-count:not([hidden]) {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 4px;
+          font-size: 0.65rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          color: #15803d;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+        }
+        .sidebar.is-collapsed .nav-link::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          left: calc(100% + 12px);
+          top: 50%;
+          transform: translateY(-50%) translateX(-4px);
+          background: #0f172a;
+          color: #ffffff;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 6px 10px;
+          border-radius: 8px;
+          white-space: nowrap;
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.14s ease, transform 0.14s ease;
+          z-index: 80;
+        }
+        .sidebar.is-collapsed .nav-link:hover::after,
+        .sidebar.is-collapsed .nav-link:focus-visible::after {
+          opacity: 1;
+          transform: translateY(-50%) translateX(0);
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
-        .nav-link, .btn-hero-white, .btn-hero-outline, .btn-top-icon, .metric-card {
+        .sidebar, .sidebar-toggle-btn, .sidebar-toggle-btn svg, .nav-link, .nav-link::after, .btn-hero-white, .btn-hero-outline, .btn-top-icon, .metric-card {
           transition: none;
         }
       }
@@ -1620,8 +2616,8 @@ $initials  = count($nameParts) >= 2
     <div class="app-layout" id="standalone-dashboard">
       <div class="mobile-sidebar-backdrop" id="mobileSidebarBackdrop"></div>
 
-      <!-- â”€â”€ Left Sidebar â”€â”€ -->
-      <aside class="sidebar">
+      <!-- ── Left Sidebar ── -->
+      <aside class="sidebar" id="patientSidebar">
         <div>
           <div class="sidebar-brand">
             <div class="sidebar-brand-box">
@@ -1629,21 +2625,27 @@ $initials  = count($nameParts) >= 2
             </div>
             <div class="brand-text-block">
               <span class="brand-sub" data-i18n="brand_sub">Mariveles Mental Wellness and General Hospital</span>
-              <span class="brand-title">LINGKOD</span>
             </div>
+            <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" aria-label="Collapse sidebar" aria-controls="patientSidebar" aria-expanded="true" title="Collapse sidebar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+                <polyline points="15 9 12 12 15 15"></polyline>
+              </svg>
+            </button>
           </div>
 
-          <nav class="sidebar-nav">
-            <a class="nav-link active" onclick="switchView('dashboard', this)">
+          <nav class="sidebar-nav" aria-label="Patient portal navigation">
+            <a class="nav-link active" data-tooltip="Dashboard" aria-label="Dashboard" title="Dashboard" onclick="switchView('dashboard', this)">
               <span class="nav-link-left">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
                 <span data-i18n="nav_dashboard">Dashboard</span>
               </span>
             </a>
 
-            <a class="nav-link" onclick="switchView('appointments', this)">
+            <a class="nav-link" data-tooltip="Appointments" aria-label="Appointments" title="Appointments" onclick="switchView('appointments', this)">
               <span class="nav-link-left">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 <span data-i18n="nav_appointments">Appointments</span>
               </span>
               <span class="nav-pill-count" id="sideApptCount" hidden>0</span>
@@ -1654,20 +2656,36 @@ $initials  = count($nameParts) >= 2
         <div class="sidebar-footer">
           <div class="sidebar-help-card">
             <div class="sidebar-help-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
               <span>Patient Assistance Desk</span>
             </div>
             <div class="sidebar-help-sub">Mon &ndash; Sat &bull; 8:00 AM to 5:00 PM<br>Please bring your Patient ID on your clinic visit.</div>
           </div>
 
-          <a class="nav-link" id="nav-settings" onclick="switchView('settings', this)">
+          <a class="nav-link" id="nav-settings" data-tooltip="Settings" aria-label="Settings" title="Settings" onclick="switchView('settings', this)">
             <span class="nav-link-left">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
               <span data-i18n="nav_settings">Settings</span>
             </span>
           </a>
         </div>
       </aside>
+      <script>
+        (function () {
+          try {
+            if (window.innerWidth >= 768 && localStorage.getItem('lingkod_patient_sidebar_collapsed') === '1') {
+              var s = document.getElementById('patientSidebar');
+              var b = document.getElementById('sidebarToggleBtn');
+              if (s) s.classList.add('is-collapsed');
+              if (b) {
+                b.setAttribute('aria-expanded', 'false');
+                b.setAttribute('aria-label', 'Expand sidebar');
+                b.setAttribute('title', 'Expand sidebar');
+              }
+            }
+          } catch (e) {}
+        })();
+      </script>
 
       <!-- â”€â”€ Right Main Area â”€â”€ -->
       <main class="main-content">
@@ -1678,7 +2696,6 @@ $initials  = count($nameParts) >= 2
             <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open navigation menu" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
             <a href="#view-dashboard" class="mobile-topbar-brand" onclick="switchView('dashboard'); return false;">
               <img src="/sdn/public/assets/v3_lingkod_logo_green.png" alt="LINGKOD" class="mobile-topbar-logo" />
-              <span class="mobile-topbar-title">LINGKOD</span>
             </a>
             <span class="topbar-id-chip" id="topPatientIdChip">Patient ID: <?= htmlspecialchars($patientId ?: 'Verified') ?></span>
           </div>
@@ -1727,7 +2744,7 @@ $initials  = count($nameParts) >= 2
                 </button>
                 <a href="/sdn/api/patient_logout.php" class="profile-dd-item profile-dd-logout">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                  <span>Logout</span>
+                  <span>Sign out</span>
                 </a>
               </div>
             </div>
@@ -1746,7 +2763,7 @@ $initials  = count($nameParts) >= 2
                 <div class="hero-eyebrow">
                   <span>Patient Portal</span>
                 </div>
-                <h1 id="heroGreeting">Good morning, <?= htmlspecialchars($firstName) ?></h1>
+                <h1 id="heroGreeting">Good morning, <?= htmlspecialchars($patientName) ?></h1>
                 <p data-i18n="hero_sub">Manage your hospital appointments and book consultations across MMWGH departments.</p>
                 <button type="button" class="mobile-hero-id-chip" id="mobileHeroIdChip" aria-label="Copy Patient ID">
                   <span id="mobileHeroIdText">ID: <?= htmlspecialchars($patientId ?: 'Verified') ?></span>
@@ -1781,7 +2798,15 @@ $initials  = count($nameParts) >= 2
                       <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px; line-height:1.4;">Scheduled consultations and visits</div>
                     </div>
                   </div>
-                  <button type="button" class="section-link" onclick="switchView('appointments')">View all</button>
+                  <button type="button" class="section-link" onclick="switchView('appointments')">
+                    <span>View all</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                </div>
+                <div class="appt-list-header" id="dashListHeader" aria-hidden="true">
+                  <span>Consultation &amp; Ref</span>
+                  <span>Schedule &amp; Mode</span>
+                  <span>Status</span>
                 </div>
                 <div class="card-item-list" id="dashUpcomingList"></div>
               </div>
@@ -1844,41 +2869,56 @@ $initials  = count($nameParts) >= 2
               </a>
             </div>
 
-            <div class="toolbar-row">
-              <div class="filter-pills-row">
-                <button class="filter-pill active" id="btnApptUpcoming" onclick="filterApptTab('upcoming', this)">Upcoming (0)</button>
-                <button class="filter-pill" id="btnApptPast" onclick="filterApptTab('past', this)">Past / Completed (0)</button>
-                <button class="filter-pill" id="btnApptCancelled" onclick="filterApptTab('cancelled', this)">Cancelled (0)</button>
-              </div>
-              <div class="toolbar-controls">
-                <div class="date-range-filter-wrap">
-                  <div class="date-filter-field">
-                    <label for="apptDateFrom" class="date-filter-label">From</label>
-                    <input type="date" id="apptDateFrom" title="Start date" onkeydown="if(event.key==='Enter') paintAppointmentList()" />
+            <div class="appt-workspace-card">
+              <div class="toolbar-row">
+                <div class="appt-panel-head">
+                  <div class="filter-pills-row" role="tablist" aria-label="Appointment categories">
+                    <button type="button" role="tab" aria-selected="true" class="filter-pill active" id="btnApptUpcoming" onclick="filterApptTab('upcoming', this)">Upcoming (0)</button>
+                    <button type="button" role="tab" aria-selected="false" class="filter-pill" id="btnApptPast" onclick="filterApptTab('past', this)">Past / Completed (0)</button>
+                    <button type="button" role="tab" aria-selected="false" class="filter-pill" id="btnApptCancelled" onclick="filterApptTab('cancelled', this)">Cancelled (0)</button>
                   </div>
-                  <span class="date-range-sep">&ndash;</span>
-                  <div class="date-filter-field">
-                    <label for="apptDateTo" class="date-filter-label">To</label>
-                    <input type="date" id="apptDateTo" title="End date" onkeydown="if(event.key==='Enter') paintAppointmentList()" />
-                  </div>
-                  <button type="button" class="btn-apply-date" id="btnApplyDate" onclick="paintAppointmentList()" title="Apply date filter">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    <span>Apply</span>
-                  </button>
-                  <button type="button" class="btn-refresh-date" id="btnRefreshDate" onclick="resetApptDateFilter()" title="Refresh &amp; clear date filter">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                    <span>Refresh</span>
-                  </button>
+                  <span class="appt-count-meta" id="apptResultMeta">0 appointments</span>
                 </div>
-                <div class="search-input-wrap">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                  <input type="text" id="apptSearchInput" placeholder="Search department, ID, date..." oninput="paintAppointmentList()" />
-                </div>
-              </div>
-            </div>
 
-            <div class="section-card">
-              <div class="card-item-list" id="fullApptsList"></div>
+                <div class="appt-filter-strip">
+                  <div class="search-input-wrap">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="apptSearchInput" placeholder="Search department, patient, ID, date..." oninput="paintAppointmentList()" />
+                  </div>
+                  <div class="toolbar-controls">
+                    <div class="date-range-filter-wrap">
+                      <div class="appt-date-pill">
+                        <div class="date-filter-field">
+                          <label for="apptDateFrom" class="date-filter-label">From</label>
+                          <input type="date" id="apptDateFrom" title="Start date" onchange="paintAppointmentList()" onkeydown="if(event.key==='Enter') paintAppointmentList()" />
+                        </div>
+                        <span class="date-range-sep" aria-hidden="true"></span>
+                        <div class="date-filter-field">
+                          <label for="apptDateTo" class="date-filter-label">To</label>
+                          <input type="date" id="apptDateTo" title="End date" onchange="paintAppointmentList()" onkeydown="if(event.key==='Enter') paintAppointmentList()" />
+                        </div>
+                      </div>
+                      <button type="button" class="btn-apply-date" id="btnApplyDate" onclick="paintAppointmentList()" title="Apply date filter">
+                        <span>Apply</span>
+                      </button>
+                      <button type="button" class="btn-refresh-date" id="btnRefreshDate" onclick="resetApptDateFilter()" aria-label="Reset date filter" title="Reset date filter">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        <span>Reset</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="appt-list-header" id="apptListHeader" aria-hidden="true">
+                <span>Consultation &amp; Ref</span>
+                <span>Schedule &amp; Mode</span>
+                <span>Status</span>
+              </div>
+
+              <div class="section-card">
+                <div class="card-item-list" id="fullApptsList"></div>
+              </div>
             </div>
           </section>
 
@@ -1936,39 +2976,35 @@ $initials  = count($nameParts) >= 2
                   </select>
                 </div>
               </div>
-
-              <div>
-                <button type="button" id="btnSaveSettings" class="settings-save-btn" onclick="saveSettings()">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                  <span data-i18n="settings_save">Save preferences</span>
-                </button>
-              </div>
             </div>
 
             <div class="settings-card">
-              <span class="settings-card-title">Digital Patient ID (QR Code)</span>
-              <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-top:10px;">
-                <div id="patientIdCardPreview" style="background:linear-gradient(135deg,#166534 0%,#15803d 58%,#047857 100%); color:#ffffff; border-radius:14px; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; flex:1; min-width:290px; max-width:480px; box-shadow:0 6px 18px rgba(21,128,61,0.18);">
-                  <div style="flex:1; min-width:170px;">
-                    <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#bbf7d0; margin-bottom:10px;">MMWGH LINGKOD &bull; Digital Patient ID</div>
+              <span class="settings-card-title">Digital Patient ID</span>
+              <div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap; margin-top:12px;">
+                <div id="patientIdCardPreview" style="background:#ffffff; color:#0f172a; border:1px solid #e2e8f0; border-top:3px solid #15803d; border-radius:14px; padding:20px 22px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; flex:1; min-width:290px; max-width:460px; box-shadow:0 4px 16px rgba(15,23,42,0.06);">
+                  <div style="flex:1; min-width:170px; display:flex; flex-direction:column; gap:14px;">
+                    <div style="font-size:0.68rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#64748b;">MMWGH &middot; Patient ID</div>
                     <div style="display:flex; align-items:center; gap:12px;">
-                      <div id="qrCardAvatar" style="width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.18); border:2px solid rgba(255,255,255,0.85); color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; overflow:hidden; flex-shrink:0;">
+                      <div id="qrCardAvatar" style="width:46px; height:46px; border-radius:50%; background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.92rem; overflow:hidden; flex-shrink:0;">
                         <?= htmlspecialchars($initials) ?>
                       </div>
                       <div style="min-width:0;">
-                        <div style="font-size:1rem; font-weight:700; color:#ffffff; line-height:1.25; word-break:break-word;" id="qrCardFullName"><?= htmlspecialchars($patientName) ?></div>
-                        <div style="display:inline-block; margin-top:5px; padding:2px 9px; border-radius:999px; background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.3); font-size:0.78rem; font-weight:600; color:#ecfdf5;" id="qrCardPatientId"><?= htmlspecialchars($patientId) ?></div>
+                        <div style="font-size:1rem; font-weight:700; color:#0f172a; line-height:1.25; word-break:break-word;" id="qrCardFullName"><?= htmlspecialchars($patientName) ?></div>
+                        <div style="margin-top:3px; font-size:0.8rem; font-weight:600; color:#15803d; font-variant-numeric:tabular-nums; letter-spacing:0.02em;" id="qrCardPatientId"><?= htmlspecialchars($patientId) ?></div>
                       </div>
                     </div>
                   </div>
-                  <div id="patientQrBox" style="padding:8px; background:#ffffff; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; width:126px; height:126px; flex-shrink:0;"></div>
+                  <div style="display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0;">
+                    <div id="patientQrBox" style="padding:8px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; width:116px; height:116px;"></div>
+                    <span style="font-size:0.68rem; font-weight:500; color:#64748b; letter-spacing:0.02em;">Scan at desk</span>
+                  </div>
                 </div>
                 <div style="flex:1; min-width:200px;">
-                  <p style="font-size:0.82rem; color:#6b7280; margin:0 0 12px; line-height:1.5;">
-                    Present this Digital Patient ID at the MMWGH clinic desk so staff can scan your QR code and verify your profile.
+                  <p style="font-size:0.84rem; color:#64748b; margin:0 0 12px; line-height:1.5;">
+                    Show this QR code at the clinic desk to verify your patient record.
                   </p>
                   <button type="button" class="btn-outline-sm" onclick="downloadPatientQr()">
-                    Download ID Card (PNG)
+                    Download ID Card
                   </button>
                 </div>
               </div>
@@ -2002,6 +3038,19 @@ $initials  = count($nameParts) >= 2
 
                 <div class="settings-row">
                   <div class="settings-row-text">
+                    <span class="settings-row-title">
+                      Two-Step Verification (Email OTP)
+                      <span id="twoStepOtpBadge" class="otp-status-pill">Disabled</span>
+                    </span>
+                    <span class="settings-row-desc">Require a 6-digit email verification code whenever you sign in</span>
+                  </div>
+                  <div class="toggle-switch off" id="toggleTwoStepOtp" role="switch" aria-checked="false" aria-label="Two-Step Verification (Email OTP)" tabindex="0" onclick="toggleTwoStepOtp(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTwoStepOtp(this);}">
+                    <div class="toggle-switch-circle"></div>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-text">
                     <span class="settings-row-title" style="color: #dc2626;" data-i18n="sec_signout_title">Sign out</span>
                     <span class="settings-row-desc" data-i18n="sec_signout_sub">End your active patient session</span>
                   </div>
@@ -2013,6 +3062,22 @@ $initials  = count($nameParts) >= 2
 
         </div>
       </main>
+
+      <!-- Status Toast Notifier -->
+      <div id="portalToast" class="portal-toast" role="status" aria-live="polite" aria-atomic="true">
+        <span id="portalToastIcon" class="portal-toast-icon" aria-hidden="true"></span>
+        <div class="portal-toast-body">
+          <span id="portalToastTitle" class="portal-toast-title"></span>
+          <span id="portalToastMsg" class="portal-toast-desc"></span>
+        </div>
+        <button type="button" class="portal-toast-close" onclick="dismissPortalToast()" aria-label="Dismiss notification">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <div id="portalToastProgress" class="portal-toast-progress" aria-hidden="true"></div>
+      </div>
 
       <!-- Mobile Bottom Navigation -->
       <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
@@ -2114,10 +3179,11 @@ $initials  = count($nameParts) >= 2
     <script>
       let portalData = {
         profile: {},
-        stats: { upcoming_count: 0, past_count: 0, cancelled_count: 0, active_meds: 0, total_visits: 0 },
+        stats: { upcoming_count: 0, past_count: 0, cancelled_count: 0, rescheduled_count: 0, active_meds: 0, total_visits: 0 },
         upcoming: [],
         past: [],
         cancelled: [],
+        rescheduled: [],
         medications: [],
         notifications: []
       };
@@ -2148,6 +3214,7 @@ $initials  = count($nameParts) >= 2
           tab_upcoming: "Upcoming",
           tab_past: "Past / Completed",
           tab_cancelled: "Cancelled",
+          tab_rescheduled: "Rescheduled",
           settings_title: "Account Settings",
           settings_sub: "Manage your patient profile, language preferences, and account security",
           settings_profile: "Patient Profile",
@@ -2189,6 +3256,7 @@ $initials  = count($nameParts) >= 2
           tab_upcoming: "Paparating",
           tab_past: "Nakalipas / Tapos Na",
           tab_cancelled: "Kinansela",
+          tab_rescheduled: "Na-reschedule",
           settings_title: "Mga Setting ng Account",
           settings_sub: "Pamahalaan ang iyong profile, wika, at seguridad ng account",
           settings_profile: "Profile ng Pasyente",
@@ -2241,15 +3309,15 @@ $initials  = count($nameParts) >= 2
         });
 
         const name = (portalData.profile && portalData.profile.full_name)
-          ? portalData.profile.full_name.trim().split(' ')[0]
-          : '<?= htmlspecialchars($firstName) ?>';
+          ? portalData.profile.full_name.trim()
+          : '<?= htmlspecialchars($patientName, ENT_QUOTES, 'UTF-8') ?>';
         const heroEl = document.getElementById('heroGreeting');
         if (heroEl) heroEl.textContent = `${getGreetingPrefix()}, ${name}`;
 
         if (portalData.stats) {
-          const up = portalData.stats.upcoming_count || 0;
-          const past = portalData.stats.past_count || 0;
-          const canc = portalData.stats.cancelled_count || 0;
+          const up = portalData.stats.upcoming_count ?? (portalData.upcoming || []).length;
+          const past = portalData.stats.past_count ?? (portalData.past || []).length;
+          const canc = portalData.stats.cancelled_count ?? (portalData.cancelled || []).length;
           const btnUp = document.getElementById('btnApptUpcoming');
           const btnPast = document.getElementById('btnApptPast');
           const btnCanc = document.getElementById('btnApptCancelled');
@@ -2320,9 +3388,16 @@ $initials  = count($nameParts) >= 2
           if (codeInput) codeInput.value = prof.patient_id || '';
           const topChip = document.getElementById('topPatientIdChip');
           if (topChip) topChip.textContent = `Patient ID: ${prof.patient_id || 'Verified'}`;
+          const topName = document.getElementById('topAvatarName');
+          if (topName) topName.textContent = prof.full_name.trim().split(/\s+/)[0] || prof.full_name;
+          const ddName = document.getElementById('ddFullName');
+          if (ddName) ddName.textContent = prof.full_name;
+          const ddId = document.getElementById('ddPatientId');
+          if (ddId) ddId.textContent = prof.patient_id || prof.email || '';
           syncPatientAvatarUI(prof.profile_image || null);
           renderPatientQrCode(prof.patient_id || '', prof.full_name || '');
         }
+        syncTwoStepOtpToggle(Boolean(prof.is_otp_enabled));
 
         // Sidebar counts
         const sideAppt = document.getElementById('sideApptCount');
@@ -2340,7 +3415,10 @@ $initials  = count($nameParts) >= 2
         const nextDate = document.getElementById('nextApptDate');
         const nextTime = document.getElementById('nextApptTime');
         if (nextDate) nextDate.textContent = next ? next.date : 'No Visit';
-        if (nextTime) nextTime.textContent = next ? `${next.time_label} \u00B7 ${next.department}` : 'Book a consultation below';
+        if (nextTime) {
+          const nextFor = (next && next.is_other_patient && next.patient_name) ? ` \u00B7 For ${next.patient_name}` : '';
+          nextTime.textContent = next ? `${next.time_label} \u00B7 ${next.department}${nextFor}` : 'Book a consultation below';
+        }
 
         const upVal = document.getElementById('upcomingVisitsVal');
         if (upVal) upVal.textContent = upcoming.length;
@@ -2365,6 +3443,10 @@ $initials  = count($nameParts) >= 2
       function renderAppointmentViews() {
         const upcoming = portalData.upcoming || [];
         const dash = document.getElementById('dashUpcomingList');
+        const dashHead = document.getElementById('dashListHeader');
+        if (dashHead) {
+          dashHead.style.display = upcoming.length ? '' : 'none';
+        }
         if (dash) {
           dash.innerHTML = upcoming.length
             ? upcoming.slice(0, 4).map(apptDashRow).join('')
@@ -2374,19 +3456,54 @@ $initials  = count($nameParts) >= 2
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 </div>
                 <div class="empty-state-title" style="font-size:0.96rem;">No Upcoming Visits</div>
-                <p class="empty-state-desc" style="font-size:0.82rem; margin-bottom:1rem;">You don't have any appointments scheduled. Book a visit with our outpatient clinic.</p>
-                <a href="/sdn/pages/patient-book-appointment.php" class="btn-primary-action" style="font-size:0.8rem; padding:0.5rem 1rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  <span>Book Appointment</span>
-                </a>
+                <p class="empty-state-desc" style="font-size:0.82rem; margin-bottom:0;">You don't have any appointments scheduled yet.</p>
               </div>
             `;
         }
         paintAppointmentList();
       }
 
+      function renderRowActionTrigger(item, forcedSlipType) {
+        const canSlip = window.PatientSlip ? window.PatientSlip.canGenerateSlip(item) : false;
+        const canResched = Boolean(item.can_reschedule);
+        if (!canSlip && !canResched) return '';
+        return `<button type="button" class="row-actions-btn" aria-label="Appointment actions" aria-haspopup="menu" aria-expanded="false" onclick="event.stopPropagation(); toggleRowActionMenu(this, ${Number(item.id)}, '${escapeHtml(forcedSlipType || '')}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="5" cy="12" r="2"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+            <circle cx="19" cy="12" r="2"></circle>
+          </svg>
+        </button>`;
+      }
+
+      function renderOtherPatientBadge(item) {
+        if (!item || !item.is_other_patient) return '';
+        const rel = item.relationship_to_patient ? ` (${item.relationship_to_patient})` : '';
+        const label = item.patient_name
+          ? `Other Patient \u00B7 ${item.patient_name}${rel}`
+          : 'Other Patient';
+        return `<span class="appt-other-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>${escapeHtml(label)}</span>
+        </span>`;
+      }
+
+      function renderVisitTypeBadge(item) {
+        const raw = String(item?.visit_type || '').toLowerCase();
+        const isFollowUp = raw.includes('follow') || (!raw && Boolean(item?.previous_appointment_date));
+        const label = isFollowUp ? 'Follow-up' : 'Initial';
+        return `<span class="appt-visit-badge ${isFollowUp ? 'is-followup' : 'is-initial'}">${label}</span>`;
+      }
+
+      function renderRescheduledBadge(item, isUpcomingContext) {
+        if (!isUpcomingContext) return '';
+        if (!item?.is_rescheduled && !item?.rescheduled_by_staff) return '';
+        return `<span class="appt-resched-badge">Rescheduled</span>`;
+      }
+
       function apptDashRow(item) {
         const stClass = getStatusBadgeClass(item.status);
+        const actionsBtn = renderRowActionTrigger(item, (item.is_rescheduled || item.rescheduled_by_staff) ? 'rescheduled' : '');
         return `<div class="item-row" style="cursor:default;">
           <div class="appt-info-left">
             <div class="date-badge">
@@ -2396,16 +3513,31 @@ $initials  = count($nameParts) >= 2
             <div class="appt-desc">
               <div class="appt-title-row">
                 <span class="appt-title">${escapeHtml(item.title)}</span>
-                <span class="appt-code-tag">${escapeHtml(item.patient_code)}</span>
+                ${renderVisitTypeBadge(item)}
+                ${renderRescheduledBadge(item, true)}
               </div>
-              <span class="appt-doc">${escapeHtml(item.date)} at ${escapeHtml(item.time_label)} &bull; ${escapeHtml(item.mode)}</span>
+              <div class="appt-meta-row">
+                <span class="appt-code-tag">${escapeHtml(item.patient_code)}</span>
+                ${renderOtherPatientBadge(item)}
+              </div>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:10px;">
+          <div class="appt-schedule-col">
+            <span class="appt-sched-line">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>${escapeHtml(item.date)} &middot; ${escapeHtml(item.time_label)}</span>
+            </span>
+            <span class="appt-sched-sub">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              <span>${escapeHtml(item.mode)}</span>
+            </span>
+          </div>
+          <div class="appt-status-col">
             <div class="status-pill ${stClass}">
               <span class="status-dot"></span>
               <span>${escapeHtml(item.status)}</span>
             </div>
+            ${actionsBtn}
           </div>
         </div>`;
       }
@@ -2451,6 +3583,7 @@ $initials  = count($nameParts) >= 2
           past: portalData.past || [],
           cancelled: portalData.cancelled || []
         };
+        if (!groups[currentApptTab]) currentApptTab = 'upcoming';
         let rows = groups[currentApptTab] || [];
 
         if (dateFrom) {
@@ -2464,8 +3597,20 @@ $initials  = count($nameParts) >= 2
           rows = rows.filter(r =>
             (r.title || '').toLowerCase().includes(q) ||
             (r.patient_code || '').toLowerCase().includes(q) ||
-            (r.date || '').toLowerCase().includes(q)
+            (r.date || '').toLowerCase().includes(q) ||
+            (r.patient_name || '').toLowerCase().includes(q) ||
+            (r.relationship_to_patient || '').toLowerCase().includes(q) ||
+            (r.is_other_patient && 'other patient'.includes(q))
           );
+        }
+
+        const metaEl = document.getElementById('apptResultMeta');
+        if (metaEl) {
+          metaEl.textContent = `${rows.length} ${rows.length === 1 ? 'appointment' : 'appointments'}`;
+        }
+        const listHeadEl = document.getElementById('apptListHeader');
+        if (listHeadEl) {
+          listHeadEl.style.display = rows.length ? '' : 'none';
         }
 
         if (!rows.length) {
@@ -2497,13 +3642,7 @@ $initials  = count($nameParts) >= 2
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                 </div>
                 <div class="empty-state-title">No Past Visits on Record</div>
-                <p class="empty-state-desc">Your completed consultations, diagnosed clinical summaries, and previous visit logs will be securely archived here.</p>
-                <div class="empty-state-actions">
-                  <a href="/sdn/pages/patient-book-appointment.php" class="btn-primary-action">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>Book New Appointment</span>
-                  </a>
-                </div>
+                <p class="empty-state-desc" style="margin-bottom:0;">Your completed consultations, diagnosed clinical summaries, and previous visit logs will be securely archived here.</p>
               </div>
             `;
             return;
@@ -2516,7 +3655,7 @@ $initials  = count($nameParts) >= 2
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
                 </div>
                 <div class="empty-state-title">No Cancelled Appointments</div>
-                <p class="empty-state-desc">You do not have any cancelled consultations or revoked appointments.</p>
+                <p class="empty-state-desc">You do not have any cancelled consultations or no-show appointments.</p>
               </div>
             `;
             return;
@@ -2528,12 +3667,8 @@ $initials  = count($nameParts) >= 2
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
               </div>
               <div class="empty-state-title">No Upcoming Appointments</div>
-              <p class="empty-state-desc">You do not have any upcoming clinic visits scheduled. Book an in-person or telemedicine consultation with our physicians.</p>
+              <p class="empty-state-desc">You do not have any upcoming clinic visits scheduled.</p>
               <div class="empty-state-actions">
-                <a href="/sdn/pages/patient-book-appointment.php" class="btn-primary-action">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  <span>Book Appointment</span>
-                </a>
                 <a href="/sdn/pages/schedules.php" class="btn-outline-sm">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                   <span>Doctor Schedules</span>
@@ -2547,10 +3682,14 @@ $initials  = count($nameParts) >= 2
       }
 
       function appointmentRow(item) {
+        const isUpcomingTab = currentApptTab === 'upcoming';
+        const isResched = Boolean(item.is_rescheduled || item.rescheduled_by_staff);
         const stClass = getStatusBadgeClass(item.status);
-        const reschedule = item.can_reschedule
-          ? `<button type="button" class="btn-outline-sm" onclick="event.stopPropagation(); openRescheduleModal(${Number(item.id)})">Reschedule</button>`
+        const stLabel = item.status;
+        const reschedNote = (isUpcomingTab && isResched && item.rescheduled_from_date)
+          ? `<span class="appt-resched-note">Moved from ${escapeHtml(item.rescheduled_from_date)}</span>`
           : '';
+        const actionsBtn = renderRowActionTrigger(item, isResched ? 'rescheduled' : '');
 
         return `<div class="item-row" style="cursor:default;">
           <div class="appt-info-left">
@@ -2561,17 +3700,32 @@ $initials  = count($nameParts) >= 2
             <div class="appt-desc">
               <div class="appt-title-row">
                 <span class="appt-title">${escapeHtml(item.title)}</span>
-                <span class="appt-code-tag">${escapeHtml(item.patient_code)}</span>
+                ${renderVisitTypeBadge(item)}
+                ${renderRescheduledBadge(item, isUpcomingTab)}
               </div>
-              <span class="appt-doc">${escapeHtml(item.date)} at ${escapeHtml(item.time_label)} &bull; ${escapeHtml(item.mode)}</span>
+              <div class="appt-meta-row">
+                <span class="appt-code-tag">${escapeHtml(item.patient_code)}</span>
+                ${renderOtherPatientBadge(item)}
+              </div>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="appt-schedule-col">
+            <span class="appt-sched-line">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>${escapeHtml(item.date)} &middot; ${escapeHtml(item.time_label)}</span>
+            </span>
+            <span class="appt-sched-sub">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              <span>${escapeHtml(item.mode)}</span>
+            </span>
+            ${reschedNote}
+          </div>
+          <div class="appt-status-col">
             <div class="status-pill ${stClass}">
               <span class="status-dot"></span>
-              <span>${escapeHtml(item.status)}</span>
+              <span>${escapeHtml(stLabel)}</span>
             </div>
-            ${reschedule}
+            ${actionsBtn}
           </div>
         </div>`;
       }
@@ -2812,6 +3966,139 @@ $initials  = count($nameParts) >= 2
         }
       }
 
+      let portalToastTimer = null;
+      let portalToastHovered = false;
+
+      function dismissPortalToast() {
+        const toast = document.getElementById('portalToast');
+        if (portalToastTimer) {
+          clearTimeout(portalToastTimer);
+          portalToastTimer = null;
+        }
+        if (toast) toast.classList.remove('is-visible');
+      }
+
+      function showPortalToast(title, description = '', variant = 'success') {
+        const toast = document.getElementById('portalToast');
+        const titleEl = document.getElementById('portalToastTitle');
+        const msgEl = document.getElementById('portalToastMsg');
+        const iconEl = document.getElementById('portalToastIcon');
+        const progressEl = document.getElementById('portalToastProgress');
+        if (!toast || !titleEl || !msgEl) return;
+
+        if (!toast.dataset.hoverBound) {
+          toast.dataset.hoverBound = '1';
+          toast.addEventListener('mouseenter', () => {
+            portalToastHovered = true;
+            if (portalToastTimer) {
+              clearTimeout(portalToastTimer);
+              portalToastTimer = null;
+            }
+          });
+          toast.addEventListener('mouseleave', () => {
+            portalToastHovered = false;
+            if (toast.classList.contains('is-visible')) {
+              portalToastTimer = setTimeout(dismissPortalToast, 1800);
+            }
+          });
+        }
+
+        if (portalToastTimer) {
+          clearTimeout(portalToastTimer);
+          portalToastTimer = null;
+        }
+
+        toast.classList.remove('is-muted', 'is-error', 'is-visible');
+        if (variant === 'muted') toast.classList.add('is-muted');
+        if (variant === 'error') toast.classList.add('is-error');
+
+        if (iconEl) {
+          if (variant === 'error') {
+            iconEl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+          } else if (variant === 'muted') {
+            iconEl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>';
+          } else {
+            iconEl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>';
+          }
+        }
+
+        titleEl.textContent = title;
+        msgEl.textContent = description;
+        msgEl.style.display = description ? 'block' : 'none';
+
+        if (progressEl) {
+          progressEl.style.animation = 'none';
+          void progressEl.offsetWidth;
+          progressEl.style.animation = '';
+        }
+
+        void toast.offsetWidth;
+        toast.classList.add('is-visible');
+
+        if (!portalToastHovered) {
+          portalToastTimer = setTimeout(dismissPortalToast, 3800);
+        }
+      }
+
+      function syncTwoStepOtpToggle(enabled) {
+        const sw = document.getElementById('toggleTwoStepOtp');
+        const badge = document.getElementById('twoStepOtpBadge');
+        if (sw) {
+          sw.classList.toggle('off', !enabled);
+          sw.setAttribute('aria-checked', enabled ? 'true' : 'false');
+        }
+        if (badge) {
+          badge.textContent = enabled ? 'Enabled' : 'Disabled';
+          badge.classList.toggle('is-enabled', Boolean(enabled));
+        }
+      }
+
+      async function toggleTwoStepOtp(switchEl) {
+        if (!switchEl) switchEl = document.getElementById('toggleTwoStepOtp');
+        if (!switchEl || switchEl.dataset.saving === '1') return;
+
+        const nextEnabled = switchEl.classList.contains('off');
+        switchEl.dataset.saving = '1';
+        syncTwoStepOtpToggle(nextEnabled);
+
+        try {
+          const res = await fetch('/sdn/api/patient_dashboard_data.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'toggle_otp', enabled: nextEnabled })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            syncTwoStepOtpToggle(!nextEnabled);
+            showPortalToast('Could not update setting', data.message || 'Please try again.', 'error');
+          } else {
+            const isNowEnabled = Boolean(data.is_otp_enabled);
+            if (portalData && portalData.profile) {
+              portalData.profile.is_otp_enabled = isNowEnabled;
+            }
+            syncTwoStepOtpToggle(isNowEnabled);
+            if (isNowEnabled) {
+              showPortalToast(
+                'Two-Step Verification Enabled',
+                'A 6-digit email code will be required whenever you sign in.',
+                'success'
+              );
+            } else {
+              showPortalToast(
+                'Two-Step Verification Disabled',
+                'You can sign in with your password without an email code.',
+                'muted'
+              );
+            }
+          }
+        } catch (err) {
+          syncTwoStepOtpToggle(!nextEnabled);
+          showPortalToast('Connection Error', 'Unable to update two-step verification. Please try again.', 'error');
+        } finally {
+          delete switchEl.dataset.saving;
+        }
+      }
+
       function toggleSwitch(switchEl) {
         toggleApptReminders(switchEl);
       }
@@ -2909,9 +4196,9 @@ $initials  = count($nameParts) >= 2
         box.innerHTML = '';
         new QRCode(box, {
           text: cleanId,
-          width: 110,
-          height: 110,
-          colorDark: '#111827',
+          width: 100,
+          height: 100,
+          colorDark: '#0f172a',
           colorLight: '#ffffff',
           correctLevel: QRCode.CorrectLevel.M
         });
@@ -2944,7 +4231,7 @@ $initials  = count($nameParts) >= 2
           loadImage(currentPatientAvatarUrl)
         ]);
 
-        const W = 720, H = 400;
+        const W = 720, H = 360;
         const out = document.createElement('canvas');
         out.width = W;
         out.height = H;
@@ -2955,33 +4242,36 @@ $initials  = count($nameParts) >= 2
           ctx.roundRect(x, y, w, h, r);
         };
 
-        // Green gradient card background
-        const grad = ctx.createLinearGradient(0, 0, W, H);
-        grad.addColorStop(0, '#166534');
-        grad.addColorStop(0.58, '#15803d');
-        grad.addColorStop(1, '#047857');
-        drawRoundRect(0, 0, W, H, 24);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Header text
-        ctx.fillStyle = '#bbf7d0';
-        ctx.font = '700 14px system-ui, -apple-system, sans-serif';
-        ctx.fillText('MARIVELES MENTAL WELLNESS AND GENERAL HOSPITAL', 36, 46);
+        // Crisp white minimal card
+        drawRoundRect(0, 0, W, H, 20);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '800 22px system-ui, -apple-system, sans-serif';
-        ctx.fillText('LINGKOD DIGITAL PATIENT ID', 36, 76);
+        ctx.fill();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-        // Divider line
-        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        // Slim green top accent bar
+        ctx.save();
+        drawRoundRect(0, 0, W, H, 20);
+        ctx.clip();
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(0, 0, W, 8);
+        ctx.restore();
+
+        // Minimal header
+        ctx.fillStyle = '#64748b';
+        ctx.font = '600 13px system-ui, -apple-system, sans-serif';
+        ctx.fillText('MMWGH  ·  PATIENT ID', 40, 56);
+
+        ctx.strokeStyle = '#f1f5f9';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(36, 98);
-        ctx.lineTo(W - 36, 98);
+        ctx.moveTo(40, 76);
+        ctx.lineTo(W - 40, 76);
         ctx.stroke();
 
         // Circular avatar on left
-        const avX = 96, avY = 210, avR = 56;
+        const avX = 88, avY = 186, avR = 48;
         ctx.save();
         ctx.beginPath();
         ctx.arc(avX, avY, avR, 0, Math.PI * 2);
@@ -2993,56 +4283,56 @@ $initials  = count($nameParts) >= 2
           const dh = avatarImage.height * scale;
           ctx.drawImage(avatarImage, avX - dw / 2, avY - dh / 2, dw, dh);
         } else {
-          ctx.fillStyle = 'rgba(255,255,255,0.18)';
+          ctx.fillStyle = '#f0fdf4';
           ctx.fillRect(avX - avR, avY - avR, avR * 2, avR * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '700 32px system-ui, -apple-system, sans-serif';
+          ctx.fillStyle = '#15803d';
+          ctx.font = '700 28px system-ui, -apple-system, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(fallbackInitials, avX, avY);
         }
         ctx.restore();
 
-        // Avatar white border
         ctx.beginPath();
         ctx.arc(avX, avY, avR, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#bbf7d0';
+        ctx.lineWidth = 2;
         ctx.stroke();
 
         // Patient Name & ID
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#0f172a';
         ctx.font = '700 24px system-ui, -apple-system, sans-serif';
-        ctx.fillText(fullName, 174, 198, 250);
+        ctx.fillText(fullName, 156, 180, 270);
 
-        drawRoundRect(174, 214, 196, 34, 17);
-        ctx.fillStyle = 'rgba(255,255,255,0.18)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        ctx.fillStyle = '#15803d';
+        ctx.font = '600 17px system-ui, -apple-system, sans-serif';
+        ctx.fillText(pid, 156, 210);
 
-        ctx.fillStyle = '#ecfdf5';
-        ctx.font = '600 16px system-ui, -apple-system, sans-serif';
-        ctx.fillText(pid, 190, 237);
+        // Minimal footer note
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '500 12px system-ui, -apple-system, sans-serif';
+        ctx.fillText('Present at the MMWGH clinic desk for verification.', 40, 320);
 
-        // Footer note
-        ctx.fillStyle = '#d1fae5';
-        ctx.font = '500 13px system-ui, -apple-system, sans-serif';
-        ctx.fillText('Present this QR code at the MMWGH clinic desk.', 36, 358);
-
-        // White QR panel on right
-        const qrPanelSize = 212;
-        const qrPanelX = W - qrPanelSize - 36;
-        const qrPanelY = 128;
-        drawRoundRect(qrPanelX, qrPanelY, qrPanelSize, qrPanelSize, 16);
+        // Framed QR panel on right
+        const qrPanelSize = 192;
+        const qrPanelX = W - qrPanelSize - 40;
+        const qrPanelY = 98;
+        drawRoundRect(qrPanelX, qrPanelY, qrPanelSize, qrPanelSize, 14);
         ctx.fillStyle = '#ffffff';
         ctx.fill();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
         if (qrImage) {
-          ctx.drawImage(qrImage, qrPanelX + 16, qrPanelY + 16, qrPanelSize - 32, qrPanelSize - 32);
+          ctx.drawImage(qrImage, qrPanelX + 14, qrPanelY + 14, qrPanelSize - 28, qrPanelSize - 28);
         }
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 12px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Scan at desk', qrPanelX + qrPanelSize / 2, qrPanelY + qrPanelSize + 22);
 
         const a = document.createElement('a');
         a.href = out.toDataURL('image/png');
@@ -3073,14 +4363,22 @@ $initials  = count($nameParts) >= 2
         const item = findAppointment(id);
         if (!item || !item.can_reschedule) return;
         rescheduleTarget = item;
-        document.getElementById('rescheduleSummary').textContent = `${item.title} (${item.patient_code}). Choose your new preferred date and session below.`;
+        const forNote = (item.is_other_patient && item.patient_name) ? ` for ${item.patient_name}` : '';
+        document.getElementById('rescheduleSummary').textContent = `${item.title}${forNote} (${item.patient_code}). Choose your new preferred date and session below.`;
         const dateInput = document.getElementById('rescheduleDate');
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const iso = tomorrow.toISOString().slice(0, 10);
         dateInput.min = iso;
         dateInput.value = item.date_iso && item.date_iso >= iso ? item.date_iso : iso;
-        document.getElementById('rescheduleTime').value = item.time_iso || '08:00:00';
+        const timeSel = document.getElementById('rescheduleTime');
+        const allowed = ['08:00:00', '10:00:00', '13:00:00', '15:00:00'];
+        if (allowed.includes(item.time_iso)) {
+          timeSel.value = item.time_iso;
+        } else {
+          const isAfternoon = /afternoon|pm/i.test(String(item.time_label || '')) && !/12:00\s*pm/i.test(String(item.time_label || ''));
+          timeSel.value = isAfternoon ? '13:00:00' : '08:00:00';
+        }
         const err = document.getElementById('rescheduleError');
         err.style.display = 'none';
         err.textContent = '';
@@ -3114,8 +4412,13 @@ $initials  = count($nameParts) >= 2
             err.style.display = 'block';
             return;
           }
+          const rescheduledId = rescheduleTarget.id;
           closeRescheduleModal();
           await initPortal();
+          const updatedItem = findAppointment(rescheduledId);
+          if (updatedItem && window.PatientSlip && window.PatientSlip.canGenerateSlip(updatedItem)) {
+            openPatientSlipById(rescheduledId, 'rescheduled');
+          }
         } catch (e) {
           err.textContent = 'Could not reach the server.';
           err.style.display = 'block';
@@ -3185,10 +4488,110 @@ $initials  = count($nameParts) >= 2
         }
       }
 
+      let activeRowActionBtn = null;
+
+      function closeRowActionMenu() {
+        const menu = document.getElementById('rowActionMenu');
+        if (menu) menu.classList.remove('open');
+        if (activeRowActionBtn) {
+          activeRowActionBtn.setAttribute('aria-expanded', 'false');
+          activeRowActionBtn = null;
+        }
+      }
+
+      function toggleRowActionMenu(btn, id, forcedSlipType) {
+        let menu = document.getElementById('rowActionMenu');
+        if (!menu) {
+          menu = document.createElement('div');
+          menu.id = 'rowActionMenu';
+          menu.className = 'row-action-menu';
+          menu.setAttribute('role', 'menu');
+          document.body.appendChild(menu);
+        }
+
+        if (activeRowActionBtn === btn && menu.classList.contains('open')) {
+          closeRowActionMenu();
+          return;
+        }
+        closeRowActionMenu();
+
+        const pool = []
+          .concat(portalData.upcoming || [])
+          .concat(portalData.rescheduled || [])
+          .concat(portalData.past || [])
+          .concat(portalData.cancelled || []);
+        const item = pool.find(a => Number(a.id) === Number(id));
+        if (!item) return;
+
+        const itemsHtml = [];
+        if (window.PatientSlip && window.PatientSlip.canGenerateSlip(item)) {
+          itemsHtml.push(`
+            <button type="button" class="row-action-item" role="menuitem" onclick="closeRowActionMenu(); openPatientSlipById(${Number(item.id)}, '${escapeHtml(forcedSlipType || '')}')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <span>View Slip</span>
+            </button>
+          `);
+        }
+        if (item.can_reschedule) {
+          itemsHtml.push(`
+            <button type="button" class="row-action-item" role="menuitem" onclick="closeRowActionMenu(); openRescheduleModal(${Number(item.id)})">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <span>Reschedule</span>
+            </button>
+          `);
+        }
+        if (!itemsHtml.length) return;
+
+        menu.innerHTML = itemsHtml.join('');
+        menu.classList.add('open');
+        const rect = btn.getBoundingClientRect();
+        const menuRect = menu.getBoundingClientRect();
+        const top = (rect.bottom + 6 + menuRect.height > window.innerHeight - 10)
+          ? Math.max(10, rect.top - menuRect.height - 6)
+          : rect.bottom + 6;
+        const left = Math.max(10, Math.min(window.innerWidth - menuRect.width - 10, rect.right - menuRect.width));
+        menu.style.top = top + 'px';
+        menu.style.left = left + 'px';
+        activeRowActionBtn = btn;
+        btn.setAttribute('aria-expanded', 'true');
+      }
+
+      function openPatientSlipById(id, forcedType) {
+        if (!window.PatientSlip) return;
+        const pool = []
+          .concat(portalData.upcoming || [])
+          .concat(portalData.rescheduled || [])
+          .concat(portalData.past || [])
+          .concat(portalData.cancelled || []);
+        const item = pool.find(a => Number(a.id) === Number(id));
+        if (!item || !window.PatientSlip.canGenerateSlip(item)) return;
+        const slipType = forcedType || window.PatientSlip.resolveSlipType(item);
+        window.PatientSlip.openModal({
+          slipType,
+          patientId: item.patient_id || item.patient_code || portalData.profile?.patient_id || '',
+          patientName: item.patient_name || portalData.profile?.full_name || '',
+          patientType: item.patient_type || 'New',
+          appointmentDate: item.date_raw || item.date || '',
+          appointmentTime: item.time_label || item.time || '',
+          specialty: item.department || '',
+          consultType: item.consult_type || item.mode || '',
+          remarks: item.remarks || item.chief_complaints || '',
+          encodedBy: item.encoded_by || 'Online Portal',
+          attendedDate: item.attended_date || item.date || '',
+          nextVisitDate: item.next_visit_date || ''
+        });
+      }
+
       function filterApptTab(tab, btn) {
         currentApptTab = tab;
-        document.querySelectorAll('#view-appointments .filter-pill').forEach(p => p.classList.remove('active'));
-        if (btn) btn.classList.add('active');
+        document.querySelectorAll('#view-appointments .filter-pill').forEach(p => {
+          p.classList.remove('active');
+          p.setAttribute('aria-selected', 'false');
+        });
+        if (btn) {
+          btn.classList.add('active');
+          btn.setAttribute('aria-selected', 'true');
+        }
         paintAppointmentList();
       }
 
@@ -3196,7 +4599,29 @@ $initials  = count($nameParts) >= 2
         document.getElementById('detailsModal')?.classList.remove('active');
       }
 
+      function initSidebarToggle() {
+        const sidebar = document.getElementById('patientSidebar');
+        const toggleBtn = document.getElementById('sidebarToggleBtn');
+        if (!sidebar || !toggleBtn) return;
+
+        const setCollapsed = (collapsed) => {
+          sidebar.classList.toggle('is-collapsed', collapsed);
+          toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+          const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+          toggleBtn.setAttribute('aria-label', label);
+          toggleBtn.setAttribute('title', label);
+          try {
+            localStorage.setItem('lingkod_patient_sidebar_collapsed', collapsed ? '1' : '0');
+          } catch (e) {}
+        };
+
+        toggleBtn.addEventListener('click', () => {
+          setCollapsed(!sidebar.classList.contains('is-collapsed'));
+        });
+      }
+
       document.addEventListener('DOMContentLoaded', () => {
+        initSidebarToggle();
         initNotificationServiceWorker();
         initPortal();
       });
@@ -3212,10 +4637,18 @@ $initials  = count($nameParts) >= 2
         if (profDd && profDd.classList.contains('show') && profCont && !profCont.contains(e.target)) {
           profDd.classList.remove('show');
         }
+        const rowMenu = document.getElementById('rowActionMenu');
+        if (rowMenu && rowMenu.classList.contains('open') && !rowMenu.contains(e.target) && (!activeRowActionBtn || !activeRowActionBtn.contains(e.target))) {
+          closeRowActionMenu();
+        }
       });
+
+      window.addEventListener('resize', closeRowActionMenu);
+      window.addEventListener('scroll', closeRowActionMenu, true);
 
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+          closeRowActionMenu();
           closeModal();
           closeRescheduleModal();
           closePasswordModal();
@@ -3224,6 +4657,7 @@ $initials  = count($nameParts) >= 2
         }
       });
     </script>
+      <script src="/sdn/public/js/patient-slip.js?v=<?= time() ?>"></script>
       <script src="/sdn/assets/js/dashboard-mobile.js?v=<?= time() ?>"></script>
   </body>
 </html>

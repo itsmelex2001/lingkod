@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setText('apptDept',       orDash(p.department));
     setText('apptDate',       formatDateNice(p.appointment_date));
     setText('apptType',       cap(p.appointment_type?.replace('-', ' ')));
-    setText('apptMode',       orDash(p.consultation_mode));
+    setText('apptMode',       orDash(p.consultation_mode && /^in-person$/i.test(p.consultation_mode) ? 'Face-to-Face' : p.consultation_mode));
     setText('apptNature',     orDash(p.consultation_nature));
     setText('apptPatientType',p.patient_type === 'first-time' ? 'First Time' : 'Returning');
     setText('apptReferral',   orDash(p.referral_source));

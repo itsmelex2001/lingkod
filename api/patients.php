@@ -79,9 +79,18 @@ if ($method === 'GET') {
 
             // Sort matched records by id ASC (chronological booking order)
             ksort($matchedMap);
+            $earliestRec = !empty($matchedMap) ? reset($matchedMap) : null;
+            $canonicalPid = ($earliestRec && !empty($earliestRec['patient_id']))
+                ? $earliestRec['patient_id']
+                : $rowPid;
+
             $priorList = [];
+            $completedVisitsCount = 0;
             foreach ($matchedMap as $cid => $crec) {
                 $crecStatus = strtolower(trim($crec['status'] ?? ''));
+                if ($crecStatus === 'completed') {
+                    $completedVisitsCount++;
+                }
                 if ($cid < $rowId && $crec['patient_id'] !== $rowPid && $crecStatus === 'completed') {
                     $timeFormatted = !empty($crec['scheduled_time'])
                         ? date('g:i A', strtotime($crec['scheduled_time']))
@@ -111,7 +120,9 @@ if ($method === 'GET') {
             $priorList = array_reverse($priorList);
             $latestPrev = $priorList[0] ?? null;
 
+            $row['canonical_patient_id']      = $canonicalPid;
             $row['visit_count']               = count($matchedMap) ?: 1;
+            $row['completed_visit_count']     = $completedVisitsCount;
             $row['previous_appointment_date'] = $latestPrev ? $latestPrev['date_formatted'] : null;
             $row['previous_appointment_raw']  = $latestPrev ? $latestPrev['appointment_date'] : null;
             $row['previous_appointment_time'] = $latestPrev ? $latestPrev['time_formatted'] : null;
@@ -125,17 +136,67 @@ if ($method === 'GET') {
         unset($row);
     };
 
+    // Search patients by name (or ID) for QR Scanner / quick lookup
+    if (isset($_GET['q']) && trim((string)$_GET['q']) !== '') {
+        $q = trim((string)$_GET['q']);
+        $like = '%' . $q . '%';
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT * FROM patients
+                 WHERE LOWER(COALESCE(full_name, '')) LIKE LOWER(?)
+                    OR LOWER(CONCAT_WS(' ', first_name, middle_initial, last_name)) LIKE LOWER(?)
+                    OR LOWER(COALESCE(patient_id, '')) = LOWER(?)
+                 ORDER BY id DESC
+                 LIMIT 60"
+            );
+            $stmt->execute([$like, $like, $q]);
+            $rawRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            error_log("Error searching patients for '$q': " . $e->getMessage());
+            $rawRows = [];
+        }
+
+        // Deduplicate by patient identity (keep latest record, preserve non-empty profile_image)
+        $byKey = [];
+        foreach ($rawRows as $r) {
+            $key = !empty($r['user_id'])
+                ? 'u:' . $r['user_id']
+                : (!empty($r['email'])
+                    ? 'e:' . strtolower(trim($r['email']))
+                    : 'n:' . strtolower(preg_replace('/\s+/', ' ', trim($r['full_name'] ?? ''))) . '|' . trim((string)($r['birthdate'] ?? '')));
+
+            if (!isset($byKey[$key])) {
+                $byKey[$key] = $r;
+            } elseif (empty($byKey[$key]['profile_image']) && !empty($r['profile_image'])) {
+                $byKey[$key]['profile_image'] = $r['profile_image'];
+            }
+        }
+
+        $matches = array_values(array_slice($byKey, 0, 20));
+        respondOk(['data' => $matches]);
+    }
+
     // Single patient by ?id=
     if (!empty($_GET['id'])) {
         $id = trim($_GET['id']);
         try {
             $stmt = $pdo->prepare(
                 "SELECT * FROM patients
-                 WHERE patient_id = ? OR CAST(id AS CHAR) = ?
+                 WHERE patient_id = ? OR reference_no = ? OR CAST(id AS CHAR) = ?
                  ORDER BY id DESC LIMIT 1"
             );
-            $stmt->execute([$id, $id]);
+            $stmt->execute([$id, $id, $id]);
             $patient = $stmt->fetch();
+            if (!$patient && stripos($id, 'PT-') === 0) {
+                $uStmt = $pdo->prepare("SELECT id, patient_id FROM users WHERE account_patient_id = ? LIMIT 1");
+                $uStmt->execute([$id]);
+                $uRow = $uStmt->fetch();
+                if ($uRow) {
+                    $fbStmt = $pdo->prepare("SELECT * FROM patients WHERE user_id = ? OR id = ? ORDER BY id DESC LIMIT 1");
+                    $fbStmt->execute([$uRow['id'], (int)($uRow['patient_id'] ?? 0)]);
+                    $patient = $fbStmt->fetch();
+                }
+            }
         } catch (Throwable $e) {
             error_log("Error fetching patient $id: " . $e->getMessage());
             $patient = null;
@@ -179,14 +240,14 @@ if ($method === 'GET') {
     
     $bookedOnlySql = "LOWER(COALESCE(p.status, '')) <> 'registered' AND (p.appointment_date IS NOT NULL OR (p.department IS NOT NULL AND p.department <> '') OR (p.chief_complaints IS NOT NULL AND p.chief_complaints <> '') OR (p.consultation_nature IS NOT NULL AND p.consultation_nature <> '') OR p.unscheduled_walkin = 1)";
 
-    if ($role === 'admin') {
+    if (in_array(strtolower((string)$role), ['admin', 'superadmin'], true)) {
         $filterSql = "AND $bookedOnlySql";
         if ($filter === 'week') {
-            $filterSql = "AND YEARWEEK(p.created_at, 1) = YEARWEEK(CURDATE(), 1)";
+            $filterSql .= " AND YEARWEEK(p.created_at, 1) = YEARWEEK(CURDATE(), 1)";
         } elseif ($filter === 'month') {
-            $filterSql = "AND MONTH(p.created_at) = MONTH(CURDATE()) AND YEAR(p.created_at) = YEAR(CURDATE())";
+            $filterSql .= " AND MONTH(p.created_at) = MONTH(CURDATE()) AND YEAR(p.created_at) = YEAR(CURDATE())";
         } elseif ($filter === 'year') {
-            $filterSql = "AND YEAR(p.created_at) = YEAR(CURDATE())";
+            $filterSql .= " AND YEAR(p.created_at) = YEAR(CURDATE())";
         }
 
         $hasRefNoCol = false;
@@ -219,7 +280,9 @@ if ($method === 'GET') {
                     p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
                     p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.preferred_time_slot,
                     p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
+                    p.medical_history_recorded_by, p.medical_history_date,
                     p.next_visit_date, p.vitals_json, p.follow_up_notes,
+                    p.rescheduled_by_staff, p.rescheduled_from_date, p.rescheduled_at,
                     p.reminder_status, p.reminder_sent_at, p.created_at,
                     d.id AS doctor_id, d.status AS doctor_status, d.title AS doctor_title, d.license_number AS doctor_license
              FROM patients p
@@ -230,6 +293,99 @@ if ($method === 'GET') {
         $stmt->execute();
         $rows = $stmt->fetchAll();
         $attachPreviousHistory($pdo, $rows, false);
+
+        if (!empty($_GET['deduplicate'])) {
+            $totalEncounters = count($rows);
+            $grouped = [];
+            $backfillFields = ['hrn', 'gender', 'age', 'birthdate', 'contact_number', 'email', 'address'];
+
+            foreach ($rows as $row) {
+                $nameNorm  = strtolower(preg_replace('/\s+/', ' ', trim((string)($row['full_name'] ?? ''))));
+                $birthVal  = trim((string)($row['birthdate'] ?? ''));
+                $emailNorm = strtolower(trim((string)($row['email'] ?? '')));
+                $genderVal = strtolower(trim((string)($row['gender'] ?? '')));
+
+                if ($nameNorm !== '' && $birthVal !== '' && $birthVal !== '0000-00-00') {
+                    $key = 'nb:' . $nameNorm . '|' . $birthVal;
+                } elseif ($nameNorm !== '' && $emailNorm !== '') {
+                    $key = 'ne:' . $nameNorm . '|' . $emailNorm;
+                } elseif ($nameNorm !== '' && $genderVal !== '') {
+                    $key = 'ng:' . $nameNorm . '|' . $genderVal;
+                } elseif ($nameNorm !== '') {
+                    $key = 'n:' . $nameNorm;
+                } else {
+                    $key = 'id:' . ($row['id'] ?? $row['patient_id'] ?? uniqid('', true));
+                }
+
+                $rowDateRaw = !empty($row['appointment_date']) && $row['appointment_date'] !== '0000-00-00'
+                    ? $row['appointment_date']
+                    : substr((string)($row['created_at'] ?? ''), 0, 10);
+
+                $approvalStatuses = ['pending', 'for_approval', 'for_processing', 'for approval'];
+                $rowStatus = strtolower(trim((string)($row['status'] ?? '')));
+                $rowIsPending = in_array($rowStatus, $approvalStatuses, true);
+
+                if (!isset($grouped[$key])) {
+                    $row['total_visits']     = 1;
+                    $row['completed_visits'] = $rowStatus === 'completed' ? 1 : 0;
+                    $row['last_visit_date']  = $rowDateRaw !== '' ? date('M j, Y', strtotime($rowDateRaw)) : null;
+                    $row['last_visit_raw']   = $rowDateRaw ?: null;
+                    $row['has_pending_approval'] = $rowIsPending ? 1 : 0;
+                    if ($rowIsPending) {
+                        $row['pending_patient_id'] = $row['patient_id'] ?? $row['id'] ?? null;
+                        $row['pending_status'] = $row['status'];
+                        $row['pending_department'] = $row['department'] ?? null;
+                        $row['pending_appointment_date'] = $rowDateRaw ?: null;
+                        $row['pending_inquiry_only'] = $row['inquiry_only'] ?? 0;
+                    }
+                    $grouped[$key] = $row;
+                } else {
+                    $grouped[$key]['total_visits']++;
+                    if ($rowStatus === 'completed') {
+                        $grouped[$key]['completed_visits']++;
+                    }
+                    // A newer visit can hide an older booking that still needs approval.
+                    if ($rowIsPending && empty($grouped[$key]['pending_patient_id'])) {
+                        $grouped[$key]['has_pending_approval'] = 1;
+                        $grouped[$key]['pending_patient_id'] = $row['patient_id'] ?? $row['id'] ?? null;
+                        $grouped[$key]['pending_status'] = $row['status'];
+                        $grouped[$key]['pending_department'] = $row['department'] ?? null;
+                        $grouped[$key]['pending_appointment_date'] = $rowDateRaw ?: null;
+                        $grouped[$key]['pending_inquiry_only'] = $row['inquiry_only'] ?? 0;
+                    }
+                    // Preserve canonical earliest PT-... ID
+                    if (!empty($row['canonical_patient_id'])) {
+                        $grouped[$key]['canonical_patient_id'] = $row['canonical_patient_id'];
+                    }
+                    // Backfill missing demographics from earlier rows
+                    foreach ($backfillFields as $f) {
+                        $cur = trim((string)($grouped[$key][$f] ?? ''));
+                        $alt = trim((string)($row[$f] ?? ''));
+                        if (($cur === '' || $cur === '0000-00-00') && $alt !== '' && $alt !== '0000-00-00') {
+                            $grouped[$key][$f] = $row[$f];
+                        }
+                    }
+                }
+            }
+
+            $deduped = array_values($grouped);
+            $returningCount = 0;
+            foreach ($deduped as $d) {
+                if ((int)($d['total_visits'] ?? 1) >= 2) {
+                    $returningCount++;
+                }
+            }
+
+            respondOk([
+                'data'    => $deduped,
+                'summary' => [
+                    'unique_patients'    => count($deduped),
+                    'returning_patients' => $returningCount,
+                    'total_encounters'   => $totalEncounters,
+                ],
+            ]);
+        }
+
         respondOk(['data' => $rows]);
     }
 
@@ -290,7 +446,9 @@ if ($method === 'GET') {
                 p.status, p.assigned_doctor, p.unscheduled_walkin, p.inquiry_only, p.mode_of_inquiry,
                 p.recommendation_remarks, p.receiver, p.hrn, p.scheduled_time, p.preferred_time_slot, p.referral_source,
                 p.medical_history_diagnosis, p.medical_history_treatment, p.medical_history_prescription, p.active_medications,
+                p.medical_history_recorded_by, p.medical_history_date,
                 p.next_visit_date, p.vitals_json, p.follow_up_notes,
+                p.rescheduled_by_staff, p.rescheduled_from_date, p.rescheduled_at,
                 p.reminder_status, p.reminder_sent_at, p.created_at,
                 d.id AS doctor_id, d.status AS doctor_status, d.title AS doctor_title, d.license_number AS doctor_license
          FROM patients p
@@ -665,6 +823,14 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         $endTime = $isAfternoon ? '17:00:00' : '12:00:00';
         $canonicalDoc = $doc['name'];
 
+        $oldDate = trim((string)($patient['appointment_date'] ?? ''));
+        $oldSlot = trim((string)($patient['preferred_time_slot'] ?? ''));
+        $isRescheduled = ($oldDate !== '' && $oldDate !== $newDate) || ($oldSlot !== '' && strcasecmp($oldSlot, $slotLabel) !== 0);
+        $fromDateVal = ($oldDate !== '' && $oldDate !== $newDate) ? $oldDate : ($patient['rescheduled_from_date'] ?? ($oldDate !== '' ? $oldDate : null));
+        $reschedSql = $isRescheduled
+            ? ", rescheduled_by_staff = 1, rescheduled_from_date = ?, rescheduled_at = NOW()"
+            : "";
+
         $willApprove = $approveNow && in_array($currSt, ['pending', 'for_approval', 'for_processing', 'for approval'], true);
         if ($willApprove) {
             $upd = $pdo->prepare(
@@ -674,11 +840,14 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                      appointment_date = ?,
                      preferred_time_slot = ?,
                      scheduled_time = ?,
-                     status = 'approved',
+                     status = 'approved'{$reschedSql},
                      updated_at = NOW()
                  WHERE patient_id = ?"
             );
-            $upd->execute([$canonicalDoc, $newDate, $slotLabel, $scheduledTime, $patientId]);
+            $params = [$canonicalDoc, $newDate, $slotLabel, $scheduledTime];
+            if ($isRescheduled) $params[] = $fromDateVal;
+            $params[] = $patientId;
+            $upd->execute($params);
         } else {
             $upd = $pdo->prepare(
                 "UPDATE patients
@@ -686,11 +855,14 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                      assigned_date = CURDATE(),
                      appointment_date = ?,
                      preferred_time_slot = ?,
-                     scheduled_time = ?,
+                     scheduled_time = ?{$reschedSql},
                      updated_at = NOW()
                  WHERE patient_id = ?"
             );
-            $upd->execute([$canonicalDoc, $newDate, $slotLabel, $scheduledTime, $patientId]);
+            $params = [$canonicalDoc, $newDate, $slotLabel, $scheduledTime];
+            if ($isRescheduled) $params[] = $fromDateVal;
+            $params[] = $patientId;
+            $upd->execute($params);
         }
 
         $refNo = trim((string)($patient['reference_no'] ?? ''));
@@ -917,10 +1089,26 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
     if ($action === 'reschedule') {
         $newDate = trim($body['date'] ?? '');
         if ($newDate === '') respondErr('date is required.');
+        $oldDate = trim((string)($patient['appointment_date'] ?? ''));
+        $fromDateVal = ($oldDate !== '' && $oldDate !== $newDate) ? $oldDate : ($patient['rescheduled_from_date'] ?? null);
         $upd = $pdo->prepare(
-            "UPDATE patients SET appointment_date = ?, updated_at = NOW() WHERE patient_id = ?"
+            "UPDATE patients
+             SET appointment_date = ?,
+                 rescheduled_by_staff = 1,
+                 rescheduled_from_date = ?,
+                 rescheduled_at = NOW(),
+                 updated_at = NOW()
+             WHERE patient_id = ?"
         );
-        $upd->execute([$newDate, $patientId]);
+        $upd->execute([$newDate, $fromDateVal, $patientId]);
+        try {
+            $refNo = trim((string)($patient['reference_no'] ?? ''));
+            if ($refNo !== '') {
+                $pdo->prepare("UPDATE appointments SET appointment_date = ? WHERE reference_no = ? OR patient_id = ?")->execute([$newDate, $refNo, $patientId]);
+            } else {
+                $pdo->prepare("UPDATE appointments SET appointment_date = ? WHERE patient_id = ?")->execute([$newDate, $patientId]);
+            }
+        } catch (\Throwable $ignoreApptResched) {}
         addLog($pdo, 'info', 'Patient Rescheduled', $actor,
                "Patient $patientId ($name) rescheduled to $newDate.");
         respondOk(['message' => "$name rescheduled to $newDate."]);

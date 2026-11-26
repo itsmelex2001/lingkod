@@ -4,6 +4,8 @@
  * Shared helpers for patient email OTP verification.
  */
 
+date_default_timezone_set('Asia/Manila');
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -13,6 +15,9 @@ function ensurePatientOtpColumns(PDO $pdo): void {
     $checked = true;
     try {
         $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('otp_code', $cols, true)) {
+            $pdo->exec("ALTER TABLE patients ADD COLUMN otp_code VARCHAR(255) NULL");
+        }
         if (!in_array('otp_hash', $cols, true)) {
             $pdo->exec("ALTER TABLE patients ADD COLUMN otp_hash VARCHAR(255) NULL");
         }
@@ -21,6 +26,15 @@ function ensurePatientOtpColumns(PDO $pdo): void {
         }
         if (!in_array('otp_attempts', $cols, true)) {
             $pdo->exec("ALTER TABLE patients ADD COLUMN otp_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0");
+        }
+        if (!in_array('is_otp_enabled', $cols, true)) {
+            $pdo->exec("ALTER TABLE patients ADD COLUMN is_otp_enabled TINYINT(1) NOT NULL DEFAULT 0");
+        }
+        if (!in_array('account_status', $cols, true)) {
+            $pdo->exec("ALTER TABLE patients ADD COLUMN account_status VARCHAR(20) NOT NULL DEFAULT 'active'");
+        }
+        if (!in_array('must_change_password', $cols, true)) {
+            $pdo->exec("ALTER TABLE patients ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0");
         }
     } catch (Throwable $e) {
         error_log("ensurePatientOtpColumns: " . $e->getMessage());
@@ -47,7 +61,7 @@ function loadEnvVars(): void {
     }
 }
 
-function sendPatientOtpEmail(string $email, string $fullName, string $otp): bool {
+function sendPatientOtpEmail(string $email, string $fullName, string $otp, int $expiresMinutes = 5): bool {
     loadEnvVars();
     $autoloadPath = dirname(__DIR__, 2) . '/vendor/autoload.php';
     if (file_exists($autoloadPath)) {
@@ -84,18 +98,19 @@ function sendPatientOtpEmail(string $email, string $fullName, string $otp): bool
 
             $mail->addAddress($email, $fullName);
             $mail->isHTML(true);
-            $mail->Subject = 'Your MMWGH LINGKOD Verification OTP';
+            $mail->Subject = 'Your Lingkod Verification Code';
             $safeName = htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8');
             $safeOtp  = htmlspecialchars($otp, ENT_QUOTES, 'UTF-8');
             $mail->Body = "
-                <div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;background:#ffffff;'>
-                  <h2 style='margin:0 0 12px;color:#14532d;font-size:18px;'>One-Time Verification Code</h2>
-                  <p style='margin:0 0 16px;color:#374151;font-size:14px;line-height:1.5;'>Hello {$safeName}, enter this 6-digit code to verify your MMWGH LINGKOD Patient Portal login:</p>
-                  <div style='font-size:28px;font-weight:800;letter-spacing:6px;color:#111827;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;text-align:center;margin:0 0 16px;'>{$safeOtp}</div>
-                  <p style='margin:0;color:#6b7280;font-size:12px;'>This code expires in 30 minutes. Never share it with anyone.</p>
+                <div style='font-family:Inter,Arial,sans-serif;max-width:480px;margin:0 auto;padding:28px;border:1px solid #e5e7eb;border-radius:12px;background:#ffffff;'>
+                  <p style='margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#14532d;'>Lingkod Patient Portal</p>
+                  <h2 style='margin:0 0 12px;color:#111827;font-size:20px;font-weight:700;'>Two-Step Verification</h2>
+                  <p style='margin:0 0 20px;color:#4b5563;font-size:14px;line-height:1.6;'>Hello {$safeName}, enter this 6-digit code to continue signing in:</p>
+                  <div style='font-family:monospace;font-size:28px;font-weight:700;letter-spacing:8px;color:#14532d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;text-align:center;margin:0 0 20px;'>{$safeOtp}</div>
+                  <p style='margin:0;color:#6b7280;font-size:12px;line-height:1.5;'>This code expires in {$expiresMinutes} minutes. If you did not try to sign in, ignore this email.</p>
                 </div>
             ";
-            $mail->AltBody = "Hello {$fullName},\n\nYour MMWGH LINGKOD verification OTP is: {$otp}\nThis code expires in 30 minutes.";
+            $mail->AltBody = "Hello {$fullName},\n\nYour Lingkod verification code is: {$otp}\nThis code expires in {$expiresMinutes} minutes.";
             @$mail->send();
             $sent = true;
         } catch (Exception $e) {

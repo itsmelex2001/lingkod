@@ -74,8 +74,11 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
 </head>
 <body>
     <div class="staff-app-container">
+        <!-- Mobile Sidebar Backdrop -->
+        <div class="staff-sidebar-backdrop" id="staffSidebarBackdrop" aria-hidden="true"></div>
+
         <!-- ── Left Sidebar ── -->
-        <aside class="staff-sidebar">
+        <aside class="staff-sidebar" id="staffSidebar">
             <div class="staff-sidebar-top">
                 <div class="sidebar-brand">
                     <div class="sidebar-brand-box">
@@ -85,49 +88,136 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                         <span class="brand-role-main">MEDICAL STAFF</span>
                         <span class="brand-dept-sub"><?= htmlspecialchars(strtoupper($deptLabel)) ?></span>
                     </div>
+                    <button type="button" class="sidebar-toggle-btn" id="staffSidebarToggleBtn" aria-label="Collapse sidebar" aria-controls="staffSidebar" aria-expanded="true" title="Collapse sidebar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                            <polyline points="15 9 12 12 15 15"></polyline>
+                        </svg>
+                    </button>
+                    <button type="button" class="staff-sidebar-close-btn" id="staffSidebarCloseBtn" aria-label="Close navigation menu" title="Close menu">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
 
                 <nav class="sidebar-menu" aria-label="Staff navigation">
                     <div class="staff-nav-group">
-                        <div class="staff-nav-label">MAIN</div>
-                        <button type="button" class="sidebar-nav-item active" data-view="overview">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><rect x="6.5" y="12.5" width="4" height="4" rx="0.5"></rect><line x1="13" y1="13" x2="17.5" y2="13"></line><line x1="13" y1="16" x2="17.5" y2="16"></line></svg>
+                        <div class="staff-nav-label">DASHBOARD</div>
+                        <button type="button" class="sidebar-nav-item active" data-view="overview" data-tooltip="Overview" aria-label="Overview">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1.5"></rect><rect width="7" height="5" x="14" y="3" rx="1.5"></rect><rect width="7" height="9" x="14" y="12" rx="1.5"></rect><rect width="7" height="5" x="3" y="16" rx="1.5"></rect></svg>
                             <span>Overview</span>
                         </button>
                     </div>
 
                     <div class="staff-nav-group">
-                        <div class="staff-nav-label">OPERATIONS</div>
-                        <button type="button" class="sidebar-nav-item" data-view="consultation">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="13" y2="16"></line></svg>
+                        <div class="staff-nav-label">PATIENT CARE</div>
+                        <button type="button" class="sidebar-nav-item" data-view="consultation" data-tooltip="Appointment Queue" aria-label="Appointment Queue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
                             <span>Appointment Queue</span>
                             <span class="nav-badge" id="navQueueBadge" style="display:none;">0</span>
                         </button>
-                        <button type="button" class="sidebar-nav-item" data-view="records">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        <button type="button" class="sidebar-nav-item" data-view="records" data-tooltip="Patient Records" aria-label="Patient Records">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><circle cx="10" cy="12" r="2"></circle><path d="M13.5 17a3.5 3.5 0 0 0-7 0"></path></svg>
                             <span>Patient Records</span>
                         </button>
                     </div>
 
                     <div class="staff-nav-group">
-                        <div class="staff-nav-label">RESOURCES</div>
-                        <button type="button" class="sidebar-nav-item" data-view="schedules">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            <span>Doctor Schedules</span>
+                        <div class="staff-nav-label">SCHEDULING</div>
+                        <button type="button" class="sidebar-nav-item" data-view="schedules" data-tooltip="Calendar" aria-label="Calendar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg>
+                            <span>Calendar</span>
                         </button>
                     </div>
                 </nav>
             </div>
+
+            <div class="sidebar-footer">
+                <button type="button" class="sidebar-nav-item" data-view="settings" data-tooltip="Settings" aria-label="Settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <span>Settings</span>
+                </button>
+            </div>
         </aside>
+        <script>
+          (function () {
+            const sidebar = document.getElementById('staffSidebar');
+            const toggleBtn = document.getElementById('staffSidebarToggleBtn');
+            if (!sidebar || !toggleBtn) return;
+            const applyState = (collapsed) => {
+              sidebar.classList.toggle('is-collapsed', collapsed);
+              toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+              const lbl = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+              toggleBtn.setAttribute('aria-label', lbl);
+              toggleBtn.setAttribute('title', lbl);
+            };
+            try {
+              if (localStorage.getItem('lingkod_staff_sidebar_collapsed') === '1') {
+                applyState(true);
+              }
+            } catch (e) {}
+            toggleBtn.addEventListener('click', () => {
+              const next = !sidebar.classList.contains('is-collapsed');
+              applyState(next);
+              try { localStorage.setItem('lingkod_staff_sidebar_collapsed', next ? '1' : '0'); } catch (e) {}
+            });
+
+            // Mobile off-canvas navigation drawer
+            const backdrop = document.getElementById('staffSidebarBackdrop');
+            const closeBtn = document.getElementById('staffSidebarCloseBtn');
+            const setMobileDrawer = (open) => {
+              const menuBtn = document.getElementById('staffMobileMenuBtn');
+              sidebar.classList.toggle('is-mobile-open', open);
+              if (backdrop) backdrop.classList.toggle('is-open', open);
+              if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            };
+            document.addEventListener('click', (e) => {
+              if (e.target.closest('#staffMobileMenuBtn')) {
+                setMobileDrawer(!sidebar.classList.contains('is-mobile-open'));
+                return;
+              }
+              if (e.target.closest('#staffSidebarCloseBtn') || e.target === backdrop) {
+                setMobileDrawer(false);
+                return;
+              }
+              if (e.target.closest('#staffSidebar .sidebar-nav-item') && window.innerWidth <= 768) {
+                setMobileDrawer(false);
+              }
+            });
+            document.addEventListener('keydown', (e) => {
+              if (e.key === 'Escape' && sidebar.classList.contains('is-mobile-open')) {
+                setMobileDrawer(false);
+                const menuBtn = document.getElementById('staffMobileMenuBtn');
+                if (menuBtn) menuBtn.focus();
+              }
+            });
+            window.addEventListener('resize', () => {
+              if (window.innerWidth > 768 && sidebar.classList.contains('is-mobile-open')) {
+                setMobileDrawer(false);
+              }
+            });
+          })();
+        </script>
 
         <!-- ── Main Content Workspace ── -->
         <main class="staff-main-wrap">
             <header class="staff-header">
-                <div class="header-search-wrap">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="7.5"></circle><line x1="20.5" y1="20.5" x2="16.5" y2="16.5"></line></svg>
-                    <input type="search" id="globalStaffSearchInput" name="staff_global_search" placeholder="Search patients, records..." autocomplete="new-password" data-lpignore="true" spellcheck="false">
+                <div class="staff-mobile-header-left">
+                    <button type="button" class="staff-mobile-menu-btn" id="staffMobileMenuBtn" aria-label="Open navigation menu" aria-controls="staffSidebar" aria-expanded="false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <div class="staff-mobile-brand">
+                        <span class="staff-mobile-brand-name">LINGKOD</span>
+                        <span class="staff-mobile-brand-dept"><?= htmlspecialchars(ucwords(strtolower($deptLabel))) ?></span>
+                    </div>
                 </div>
-
                 <div class="header-right-meta">
                     <div class="staff-notif-wrap" id="staffNotifContainer">
                         <button type="button" class="staff-notif-btn" id="staffNotifBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
@@ -168,7 +258,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                                 <span>Account Settings</span>
                             </button>
-                            <a href="/sdn/pages/logout.php" class="profile-dd-item profile-dd-logout">
+                            <a href="/sdn/pages/logout.php?portal=staff" class="profile-dd-item profile-dd-logout">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                                 <span>Sign out</span>
                             </a>
@@ -216,17 +306,17 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
 
                     <!-- Quick Patient QR & Name Lookup Bar (Direct Dashboard Access) -->
                     <div class="ov-quick-lookup-card" style="background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; padding:14px 20px; margin-bottom:20px; display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; box-shadow:0 1px 2px rgba(15,23,42,0.04);">
-                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <button type="button" class="btn-clean primary" onclick="openDashboardQrScanner()" style="white-space:nowrap;">
+                        <div class="ov-quick-lookup-lead" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <button type="button" class="btn-clean primary ov-qr-scan-btn" onclick="openDashboardQrScanner()" style="white-space:nowrap;">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
                                 <span>Scan Patient QR</span>
                             </button>
-                            <div>
+                            <div class="ov-quick-lookup-copy">
                                 <div style="font-size:0.84rem; font-weight:600; color:#0f172a; line-height:1.25;">Quick Patient Lookup</div>
                                 <div style="font-size:0.76rem; color:#64748b; line-height:1.3;">Scan a Digital ID QR code or search by patient name or ID.</div>
                             </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px; flex:0 1 360px; min-width:240px;">
+                        <div class="ov-quick-lookup-search" style="display:flex; align-items:center; gap:8px; flex:0 1 360px; min-width:240px;">
                             <input type="search" id="overviewQuickLookup" name="ov_quick_lookup" class="form-control-clean" placeholder="Enter patient name or ID..." autocomplete="new-password" data-lpignore="true" style="flex:1; min-width:0; height:38px;">
                             <button type="button" class="btn-clean outline" onclick="runOverviewPatientLookup()" style="height:38px; white-space:nowrap;">Find Patient</button>
                         </div>
@@ -402,12 +492,12 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                     </div>
                 </section>
 
-                <!-- ═════════ VIEW 4: DOCTOR SCHEDULES (Organized per Department) ═════════ -->
+                <!-- ═════════ VIEW 4: CALENDAR (Department Doctor Schedules) ═════════ -->
                 <section id="view-schedules" class="view-panel">
                     <div class="view-header">
                         <div>
-                            <h1>Doctor Schedules</h1>
-                            <p>Physician availability, clinic hours, and daily slot capacity organized by department.</p>
+                            <h1>Calendar</h1>
+                            <p><?= htmlspecialchars(ucwords(strtolower($deptLabel))) ?> &middot; Physician schedules and daily clinic load.</p>
                         </div>
                         <div class="view-header-actions">
                             <div class="sched-summary-pills">
@@ -418,23 +508,9 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                         </div>
                     </div>
 
-                    <div class="modern-table-shell">
-                        <div class="modern-table-toolbar">
-                            <div class="dept-category-tabs" role="tablist" aria-label="Filter schedules by department">
-                                <button type="button" class="dept-tab active" data-dept="all" onclick="setSchedDeptCategory('all')">
-                                    All <span class="dept-tab-count" id="schedCountAll">0</span>
-                                </button>
-                                <button type="button" class="dept-tab" data-dept="general" onclick="setSchedDeptCategory('general')">
-                                    General Medical <span class="dept-tab-count" id="schedCountGeneral">0</span>
-                                </button>
-                                <button type="button" class="dept-tab" data-dept="neurology" onclick="setSchedDeptCategory('neurology')">
-                                    Neurology <span class="dept-tab-count" id="schedCountNeurology">0</span>
-                                </button>
-                                <button type="button" class="dept-tab" data-dept="psychiatry" onclick="setSchedDeptCategory('psychiatry')">
-                                    Psychiatry <span class="dept-tab-count" id="schedCountPsychiatry">0</span>
-                                </button>
-                            </div>
-                            <div class="modern-table-controls">
+                    <div class="modern-table-shell" style="margin-bottom:14px;">
+                        <div class="modern-table-toolbar" style="padding:12px 16px;">
+                            <div class="modern-table-controls" style="width:100%;">
                                 <div class="modern-search-box">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                     <input type="search" id="schedSearchInput" name="sched_search_q" placeholder="Search doctor or specialization..." autocomplete="new-password" data-lpignore="true" spellcheck="false">
@@ -446,14 +522,6 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                     <option value="all">All Statuses</option>
                                     <option value="in">Available (IN)</option>
                                     <option value="out">Unavailable (OUT)</option>
-                                </select>
-                                <select id="schedSortSelect" class="modern-select" aria-label="Sort doctor schedules">
-                                    <option value="dept_name">Sort: Department &amp; Name</option>
-                                    <option value="name_asc">Sort: Name (A – Z)</option>
-                                    <option value="name_desc">Sort: Name (Z – A)</option>
-                                    <option value="status_in">Sort: Available First</option>
-                                    <option value="slots_desc">Sort: Capacity (High – Low)</option>
-                                    <option value="load_desc">Sort: Patient Load Today</option>
                                 </select>
                                 <button type="button" class="modern-reset-btn" onclick="resetScheduleFilters()">Reset</button>
                             </div>
@@ -564,7 +632,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                         <div class="settings-card">
                             <div class="settings-card-header">
                                 <span class="settings-card-title">Patient QR ID Scanner</span>
-                                <span class="settings-card-sub">Scan a patient's Digital ID QR code with the camera or enter their Patient ID</span>
+                                <span class="settings-card-sub">Scan a patient's Digital ID QR code with the camera or search by patient name</span>
                             </div>
 
                             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
@@ -576,8 +644,8 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                     <span>Stop Camera</span>
                                 </button>
                                 <div style="display:flex; align-items:center; gap:8px; margin-left:auto; flex-wrap:wrap;">
-                                    <input type="text" id="manualQrPatientId" class="form-control-clean" placeholder="Enter Patient ID" aria-label="Enter Patient ID" style="width:190px;">
-                                    <button type="button" class="btn-clean outline" id="btnManualQrLookup">Lookup ID</button>
+                                    <input type="search" id="manualQrPatientId" class="form-control-clean" placeholder="Search patient name" aria-label="Search patient name" style="width:230px;">
+                                    <button type="button" class="btn-clean outline" id="btnManualQrLookup">Search</button>
                                 </div>
                             </div>
 
@@ -593,7 +661,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                     <div class="settings-card-title">Active Session</div>
                                     <div class="settings-card-sub">Signed in as <?= htmlspecialchars($userFullName) ?> (<?= htmlspecialchars($deptLabel) ?>)</div>
                                 </div>
-                                <a href="/sdn/pages/logout.php" class="btn-clean danger-outline">
+                                <a href="/sdn/pages/logout.php?portal=staff" class="btn-clean danger-outline">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                                     <span>Sign out</span>
                                 </a>
@@ -605,6 +673,20 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
         </main>
     </div>
 
+    <!-- ── MODAL: Calendar Day Doctor Schedule ── -->
+    <div id="staffCalDayModal" class="clean-modal-backdrop">
+        <div class="clean-modal-box" style="max-width:860px; width:94%;">
+            <div class="clean-modal-header">
+                <div>
+                    <h3 id="staffCalModalTitle">Doctor Schedule</h3>
+                    <div id="staffCalModalSub" style="font-size:0.8rem; color:#64748b; margin-top:2px;"></div>
+                </div>
+                <button type="button" class="clean-modal-close" onclick="closeStaffCalDayModal()">&times;</button>
+            </div>
+            <div class="clean-modal-body" id="staffCalModalBody" style="max-height:70vh; overflow-y:auto;"></div>
+        </div>
+    </div>
+
     <!-- ── MODAL 1: Patient Details ── -->
     <div id="patientDetailsModal" class="clean-modal-backdrop">
         <div class="clean-modal-box">
@@ -614,6 +696,10 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
             </div>
             <div class="clean-modal-body" id="patientDetailsContent"></div>
             <div class="clean-modal-footer" style="flex-wrap:wrap; gap:8px;">
+                <button type="button" id="staffDetailsSlipBtn" class="btn-clean outline" onclick="openPatientSlipFromDetails()" style="display:none;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span id="staffDetailsSlipBtnLabel">Print Patient Slip</span>
+                </button>
                 <button type="button" class="btn-clean outline" onclick="printMedicalCertificateFromDetails()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                     <span>Print Medical Certificate</span>
@@ -966,6 +1052,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
         window.STAFF_USER_ID = <?= json_encode($userId) ?>;
         window.STAFF_FIRST_NAME = <?= json_encode($firstName) ?>;
     </script>
+    <script src="/sdn/public/js/patient-slip.js?v=<?= time() ?>"></script>
     <script src="/sdn/public/js/staff-dashboard-clean.js?v=<?= time() ?>"></script>
 </body>
 </html>

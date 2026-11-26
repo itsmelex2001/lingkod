@@ -184,23 +184,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 2. Toast Feedback ──
   let toastTimer = null;
-  function showToast(msg, duration = 2800, tone = 'success') {
-    if (!toastEl) return;
-    const t = tone === 'error' || tone === 'warning' || tone === 'info' ? tone : 'success';
-    toastEl.classList.remove('is-error', 'is-warning', 'is-info', 'is-success');
-    toastEl.classList.add(`is-${t}`);
-    const icons = {
-      success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
-      error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-      warning: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-      info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
-    };
-    toastEl.innerHTML = `<span class="toast-clean-mark" aria-hidden="true">${icons[t]}</span><span>${escapeHtml(String(msg || ''))}</span>`;
-    toastEl.classList.add('is-visible');
+  let toastHovered = false;
+  function dismissToast() {
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      toastEl.classList.remove('is-visible');
-    }, duration);
+    if (toastEl) toastEl.classList.remove('is-visible');
+  }
+
+  function showToast(msg, duration = 3600, tone = 'success') {
+    if (!toastEl) return;
+    if (typeof duration === 'string') {
+      tone = duration;
+      duration = 3600;
+    }
+    const ms = Math.max(1800, Number(duration) || 3600);
+    const t = tone === 'error' || tone === 'warning' || tone === 'info' ? tone : 'success';
+    const titles = {
+      success: 'Success',
+      error: 'Action Failed',
+      warning: 'Attention',
+      info: 'Notice'
+    };
+    const icons = {
+      success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+      error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+      warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
+
+    if (!toastEl.dataset.hoverBound) {
+      toastEl.dataset.hoverBound = '1';
+      toastEl.addEventListener('mouseenter', () => {
+        toastHovered = true;
+        clearTimeout(toastTimer);
+      });
+      toastEl.addEventListener('mouseleave', () => {
+        toastHovered = false;
+        if (toastEl.classList.contains('is-visible')) {
+          toastTimer = setTimeout(dismissToast, 1800);
+        }
+      });
+    }
+
+    clearTimeout(toastTimer);
+    toastEl.classList.remove('is-error', 'is-warning', 'is-info', 'is-success', 'is-visible');
+    toastEl.classList.add(`is-${t}`);
+    toastEl.style.setProperty('--toast-duration', `${ms}ms`);
+    toastEl.innerHTML = `
+      <span class="toast-clean-mark" aria-hidden="true">${icons[t]}</span>
+      <div class="toast-clean-body">
+        <span class="toast-clean-title">${titles[t]}</span>
+        <span class="toast-clean-desc">${escapeHtml(String(msg || ''))}</span>
+      </div>
+      <button type="button" class="toast-clean-close" aria-label="Dismiss notification">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="toast-clean-progress" aria-hidden="true"></div>
+    `;
+    toastEl.querySelector('.toast-clean-close')?.addEventListener('click', dismissToast);
+
+    void toastEl.offsetWidth;
+    toastEl.classList.add('is-visible');
+    if (!toastHovered) {
+      toastTimer = setTimeout(dismissToast, ms);
+    }
   }
   window.showToast = showToast;
 
@@ -601,11 +647,21 @@ document.addEventListener('DOMContentLoaded', () => {
     renderDoctorSchedules();
   };
 
+  function getStaffDeptKey() {
+    return normalizeSchedDept(window.STAFF_DEPT || 'General Medical');
+  }
+
+  function getStaffDeptDoctors() {
+    const deptKey = getStaffDeptKey();
+    const matched = (allDoctors || []).filter(d => normalizeSchedDept(d.department) === deptKey);
+    return matched.length ? matched : (departmentDoctors || []);
+  }
+
   function populateScheduleSpecializations() {
     const selectEl = document.getElementById('schedSpecFilter');
     if (!selectEl) return;
     const specs = [...new Set(
-      (allDoctors || [])
+      getStaffDeptDoctors()
         .map(d => String(d.specialization || '').trim())
         .filter(Boolean)
     )].sort((a, b) => a.localeCompare(b));
@@ -621,24 +677,412 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let staffCalYear = new Date().getFullYear();
+  let staffCalMonth = new Date().getMonth();
+  let staffCalActiveYmd = null;
+
+  function toLocalYmd(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function getPatientsForDateInDept(ymd) {
+    const deptKey = getStaffDeptKey();
+    return (allPatients || []).filter(p => {
+      if (!p.appointment_date || String(p.appointment_date).slice(0, 10) !== ymd) return false;
+      const st = String(p.status || '').toLowerCase();
+      if (st === 'cancelled' || st === 'rejected' || st === 'no-show') return false;
+      return normalizeSchedDept(p.department) === deptKey;
+    });
+  }
+
+  function getDoctorLoadForDate(docName, ymd) {
+    const normDoc = normalizeDoctorName(docName);
+    if (!normDoc) return 0;
+    return getPatientsForDateInDept(ymd).filter(p => normalizeDoctorName(p.assigned_doctor) === normDoc).length;
+  }
+
+  // Canonical clinic schedule templates synced with pages/schedules.php
+  const CLINIC_SCHEDULE_TEMPLATES = {
+    general: [
+      {
+        id: 'gen-consult',
+        label: 'General Medical Consultation',
+        shortLabel: 'General Medical',
+        days: [1, 2, 3, 4, 5, 6],
+        hours: '8:00 AM – 10:00 AM',
+        matchDoc: (spec) => !spec.includes('chronic') && !spec.includes('prevent') && !spec.includes('physical')
+      },
+      {
+        id: 'gen-preventive',
+        label: 'Physical Examination & Preventive Healthcare',
+        shortLabel: 'Physical Exam & Preventive',
+        days: [1, 2, 3, 4, 5],
+        hours: '10:00 AM – 12:00 PM',
+        matchDoc: (spec) => spec.includes('prevent') || spec.includes('physical') || spec.includes('routine')
+      },
+      {
+        id: 'gen-chronic',
+        label: 'Chronic Disease Management & Lab Requests',
+        shortLabel: 'Chronic Disease Mgmt',
+        days: [1, 3, 5],
+        hours: '1:00 PM – 4:00 PM',
+        matchDoc: (spec) => spec.includes('chronic')
+      }
+    ],
+    neurology: [
+      {
+        id: 'neuro-consult',
+        label: 'Neurology Consultation & Headache Management',
+        shortLabel: 'Neurology & Headache',
+        days: [1, 2, 4, 5],
+        hours: '8:30 AM – 11:30 AM',
+        matchDoc: (spec) => !spec.includes('stroke') && !spec.includes('epilepsy') && !spec.includes('diagnostic')
+      },
+      {
+        id: 'neuro-stroke',
+        label: 'Stroke, Epilepsy & Neurological Diagnostic Testing',
+        shortLabel: 'Stroke & Diagnostics',
+        days: [2, 3, 4, 6],
+        hours: '1:30 PM – 4:30 PM',
+        matchDoc: (spec) => spec.includes('stroke') || spec.includes('epilepsy') || spec.includes('diagnostic') || spec.includes('dementia')
+      }
+    ],
+    psychiatry: [
+      {
+        id: 'psych-adult',
+        label: 'Psychotherapy & Psychological Assessment',
+        shortLabel: 'Psychotherapy & Assessment',
+        days: [1, 2, 3, 4, 5],
+        hours: '8:00 AM – 11:30 AM',
+        matchDoc: (spec) => !spec.includes('child') && !spec.includes('adolescent') && !spec.includes('substance') && !spec.includes('rehab')
+      },
+      {
+        id: 'psych-child',
+        label: 'Child & Adolescent Psychology / Rehabilitation',
+        shortLabel: 'Child & Rehab Psych',
+        days: [1, 2, 3, 4, 5, 6],
+        hours: '1:00 PM – 5:00 PM',
+        matchDoc: (spec) => spec.includes('child') || spec.includes('adolescent') || spec.includes('substance') || spec.includes('rehab')
+      }
+    ]
+  };
+
+  function getClinicBlocksForDate(filteredDocs, dateObj, todayDate, todayYmd, dayPatients) {
+    const dow = dateObj.getDay();
+    if (dow === 0) return []; // Sundays closed
+    const ymd = toLocalYmd(dateObj);
+
+    const maxHorizonDate = new Date(todayDate);
+    maxHorizonDate.setDate(maxHorizonDate.getDate() + 60);
+    const withinHorizon = dateObj <= maxHorizonDate;
+    const hasBookedPatients = (dayPatients || []).length > 0;
+    const explicitFutureDocs = filteredDocs.filter(d => d.schedule_date && String(d.schedule_date).slice(0, 10) === ymd);
+
+    if (!withinHorizon && !hasBookedPatients && !explicitFutureDocs.length) {
+      return [];
+    }
+
+    const deptKey = getStaffDeptKey();
+    const templates = CLINIC_SCHEDULE_TEMPLATES[deptKey] || CLINIC_SCHEDULE_TEMPLATES.general;
+
+    return templates
+      .filter(tpl => tpl.days.includes(dow))
+      .map(tpl => {
+        const matched = filteredDocs.filter(d => {
+          const sDate = d.schedule_date ? String(d.schedule_date).slice(0, 10) : '';
+          if (sDate && sDate > todayYmd && sDate !== ymd) return false;
+          const spec = String(d.specialization || '').toLowerCase();
+          return tpl.matchDoc(spec);
+        });
+        return {
+          spec: tpl.label,
+          shortLabel: tpl.shortLabel,
+          clinicHours: tpl.hours,
+          docs: matched
+        };
+      })
+      .filter(block => block.docs.length > 0);
+  }
+
+  window.changeStaffCalMonth = function (delta) {
+    staffCalMonth += delta;
+    if (staffCalMonth < 0) {
+      staffCalMonth = 11;
+      staffCalYear--;
+    } else if (staffCalMonth > 11) {
+      staffCalMonth = 0;
+      staffCalYear++;
+    }
+    renderDoctorSchedules();
+  };
+
+  window.jumpStaffCalToday = function () {
+    const now = new Date();
+    staffCalYear = now.getFullYear();
+    staffCalMonth = now.getMonth();
+    renderDoctorSchedules();
+  };
+
+  window.closeStaffCalDayModal = function () {
+    const m = document.getElementById('staffCalDayModal');
+    if (m) m.classList.remove('active');
+    staffCalActiveYmd = null;
+  };
+
+  function openStaffCalDayModal(dateObj, dayDocs, dayPatients) {
+    const modal = document.getElementById('staffCalDayModal');
+    const titleEl = document.getElementById('staffCalModalTitle');
+    const subEl = document.getElementById('staffCalModalSub');
+    const bodyEl = document.getElementById('staffCalModalBody');
+    if (!modal || !bodyEl) return;
+
+    const ymd = toLocalYmd(dateObj);
+    staffCalActiveYmd = ymd;
+    const formatted = dateObj.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    const availCount = dayDocs.filter(d => d._isIn).length;
+    const deptTitle = window.STAFF_DEPT || 'General Medical';
+    if (titleEl) titleEl.textContent = formatted;
+    if (subEl) {
+      subEl.textContent = `${deptTitle} · ${dayDocs.length} physician${dayDocs.length === 1 ? '' : 's'} (${availCount} available) · ${dayPatients.length} booked`;
+    }
+
+    const rowsHtml = dayDocs.map(d => {
+      const docName = d.name && d.name.startsWith('Dr.') ? d.name : `Dr. ${d.name || 'Physician'}`;
+      const spec = d.specialization || 'General Practice';
+      const startFmt = d.schedule_start_fmt || formatTime12(d.schedule_start);
+      const endFmt = d.schedule_end_fmt || formatTime12(d.schedule_end);
+      const hours = (startFmt && endFmt) ? `${startFmt} – ${endFmt}` : '8:00 AM – 5:00 PM';
+      const dayLoad = getDoctorLoadForDate(d.name, ymd);
+      const pct = Math.min(100, Math.round((dayLoad / d._totalSlots) * 100));
+
+      const cleanDocName = String(docName || '').replace(/^dr\.?\s*/i, '').replace(/,?\s*md$/i, '').trim();
+      const docParts = cleanDocName.split(/\s+/).filter(Boolean);
+      const docInit = docParts.length > 1
+        ? (docParts[0][0] + docParts[docParts.length - 1][0]).toUpperCase()
+        : (cleanDocName.slice(0, 2).toUpperCase() || 'DR');
+      const avatarThumb = d.profile_image
+        ? `<span class="entity-avatar-sm"><img src="${escapeHtml(d.profile_image)}" alt="${escapeHtml(docName)}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';"><span style="display:none;">${escapeHtml(docInit)}</span></span>`
+        : `<span class="entity-avatar-sm">${escapeHtml(docInit)}</span>`;
+
+      return `
+        <tr>
+          <td class="cell-primary">
+            <div class="table-person-cell">
+              ${avatarThumb}
+              <span>${escapeHtml(docName)}</span>
+            </div>
+          </td>
+          <td class="cell-secondary">${escapeHtml(spec)}</td>
+          <td class="cell-tabular">${escapeHtml(hours)}</td>
+          <td class="cell-tabular">
+            <div class="sched-cap-wrap">
+              <span class="sched-cap-text"><strong>${dayLoad}</strong> <span class="capacity-total">/ ${d._totalSlots}</span></span>
+              <div class="sched-cap-bar"><div class="sched-cap-fill" style="width:${pct}%"></div></div>
+            </div>
+          </td>
+          <td>
+            <span class="table-status-indicator ${d._isIn ? 'is-active' : 'is-inactive'}">
+              <span class="status-dot"></span>${d._isIn ? 'Available' : 'Out'}
+            </span>
+          </td>
+          <td class="col-actions">
+            <select class="select-filter doc-status-select ${d._isIn ? 'status-in' : 'status-out'}" onchange="updateDocStatus(${Number(d.id)}, this.value, this)" aria-label="Availability for ${escapeHtml(docName)}">
+              <option value="in" ${d._isIn ? 'selected' : ''}>IN</option>
+              <option value="out" ${!d._isIn ? 'selected' : ''}>OUT</option>
+            </select>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const doctorsSection = dayDocs.length ? `
+      <div class="dept-schedule-card" style="margin-bottom:14px;">
+        <div class="table-wrap">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>Physician</th>
+                <th>Specialization</th>
+                <th>Schedule Hours</th>
+                <th>Booked / Cap</th>
+                <th>Status</th>
+                <th>Availability</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    ` : '';
+
+    const patientsSection = dayPatients.length ? `
+      <div class="dept-schedule-card">
+        <div style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:0.82rem;font-weight:700;color:#082f04;">
+          Booked Patients (${dayPatients.length})
+        </div>
+        <div class="table-wrap">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Assigned Physician</th>
+                <th>Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dayPatients.map(p => `
+                <tr>
+                  <td class="cell-primary">${escapeHtml(p.full_name || 'Patient')}</td>
+                  <td class="cell-secondary">${escapeHtml(p.assigned_doctor || 'Unassigned')}</td>
+                  <td class="cell-tabular">${escapeHtml(p.scheduled_time ? formatTime12(p.scheduled_time) : '8:00 AM')}</td>
+                  <td>${renderOverviewStatusPill(p.status || 'pending')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ` : '';
+
+    bodyEl.innerHTML = (doctorsSection + patientsSection) || '<div style="padding:24px;text-align:center;color:#64748b;">No doctor schedules for this date.</div>';
+    modal.classList.add('active');
+  }
+
+  let staffCalPopoverEl = null;
+  let staffCalPopoverHideTimer = null;
+
+  function cancelHideStaffCalPopover() {
+    if (staffCalPopoverHideTimer) {
+      clearTimeout(staffCalPopoverHideTimer);
+      staffCalPopoverHideTimer = null;
+    }
+  }
+
+  function scheduleHideStaffCalPopover() {
+    cancelHideStaffCalPopover();
+    staffCalPopoverHideTimer = setTimeout(() => {
+      hideStaffCalPopover();
+    }, 180);
+  }
+
+  function getStaffCalPopover() {
+    if (!staffCalPopoverEl) {
+      staffCalPopoverEl = document.createElement('div');
+      staffCalPopoverEl.id = 'staffCalHoverPopover';
+      staffCalPopoverEl.className = 'staff-cal-popover';
+      staffCalPopoverEl.setAttribute('role', 'tooltip');
+      document.body.appendChild(staffCalPopoverEl);
+      staffCalPopoverEl.addEventListener('mouseenter', cancelHideStaffCalPopover);
+      staffCalPopoverEl.addEventListener('mouseleave', scheduleHideStaffCalPopover);
+      window.addEventListener('scroll', (e) => {
+        if (staffCalPopoverEl && staffCalPopoverEl.contains(e.target)) return;
+        hideStaffCalPopover();
+      }, true);
+    }
+    return staffCalPopoverEl;
+  }
+
+  function hideStaffCalPopover() {
+    cancelHideStaffCalPopover();
+    if (staffCalPopoverEl) {
+      staffCalPopoverEl.classList.remove('is-visible');
+    }
+  }
+
+  function showStaffCalPopover(anchorEl, title, dateStr, docs, showSpecLine = false) {
+    const pop = getStaffCalPopover();
+    const inCount = docs.filter(d => d._isIn).length;
+    const rowsHtml = docs.map(d => {
+      const docName = d.name && d.name.startsWith('Dr.') ? d.name : `Dr. ${d.name || 'Physician'}`;
+      const startFmt = d.schedule_start_fmt || formatTime12(d.schedule_start);
+      const endFmt = d.schedule_end_fmt || formatTime12(d.schedule_end);
+      const hours = (startFmt && endFmt) ? `${startFmt} – ${endFmt}` : '8:00 AM – 5:00 PM';
+      const cleanName = String(docName).replace(/^dr\.?\s*/i, '').replace(/,?\s*md$/i, '').trim();
+      const parts = cleanName.split(/\s+/).filter(Boolean);
+      const initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : (cleanName.slice(0, 2).toUpperCase() || 'DR');
+      const avatarHtml = d.profile_image
+        ? `<img src="${escapeHtml(d.profile_image)}" alt="" onerror="this.remove();">`
+        : escapeHtml(initials);
+
+      return `
+        <div class="staff-cal-pop-row">
+          <div class="staff-cal-pop-doc">
+            <span class="staff-cal-pop-avatar">${avatarHtml}</span>
+            <div class="staff-cal-pop-info">
+              <div class="staff-cal-pop-name">${escapeHtml(docName)}</div>
+              ${showSpecLine ? `<div class="staff-cal-pop-spec-tag">${escapeHtml(d.specialization || 'General Practice')}</div>` : ''}
+              <div class="staff-cal-pop-time">${escapeHtml(hours)}</div>
+            </div>
+          </div>
+          <span class="staff-cal-pop-status ${d._isIn ? 'is-in' : 'is-out'}">${d._isIn ? 'IN' : 'OUT'}</span>
+        </div>
+      `;
+    }).join('');
+
+    pop.innerHTML = `
+      <div class="staff-cal-pop-head">
+        <div class="staff-cal-pop-title">${escapeHtml(title)}</div>
+        <div class="staff-cal-pop-sub">${escapeHtml(dateStr)} &middot; ${inCount} of ${docs.length} available</div>
+      </div>
+      <div class="staff-cal-pop-list">${rowsHtml}</div>
+      <div class="staff-cal-pop-foot">Click to view full schedule &amp; toggle IN/OUT</div>
+    `;
+
+    // Position smartly within viewport bounds
+    const rect = anchorEl.getBoundingClientRect();
+    pop.style.left = '-9999px';
+    pop.style.top = '-9999px';
+    pop.classList.add('is-visible');
+
+    const popRect = pop.getBoundingClientRect();
+    const pad = 12;
+    let left = rect.right + 10;
+    if (left + popRect.width > window.innerWidth - pad) {
+      left = rect.left - popRect.width - 10;
+    }
+    if (left < pad) {
+      left = Math.max(pad, Math.min(rect.left, window.innerWidth - popRect.width - pad));
+    }
+
+    let top = rect.top - 8;
+    if (top + popRect.height > window.innerHeight - pad) {
+      top = Math.max(pad, window.innerHeight - popRect.height - pad);
+    }
+    if (top < pad) top = pad;
+
+    pop.style.left = `${Math.round(left)}px`;
+    pop.style.top = `${Math.round(top)}px`;
+  }
+
+  function groupDoctorsBySpecialization(docs) {
+    const map = new Map();
+    docs.forEach(d => {
+      const spec = String(d.specialization || 'General Practice').trim() || 'General Practice';
+      if (!map.has(spec)) map.set(spec, []);
+      map.get(spec).push(d);
+    });
+    return Array.from(map.entries()).map(([spec, list]) => ({ spec, docs: list }));
+  }
+
   function renderDoctorSchedules() {
     const container = document.getElementById('doctorSchedulesContainer');
     if (!container) return;
+    hideStaffCalPopover();
 
-    const docs = allDoctors || [];
+    const docs = getStaffDeptDoctors();
     const setText = (id, val) => {
       const el = document.getElementById(id);
       if (el) el.textContent = val;
     };
-
-    const genDocs = docs.filter(d => normalizeSchedDept(d.department) === 'general');
-    const neuroDocs = docs.filter(d => normalizeSchedDept(d.department) === 'neurology');
-    const psychDocs = docs.filter(d => normalizeSchedDept(d.department) === 'psychiatry');
-
-    setText('schedCountAll', docs.length);
-    setText('schedCountGeneral', genDocs.length);
-    setText('schedCountNeurology', neuroDocs.length);
-    setText('schedCountPsychiatry', psychDocs.length);
 
     const availTotal = docs.filter(d => isDocAvailable(d.status)).length;
     setText('schedSummaryAvailable', `${availTotal} Available`);
@@ -646,30 +1090,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     populateScheduleSpecializations();
 
-    // Enrich with today's load and normalized fields
     let filtered = docs.map(d => {
-      const deptKey = normalizeSchedDept(d.department);
       const isIn = isDocAvailable(d.status);
       const totalSlots = Math.min(100, Math.max(1, parseInt(d.total_slots, 10) || 20));
-      const todayLoad = getDoctorTodayLoad(d.name);
       return Object.assign({}, d, {
-        _deptKey: deptKey,
         _isIn: isIn,
-        _totalSlots: totalSlots,
-        _todayLoad: todayLoad
+        _totalSlots: totalSlots
       });
     });
-
-    if (schedDept !== 'all') {
-      filtered = filtered.filter(d => d._deptKey === schedDept);
-    }
 
     if (schedSearch) {
       const q = schedSearch.toLowerCase();
       filtered = filtered.filter(d =>
         (d.name || '').toLowerCase().includes(q) ||
-        (d.specialization || '').toLowerCase().includes(q) ||
-        formatDeptLabel(d.department).toLowerCase().includes(q)
+        (d.specialization || '').toLowerCase().includes(q)
       );
     }
 
@@ -681,133 +1115,186 @@ document.addEventListener('DOMContentLoaded', () => {
       filtered = filtered.filter(d => (schedStatus === 'in' ? d._isIn : !d._isIn));
     }
 
-    filtered.sort((a, b) => {
-      if (schedSort === 'name_asc') {
-        return (a.name || '').localeCompare(b.name || '');
-      }
-      if (schedSort === 'name_desc') {
-        return (b.name || '').localeCompare(a.name || '');
-      }
-      if (schedSort === 'status_in') {
-        if (a._isIn !== b._isIn) return a._isIn ? -1 : 1;
-        return (a.name || '').localeCompare(b.name || '');
-      }
-      if (schedSort === 'slots_desc') {
-        if (b._totalSlots !== a._totalSlots) return b._totalSlots - a._totalSlots;
-        return (a.name || '').localeCompare(b.name || '');
-      }
-      if (schedSort === 'load_desc') {
-        if (b._todayLoad !== a._todayLoad) return b._todayLoad - a._todayLoad;
-        return (a.name || '').localeCompare(b.name || '');
-      }
-      return (a.name || '').localeCompare(b.name || '');
-    });
+    filtered.sort((a, b) => (a.specialization || '').localeCompare(b.specialization || '') || (a.name || '').localeCompare(b.name || ''));
 
-    if (!filtered.length) {
-      container.innerHTML = `
-        <div class="dept-schedule-card" style="padding:36px 24px; text-align:center;">
-          <div class="modern-table-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#64748b; padding:0;">
-            <div style="font-size:0.88rem; color:#475569; font-weight:500;">No doctor schedules match the selected department or filters.</div>
-            <button type="button" class="modern-reset-btn" onclick="resetScheduleFilters()">Reset Filters</button>
-          </div>
-        </div>
-      `;
-      return;
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const todayYmd = toLocalYmd(todayDate);
+
+    const firstDay = new Date(staffCalYear, staffCalMonth, 1).getDay();
+    const daysInMonth = new Date(staffCalYear, staffCalMonth + 1, 0).getDate();
+    const daysInPrev = new Date(staffCalYear, staffCalMonth, 0).getDate();
+
+    let cellsHtml = '';
+    const dayLookupMap = new Map();
+    const specLookupMap = new Map();
+
+    // Leading out-of-month gray cells
+    for (let i = firstDay - 1; i >= 0; i--) {
+      cellsHtml += `<div class="staff-cal-cell is-outside" aria-hidden="true"><div class="staff-cal-cell-head"><span class="staff-cal-day-num">${daysInPrev - i}</span></div></div>`;
     }
 
-    const deptOrder = [
-      { key: 'general', title: 'General Medical' },
-      { key: 'neurology', title: 'Neurology' },
-      { key: 'psychiatry', title: 'Psychiatry' },
-      { key: 'other', title: 'Other Departments' }
-    ];
+    // Current month day cells
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(staffCalYear, staffCalMonth, day);
+      cellDate.setHours(0, 0, 0, 0);
+      const ymd = toLocalYmd(cellDate);
+      const isPast = cellDate < todayDate;
+      const isToday = ymd === todayYmd;
+      const isSunday = cellDate.getDay() === 0;
+      const dayPatients = getPatientsForDateInDept(ymd);
+      const clinicBlocks = isPast ? [] : getClinicBlocksForDate(filtered, cellDate, todayDate, todayYmd, dayPatients);
+      const dayDocsMap = new Map();
+      clinicBlocks.forEach(b => b.docs.forEach(d => dayDocsMap.set(d.id, d)));
+      const dayDocs = Array.from(dayDocsMap.values());
+      const isOpen = !isPast && !isSunday && clinicBlocks.length > 0;
 
-    const sectionsHtml = deptOrder.map(group => {
-      const groupDocs = filtered.filter(d => d._deptKey === group.key);
-      if (!groupDocs.length) return '';
+      const headHtml = `
+        <div class="staff-cal-cell-head">
+          <span class="staff-cal-day-num">${day}</span>
+          ${isToday ? '<span class="staff-cal-today-tag">Today</span>' : ''}
+        </div>
+      `;
 
-      const availCount = groupDocs.filter(d => d._isIn).length;
-      const totalSlotsSum = groupDocs.reduce((acc, d) => acc + d._totalSlots, 0);
-      const totalLoadSum = groupDocs.reduce((acc, d) => acc + d._todayLoad, 0);
+      if (!isOpen) {
+        const hasHistory = isPast && dayPatients.length > 0;
+        if (hasHistory) {
+          dayLookupMap.set(ymd, { dateObj: cellDate, docs: [], patients: dayPatients });
+        }
+        const closedContent = hasHistory
+          ? `<div class="staff-cal-metrics"><span class="staff-cal-metric is-history">${dayPatients.length} visit${dayPatients.length === 1 ? '' : 's'}</span></div>`
+          : (!isPast && isSunday ? '<div class="staff-cal-closed-note">Closed</div>' : (!isPast ? '<div class="staff-cal-closed-note">No schedules</div>' : ''));
+        cellsHtml += `<div class="staff-cal-cell is-closed${hasHistory ? ' has-history' : ''}"${hasHistory ? ` data-cal-ymd="${ymd}" tabindex="0" role="button"` : ''}>${headHtml}${closedContent}</div>`;
+        continue;
+      }
 
-      const rowsHtml = groupDocs.map(d => {
-        const docName = d.name && d.name.startsWith('Dr.') ? d.name : `Dr. ${d.name || 'Physician'}`;
-        const spec = d.specialization || 'General Practice';
-        const startFmt = d.schedule_start_fmt || formatTime12(d.schedule_start);
-        const endFmt = d.schedule_end_fmt || formatTime12(d.schedule_end);
-        const hours = (startFmt && endFmt) ? `${startFmt} – ${endFmt}` : '8:00 AM – 5:00 PM';
-        const pct = Math.min(100, Math.round((d._todayLoad / d._totalSlots) * 100));
+      dayLookupMap.set(ymd, { dateObj: cellDate, docs: dayDocs, patients: dayPatients });
 
-        const cleanDocName = String(docName || '').replace(/^dr\.?\s*/i, '').replace(/,?\s*md$/i, '').trim();
-        const docParts = cleanDocName.split(/\s+/).filter(Boolean);
-        const docInit = docParts.length > 1
-          ? (docParts[0][0] + docParts[docParts.length - 1][0]).toUpperCase()
-          : (cleanDocName.slice(0, 2).toUpperCase() || 'DR');
-        const avatarThumb = d.profile_image
-          ? `<span class="entity-avatar-sm"><img src="${escapeHtml(d.profile_image)}" alt="${escapeHtml(docName)}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';"><span style="display:none;">${escapeHtml(docInit)}</span></span>`
-          : `<span class="entity-avatar-sm">${escapeHtml(docInit)}</span>`;
-
+      const shortDateStr = cellDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const chipsHtml = clinicBlocks.map((block, idx) => {
+        const key = `${ymd}|${idx}`;
+        specLookupMap.set(key, {
+          title: block.spec,
+          dateStr: `${shortDateStr} · ${block.clinicHours}`,
+          docs: block.docs,
+          showSpecLine: true
+        });
+        const hasAvailable = block.docs.some(d => d._isIn);
         return `
-          <tr>
-            <td class="cell-primary">
-              <div class="table-person-cell">
-                ${avatarThumb}
-                <span>${escapeHtml(docName)}</span>
-              </div>
-            </td>
-            <td class="cell-secondary">${escapeHtml(spec)}</td>
-            <td class="cell-tabular">${escapeHtml(hours)}</td>
-            <td class="cell-tabular">
-              <div class="sched-cap-wrap">
-                <span class="sched-cap-text"><strong>${d._todayLoad}</strong> <span class="capacity-total">/ ${d._totalSlots}</span></span>
-                <div class="sched-cap-bar"><div class="sched-cap-fill" style="width:${pct}%"></div></div>
-              </div>
-            </td>
-            <td>
-              <span class="table-status-indicator ${d._isIn ? 'is-active' : 'is-inactive'}">
-                <span class="status-dot"></span>${d._isIn ? 'Available' : 'Out'}
-              </span>
-            </td>
-            <td class="col-actions">
-              <select class="select-filter doc-status-select ${d._isIn ? 'status-in' : 'status-out'}" onchange="updateDocStatus(${Number(d.id)}, this.value, this)" aria-label="Availability for ${escapeHtml(docName)}">
-                <option value="in" ${d._isIn ? 'selected' : ''}>IN</option>
-                <option value="out" ${!d._isIn ? 'selected' : ''}>OUT</option>
-              </select>
-            </td>
-          </tr>
+          <button type="button" class="staff-cal-spec-chip${hasAvailable ? '' : ' is-out'}" data-spec-key="${escapeHtml(key)}" data-cal-ymd="${ymd}">
+            <span class="staff-cal-spec-left">
+              <span class="staff-cal-doc-dot" aria-hidden="true"></span>
+              <span class="staff-cal-spec-name">${escapeHtml(block.shortLabel)}</span>
+            </span>
+          </button>
         `;
       }).join('');
 
-      return `
-        <div class="dept-schedule-card">
-          <div class="dept-card-head">
-            <div class="dept-head-left">
-              <h3>${group.title}</h3>
-              <span class="dept-head-meta">${groupDocs.length} physician${groupDocs.length === 1 ? '' : 's'} &middot; ${availCount} available</span>
-            </div>
-            <span class="dept-cap-pill">${totalLoadSum} / ${totalSlotsSum} slots booked today</span>
-          </div>
-          <div class="modern-table-scroll sched-table-scroll">
-            <table class="modern-table sched-table">
-              <thead class="modern-thead">
-                <tr>
-                  <th>Physician</th>
-                  <th>Specialization</th>
-                  <th>Schedule Hours</th>
-                  <th>Daily Load / Capacity</th>
-                  <th>Status</th>
-                  <th class="col-actions">Availability</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
+      cellsHtml += `
+        <div class="staff-cal-cell is-open${isToday ? ' is-today' : ''}" data-cal-ymd="${ymd}" tabindex="0" role="button" aria-label="${monthNames[staffCalMonth]} ${day}, ${staffCalYear} — ${clinicBlocks.length} clinic schedules">
+          ${headHtml}
+          ${dayPatients.length > 0 ? `<div class="staff-cal-metrics"><span class="staff-cal-metric is-booked">Booked: ${dayPatients.length}</span></div>` : ''}
+          <div class="staff-cal-pills">
+            ${chipsHtml}
           </div>
         </div>
       `;
-    }).join('');
+    }
 
-    container.innerHTML = sectionsHtml;
+    // Trailing out-of-month gray cells
+    const totalCells = firstDay + daysInMonth;
+    const trailing = (7 - (totalCells % 7)) % 7;
+    for (let d = 1; d <= trailing; d++) {
+      cellsHtml += `<div class="staff-cal-cell is-outside" aria-hidden="true"><div class="staff-cal-cell-head"><span class="staff-cal-day-num">${d}</span></div></div>`;
+    }
+
+    container.innerHTML = `
+      <div class="staff-cal-board">
+        <div class="staff-cal-toolbar">
+          <div class="staff-cal-nav-left">
+            <button type="button" class="staff-cal-nav-link" id="staffCalPrevBtn">&larr; Previous Month</button>
+          </div>
+          <div class="staff-cal-month-title">${monthNames[staffCalMonth]} ${staffCalYear}</div>
+          <div class="staff-cal-nav-right">
+            <button type="button" class="staff-cal-nav-link is-subtle" id="staffCalTodayBtn">Today</button>
+            <button type="button" class="staff-cal-nav-link" id="staffCalNextBtn">Next Month &rarr;</button>
+          </div>
+        </div>
+        <div class="staff-cal-legend">
+          <div class="staff-cal-legend-items">
+            <span class="staff-cal-legend-item"><span class="staff-cal-swatch is-general"></span>${escapeHtml(window.STAFF_DEPT || 'General Medical')} Specializations</span>
+            <span class="staff-cal-legend-item"><span class="staff-cal-swatch is-psych"></span>Booked Patients</span>
+            <span class="staff-cal-legend-item"><span class="staff-cal-swatch is-closed"></span>Past / Closed</span>
+          </div>
+          <span>Hover a specialization to see assigned doctors &amp; hours</span>
+        </div>
+        <div class="staff-cal-scroll">
+          <div class="staff-cal-frame">
+            <div class="staff-cal-weekdays">
+              <div class="staff-cal-weekday">Sun</div>
+              <div class="staff-cal-weekday">Mon</div>
+              <div class="staff-cal-weekday">Tue</div>
+              <div class="staff-cal-weekday">Wed</div>
+              <div class="staff-cal-weekday">Thu</div>
+              <div class="staff-cal-weekday">Fri</div>
+              <div class="staff-cal-weekday">Sat</div>
+            </div>
+            <div class="staff-cal-grid">${cellsHtml}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('staffCalPrevBtn')?.addEventListener('click', () => window.changeStaffCalMonth(-1));
+    document.getElementById('staffCalNextBtn')?.addEventListener('click', () => window.changeStaffCalMonth(1));
+    document.getElementById('staffCalTodayBtn')?.addEventListener('click', () => window.jumpStaffCalToday());
+
+    // Hover & keyboard focus popover on specialization chips and "+N more"
+    container.querySelectorAll('[data-spec-key]').forEach(chip => {
+      const key = chip.getAttribute('data-spec-key');
+      const show = () => {
+        cancelHideStaffCalPopover();
+        const info = specLookupMap.get(key);
+        if (info) showStaffCalPopover(chip, info.title, info.dateStr, info.docs, info.showSpecLine);
+      };
+      chip.addEventListener('mouseenter', show);
+      chip.addEventListener('focus', show);
+      chip.addEventListener('mouseleave', scheduleHideStaffCalPopover);
+      chip.addEventListener('blur', scheduleHideStaffCalPopover);
+    });
+
+    container.querySelectorAll('.staff-cal-cell[data-cal-ymd]').forEach(cell => {
+      const ymd = cell.getAttribute('data-cal-ymd');
+      const openHandler = () => {
+        hideStaffCalPopover();
+        const entry = dayLookupMap.get(ymd);
+        if (entry) openStaffCalDayModal(entry.dateObj, entry.docs, entry.patients);
+      };
+      cell.addEventListener('click', openHandler);
+      cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openHandler();
+        }
+      });
+    });
+
+    if (staffCalActiveYmd && dayLookupMap.has(staffCalActiveYmd)) {
+      const modal = document.getElementById('staffCalDayModal');
+      if (modal && modal.classList.contains('active')) {
+        const entry = dayLookupMap.get(staffCalActiveYmd);
+        openStaffCalDayModal(entry.dateObj, entry.docs, entry.patients);
+      }
+    }
   }
+
+  document.getElementById('staffCalDayModal')?.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'staffCalDayModal') closeStaffCalDayModal();
+  });
 
   // ── 6. Consultations View Renderer ──
   function renderConsultations() {
@@ -954,22 +1441,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
-  // ── 7. Records View Renderer (With Search & Sorting) ──
+  // ── 7. Records View Renderer (Grouped by Unique Patient, With Search & Sorting) ──
   function renderRecords() {
     const tbody = document.getElementById('recordsTableBody');
     if (!tbody) return;
 
-    const filtered = allPatients.filter(p => {
-      if ((p.status || '').toLowerCase() !== 'completed') return false;
+    const completedRows = allPatients.filter(p => (p.status || '').toLowerCase() === 'completed');
 
+    // Deduplicate by unique patient identity (email first, then user_id / hrn / name+birthdate)
+    const groupedMap = new Map();
+    for (const row of completedRows) {
+      const emailKey = (row.email || '').trim().toLowerCase();
+      const identityKey = emailKey
+        ? `email:${emailKey}`
+        : (row.user_id
+          ? `user:${row.user_id}`
+          : (row.hrn
+            ? `hrn:${String(row.hrn).trim().toLowerCase()}`
+            : `name:${(row.full_name || '').trim().toLowerCase()}|${row.birthdate || ''}`));
+
+      const rowTs = new Date(row.appointment_date || row.created_at || 0).getTime() || 0;
+      const existing = groupedMap.get(identityKey);
+
+      if (!existing) {
+        groupedMap.set(identityKey, {
+          ...row,
+          _latestTs: rowTs,
+          _earliestId: Number(row.id) || Number.MAX_SAFE_INTEGER,
+          _displayPatientId: row.canonical_patient_id || row.patient_id,
+          _completedCount: 1,
+          _allIds: [row.patient_id, row.reference_no].filter(Boolean)
+        });
+      } else {
+        existing._completedCount += 1;
+        if (row.patient_id) existing._allIds.push(row.patient_id);
+        if (row.reference_no) existing._allIds.push(row.reference_no);
+
+        // Preserve earliest original PT- ID
+        const rowNumId = Number(row.id) || Number.MAX_SAFE_INTEGER;
+        if (rowNumId < existing._earliestId) {
+          existing._earliestId = rowNumId;
+          existing._displayPatientId = row.canonical_patient_id || row.patient_id || existing._displayPatientId;
+        }
+
+        // Keep the most recent completed visit as the primary row summary
+        if (rowTs > existing._latestTs || (rowTs === existing._latestTs && rowNumId > (Number(existing.id) || 0))) {
+          const prevCount = existing._completedCount;
+          const prevEarliest = existing._earliestId;
+          const prevDisplayPid = existing._displayPatientId;
+          const prevAllIds = existing._allIds;
+          groupedMap.set(identityKey, {
+            ...row,
+            _latestTs: rowTs,
+            _earliestId: prevEarliest,
+            _displayPatientId: prevDisplayPid,
+            _completedCount: prevCount,
+            _allIds: prevAllIds
+          });
+        }
+      }
+    }
+
+    const filtered = Array.from(groupedMap.values()).filter(p => {
       if (recordsSearch) {
         const q = recordsSearch.toLowerCase();
         const mName = (p.full_name || '').toLowerCase().includes(q);
-        const mId = (p.patient_id || '').toLowerCase().includes(q) || (p.reference_no || '').toLowerCase().includes(q);
+        const mEmail = (p.email || '').toLowerCase().includes(q);
+        const mId = (p._displayPatientId || '').toLowerCase().includes(q)
+          || (p._allIds || []).some(id => String(id).toLowerCase().includes(q));
         const mHrn = (p.hrn || '').toLowerCase().includes(q);
         const mDoc = (p.assigned_doctor || '').toLowerCase().includes(q);
         const mComplaint = (p.chief_complaints || '').toLowerCase().includes(q);
-        if (!mName && !mId && !mHrn && !mDoc && !mComplaint) return false;
+        if (!mName && !mEmail && !mId && !mHrn && !mDoc && !mComplaint) return false;
       }
 
       return true;
@@ -1010,6 +1553,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ? (p.assigned_doctor.startsWith('Dr.') ? p.assigned_doctor : 'Dr. ' + p.assigned_doctor)
         : 'Attending Physician';
 
+      const visitCount = Math.max(p._completedCount || 1, Number(p.completed_visit_count) || 1);
+      const visitMeta = visitCount > 1 ? ` · ${visitCount} visits` : '';
+      const displayPid = p._displayPatientId || p.canonical_patient_id || p.patient_id;
       const prevRecBadge = p.previous_appointment_date
         ? `<div class="date-stack-sub">Previous ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' · ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
         : '';
@@ -1018,7 +1564,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr>
           <td>
             <div class="patient-cell-name">${escapeHtml(p.full_name || 'Patient')}</div>
-            <div class="patient-cell-meta">${escapeHtml(p.patient_id)} · ${escapeHtml(p.gender || '-')}</div>
+            <div class="patient-cell-meta">${escapeHtml(displayPid)} · ${escapeHtml(p.gender || '-')}${escapeHtml(visitMeta)}</div>
           </td>
           <td>
             <div class="date-stack">
@@ -1954,7 +2500,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res && res.success) {
         showToast(res.message || 'Schedule and physician updated.');
         closeScheduleAssistModal();
-        loadData();
+        await loadData();
+        const updatedP = allPatients.find(x => x.patient_id === patientId);
+        if (updatedP && window.PatientSlip && window.PatientSlip.canGenerateSlip(updatedP)) {
+          window.PatientSlip.openModal({
+            slipType: 'rescheduled',
+            patientId: updatedP.patient_id || patientId || '',
+            patientName: updatedP.full_name || '',
+            patientType: updatedP.patient_type || 'Old',
+            appointmentDate: res.appointment_date || newDate,
+            appointmentTime: res.preferred_time_slot || slotVal || '',
+            specialty: updatedP.department || window.STAFF_DEPT || '',
+            consultType: updatedP.consultation_nature || updatedP.consultation_mode || 'Face-to-Face',
+            encodedBy: window.STAFF_FIRST_NAME || 'Medical Staff'
+          });
+        }
       } else {
         showToast(res?.message || 'Could not update schedule.', 3200, 'error');
       }
@@ -3089,18 +3649,30 @@ document.addEventListener('DOMContentLoaded', () => {
         })
       });
 
-      showToast('Consultation completed. You may now print the Medical Certificate or Prescription.');
+      showToast(nextVisitDate ? 'Consultation completed. Follow-Up Slip is ready to print.' : 'Consultation completed.');
       closeClinicalNoteModal();
 
-      // Trigger the official prescription slip layout
-      printPrescriptionSlip(patientId, {
-        diagnosis,
-        treatment,
-        prescription,
-        next_visit_date: nextVisitDate
-      });
-
-      loadData();
+      await loadData();
+      const completedP = allPatients.find(x => x.patient_id === patientId);
+      if (nextVisitDate && window.PatientSlip) {
+        window.PatientSlip.openModal({
+          slipType: 'followUp',
+          patientId: completedP?.patient_id || patientId || '',
+          patientName: completedP?.full_name || '',
+          patientType: completedP?.patient_type || 'New',
+          specialty: completedP?.department || window.STAFF_DEPT || '',
+          attendedDate: completedP?.medical_history_date || new Date().toISOString().slice(0, 16).replace('T', ' '),
+          nextVisitDate,
+          encodedBy: window.STAFF_FIRST_NAME || 'Medical Staff'
+        });
+      } else if (prescription) {
+        printPrescriptionSlip(patientId, {
+          diagnosis,
+          treatment,
+          prescription,
+          next_visit_date: nextVisitDate
+        });
+      }
     } catch (e) {
       showToast('Error saving consultation note.');
     }
@@ -3230,6 +3802,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.printPrescriptionFromDetails = function () {
     if (window.currentDetailsPatientId) printPrescriptionSlip(window.currentDetailsPatientId);
+  };
+
+  window.openPatientSlipFromDetails = async function () {
+    if (!window.currentDetailsPatientId || !window.PatientSlip) return;
+    const p = await fetchFreshPatientForPrint(window.currentDetailsPatientId);
+    if (!p) { showToast('Patient record not found.'); return; }
+    if (!window.PatientSlip.canGenerateSlip(p)) {
+      showToast('Slip is only available for confirmed appointments.');
+      return;
+    }
+    window.PatientSlip.openModal({
+      slipType: window.PatientSlip.resolveSlipType(p),
+      patientId: p.patient_id || p.reference_no || '',
+      patientName: p.full_name || '',
+      patientType: p.patient_type || 'New',
+      appointmentDate: p.appointment_date || '',
+      appointmentTime: p.preferred_time_slot || p.scheduled_time || '',
+      specialty: p.department || window.STAFF_DEPT || '',
+      consultType: p.consultation_nature || p.consultation_mode || 'Face-to-Face',
+      remarks: p.chief_complaints || '',
+      encodedBy: p.medical_history_recorded_by || p.receiver || window.STAFF_FIRST_NAME || 'Medical Staff',
+      attendedDate: p.medical_history_date || p.appointment_date || '',
+      nextVisitDate: p.next_visit_date || ''
+    });
   };
 
   // ── Print Slip Generator (Exact Government MMWGH Slip Layout) ──
@@ -3644,6 +4240,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const detailsModal = document.getElementById('patientDetailsModal');
   window.openPatientDetailsModal = async function (patientId) {
     currentDetailsPatientId = patientId;
+    window.currentDetailsPatientId = patientId;
+    const preSlipBtn = document.getElementById('staffDetailsSlipBtn');
+    if (preSlipBtn) preSlipBtn.style.display = 'none';
     const bodyEl = document.getElementById('patientDetailsContent');
     bodyEl.innerHTML = '<div style="text-align:center; padding:2rem; color:#64748b;">Loading patient record...</div>';
     detailsModal.classList.add('open');
@@ -3652,6 +4251,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(patientId)}&_=${Date.now()}`).then(r => r.json());
       if (res && res.success && res.data) {
         const p = res.data;
+        const slipBtnEl = document.getElementById('staffDetailsSlipBtn');
+        const slipLabelEl = document.getElementById('staffDetailsSlipBtnLabel');
+        const allowSlip = Boolean(window.PatientSlip && window.PatientSlip.canGenerateSlip(p));
+        if (slipBtnEl) slipBtnEl.style.display = allowSlip ? '' : 'none';
+        if (allowSlip && slipLabelEl) {
+          const st = window.PatientSlip.resolveSlipType(p);
+          slipLabelEl.textContent = st === 'followUp'
+            ? 'Print Follow-Up Slip'
+            : (st === 'rescheduled' ? 'Print Rescheduled Slip' : 'Print Appointment Slip');
+        }
         const statusNorm = (p.status || '').toLowerCase();
         const isInquiry = isInquiryRecord(p);
         const isCompleted = statusNorm === 'completed';
@@ -3710,7 +4319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div>
               <div style="font-size:0.72rem; color:#64748b; font-weight:600; text-transform:uppercase;">Consultation Mode</div>
-              <div style="font-size:0.86rem; font-weight:600; color:#334155; margin-top:2px;">${escapeHtml(isInquiry ? (p.mode_of_inquiry || 'Online Portal') : (p.consultation_mode || 'In-Person'))}${isInquiry ? ' (Inquiry Only)' : ''}</div>
+              <div style="font-size:0.86rem; font-weight:600; color:#334155; margin-top:2px;">${escapeHtml(isInquiry ? (p.mode_of_inquiry || 'Online Portal') : ((!p.consultation_mode || /^in-person$/i.test(p.consultation_mode)) ? 'Face-to-Face' : p.consultation_mode))}${isInquiry ? ' (Inquiry Only)' : ''}</div>
             </div>
             <div>
               <div style="font-size:0.72rem; color:#64748b; font-weight:600; text-transform:uppercase;">Preferred Date &amp; Time Slot</div>
@@ -4162,10 +4771,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function setQrStatus(msg, isError) {
     if (!staffQrStatusEl) return;
     staffQrStatusEl.textContent = msg || '';
+    staffQrStatusEl.style.display = msg ? 'block' : 'none';
     staffQrStatusEl.style.color = isError ? '#dc2626' : '#64748b';
   }
 
-  function renderScannedPatientCard(p) {
+  let lastQrSearchMatches = [];
+
+  function renderScannedPatientCard(p, allowBackToList = false) {
     if (!staffQrResultEl) return;
     const name = p.full_name || 'Unknown Patient';
     const pid = p.patient_id || p.id || 'N/A';
@@ -4179,8 +4791,12 @@ document.addEventListener('DOMContentLoaded', () => {
       : `<div style="display:flex;width:72px;height:72px;border-radius:50%;background:#10b981;color:#fff;font-weight:700;font-size:22px;align-items:center;justify-content:center;flex-shrink:0;">${escapeHtml(initials)}</div>`;
 
     const genderAge = [p.gender, p.age ? `${p.age} yrs old` : ''].filter(Boolean).join(', ') || '—';
+    const backBtnHtml = allowBackToList && lastQrSearchMatches.length > 1
+      ? `<div style="margin-bottom:12px;"><button type="button" class="btn-clean outline" id="btnQrBackToResults" style="padding:5px 10px;font-size:12px;">&larr; Back to ${lastQrSearchMatches.length} matches</button></div>`
+      : '';
 
     staffQrResultEl.innerHTML = `
+      ${backBtnHtml}
       <div style="display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid #e2e8f0;margin-bottom:16px;flex-wrap:wrap;">
         ${avatarHtml}
         <div style="min-width:0;flex:1;">
@@ -4202,19 +4818,71 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
     staffQrResultEl.style.display = 'block';
+
+    const backBtn = document.getElementById('btnQrBackToResults');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => renderPatientSearchList(lastQrSearchMatches));
+    }
+  }
+
+  function renderPatientSearchList(matches) {
+    if (!staffQrResultEl) return;
+    const rowsHtml = matches.map((p, idx) => {
+      const name = p.full_name || 'Unknown Patient';
+      const pid = p.patient_id || p.id || 'N/A';
+      const parts = name.trim().split(/\s+/);
+      const initials = parts.length >= 2
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : name.slice(0, 2).toUpperCase();
+      const avatarHtml = p.profile_image
+        ? `<img src="${escapeHtml(p.profile_image)}" alt="${escapeHtml(name)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #d1fae5;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div style="display:none;width:40px;height:40px;border-radius:50%;background:#15803d;color:#fff;font-weight:700;font-size:13px;align-items:center;justify-content:center;flex-shrink:0;">${escapeHtml(initials)}</div>`
+        : `<div style="display:flex;width:40px;height:40px;border-radius:50%;background:#15803d;color:#fff;font-weight:700;font-size:13px;align-items:center;justify-content:center;flex-shrink:0;">${escapeHtml(initials)}</div>`;
+      const meta = [pid, p.birthdate || '', p.department || ''].filter(Boolean).join(' · ');
+
+      return `
+        <button type="button" class="qr-match-row" data-match-idx="${idx}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#ffffff;text-align:left;cursor:pointer;transition:border-color 0.14s ease,background-color 0.14s ease;">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+            ${avatarHtml}
+            <div style="min-width:0;">
+              <div style="font-size:14px;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+              <div style="font-size:12px;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(meta)}</div>
+            </div>
+          </div>
+          <div style="flex-shrink:0;">${renderOverviewStatusPill(p.status || 'pending')}</div>
+        </button>
+      `;
+    }).join('');
+
+    staffQrResultEl.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:10px;">Select a patient (${matches.length} found)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;">${rowsHtml}</div>
+    `;
+    staffQrResultEl.style.display = 'block';
+
+    staffQrResultEl.querySelectorAll('.qr-match-row').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-match-idx'), 10);
+        const chosen = matches[idx];
+        if (chosen) {
+          renderScannedPatientCard(chosen, true);
+          setQrStatus(`Selected: ${chosen.full_name || chosen.patient_id}`, false);
+        }
+      });
+    });
   }
 
   async function lookupScannedPatient(rawId) {
     const pid = String(rawId || '').trim();
     if (!pid) {
-      setQrStatus('Enter or scan a valid Patient ID.', true);
+      setQrStatus('Scan a valid Patient QR code.', true);
       return;
     }
     setQrStatus(`Looking up ${pid}...`, false);
     try {
       const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(pid)}`).then(r => r.json());
       if (res && res.success && res.data) {
-        renderScannedPatientCard(res.data);
+        lastQrSearchMatches = [res.data];
+        renderScannedPatientCard(res.data, false);
         setQrStatus(`Verified: ${res.data.full_name || pid}`, false);
         showToast('Patient record loaded.');
       } else {
@@ -4224,6 +4892,35 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       setQrStatus('Network error while looking up patient.', true);
+    }
+  }
+
+  async function searchPatientsByName(rawQuery) {
+    const q = String(rawQuery || '').trim();
+    if (!q) {
+      lastQrSearchMatches = [];
+      if (staffQrResultEl) staffQrResultEl.style.display = 'none';
+      setQrStatus('Enter a patient name to search.', true);
+      return;
+    }
+    setQrStatus(`Searching for "${q}"...`, false);
+    try {
+      const res = await fetch(`/sdn/api/patients.php?q=${encodeURIComponent(q)}`).then(r => r.json());
+      const matches = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+      lastQrSearchMatches = matches;
+
+      if (matches.length === 0) {
+        if (staffQrResultEl) staffQrResultEl.style.display = 'none';
+        setQrStatus(`No patients found matching "${q}".`, true);
+      } else if (matches.length === 1) {
+        renderScannedPatientCard(matches[0], false);
+        setQrStatus(`Found: ${matches[0].full_name || q}`, false);
+      } else {
+        renderPatientSearchList(matches);
+        setQrStatus(`Found ${matches.length} patients matching "${q}".`, false);
+      }
+    } catch (e) {
+      setQrStatus('Network error while searching patients.', true);
     }
   }
 
@@ -4288,14 +4985,31 @@ document.addEventListener('DOMContentLoaded', () => {
     setQrStatus('Camera stopped.', false);
   });
   if (btnManualQrLookup) btnManualQrLookup.addEventListener('click', () => {
-    lookupScannedPatient(manualQrInput ? manualQrInput.value : '');
+    searchPatientsByName(manualQrInput ? manualQrInput.value : '');
   });
-  if (manualQrInput) manualQrInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      lookupScannedPatient(manualQrInput.value);
-    }
-  });
+  if (manualQrInput) {
+    let qrSearchTimer = null;
+    manualQrInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(qrSearchTimer);
+        searchPatientsByName(manualQrInput.value);
+      }
+    });
+    manualQrInput.addEventListener('input', () => {
+      clearTimeout(qrSearchTimer);
+      const val = manualQrInput.value.trim();
+      if (!val) {
+        lastQrSearchMatches = [];
+        if (staffQrResultEl) staffQrResultEl.style.display = 'none';
+        setQrStatus('', false);
+        return;
+      }
+      if (val.length >= 2) {
+        qrSearchTimer = setTimeout(() => searchPatientsByName(val), 250);
+      }
+    });
+  }
 
   // ── 15. CSV Export ──
   window.exportRecordsCSV = function () {

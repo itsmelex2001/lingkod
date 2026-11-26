@@ -301,7 +301,6 @@
         <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="LINGKOD Logo" class="brand-logo" />
         <div class="brand-text">
           <span class="hospital-name">Mariveles Mental Wellness and General Hospital</span>
-          <span class="system-name">LINGKOD</span>
         </div>
       </a>
     </div>
@@ -887,14 +886,13 @@
   }
 
   .brand-logo {
-    height: 124px;
-    max-height: none;
+    height: 58px;
+    max-height: 58px;
     width: auto;
     object-fit: contain;
     flex-shrink: 0;
-    margin-left: -10px;
-    margin-right: -21px;
-    transform: translateY(7px);
+    margin: 0;
+    transform: none;
   }
 
   .brand-text {

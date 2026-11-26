@@ -75,8 +75,17 @@ function requireAuth(): void {
         respondErr('Unauthorised. Please log in.', 401);
     }
 
-    // Healthcare Inactivity Timeout: 30 minutes (1800 seconds)
-    $timeoutSeconds = 1800;
+    // Dynamic Inactivity Timeout from Admin Settings (default 30 minutes)
+    $timeoutMinutes = 30;
+    if (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+        if (!function_exists('getSettingValue') && file_exists(__DIR__ . '/settings_helper.php')) {
+            require_once __DIR__ . '/settings_helper.php';
+        }
+        if (function_exists('getSettingValue')) {
+            $timeoutMinutes = max(5, (int)getSettingValue($GLOBALS['pdo'], 'session_timeout_minutes', 30));
+        }
+    }
+    $timeoutSeconds = $timeoutMinutes * 60;
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeoutSeconds)) {
         session_unset();
         session_destroy();

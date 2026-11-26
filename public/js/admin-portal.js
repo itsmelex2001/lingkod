@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
         link.addEventListener('click', e => {
             const targetView = e.currentTarget.dataset.view;
-            if(!targetView) return;
+            if (!targetView) return;
             e.preventDefault();
             document.querySelectorAll('.sidebar-nav .nav-link').forEach(l => l.classList.remove('active'));
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
@@ -131,9 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (activeSection.id === 'view-doctors') {
                 loadDoctors();
             } else if (activeSection.id === 'view-rbac') {
-                loadRBAC();
+                loadRBAC(true);
             } else if (activeSection.id === 'view-reports') {
-                loadReports();
+                loadReports(true);
             } else if (activeSection.id === 'view-audit') {
                 loadAudit();
             }
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function showToast(msg, type = 'success') {
+function showToast(msg, type = 'success', customTitle = null) {
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -173,34 +173,63 @@ function showToast(msg, type = 'success') {
             ? 'warning'
             : (type === 'info' ? 'info' : 'success'));
 
-    const icons = {
-        success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
-        error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-        warning: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-        info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    const titles = {
+        success: 'Success',
+        error: 'Action Failed',
+        warning: 'Attention',
+        info: 'Notice'
     };
-    const iconSvg = icons[normalizedType];
+    const icons = {
+        success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+        error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+        warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+    };
+    const iconSvg = icons[normalizedType] || icons.success;
 
     const toast = document.createElement('div');
     toast.className = `ep-toast is-${normalizedType}`;
-    toast.setAttribute('role', 'status');
+    toast.setAttribute('role', normalizedType === 'error' ? 'alert' : 'status');
+    toast.setAttribute('aria-live', 'polite');
     toast.innerHTML = `
         <span class="ep-toast-icon" aria-hidden="true">${iconSvg}</span>
-        <span class="ep-toast-msg">${escapeHtml(msg)}</span>
-        <button type="button" class="ep-toast-close" aria-label="Dismiss">&times;</button>
+        <div class="ep-toast-body">
+            <span class="ep-toast-title">${escapeHtml(customTitle || titles[normalizedType])}</span>
+            <span class="ep-toast-msg">${escapeHtml(msg)}</span>
+        </div>
+        <button type="button" class="ep-toast-close" aria-label="Dismiss notification">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="ep-toast-progress" aria-hidden="true"></div>
     `;
 
+    let timer = null;
     const dismiss = () => {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
         if (!toast.parentNode) return;
         toast.classList.remove('is-visible');
-        setTimeout(() => toast.remove(), 220);
+        setTimeout(() => toast.remove(), 170);
     };
 
     toast.querySelector('.ep-toast-close').addEventListener('click', dismiss);
-    container.appendChild(toast);
+    toast.addEventListener('mouseenter', () => {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+    });
+    toast.addEventListener('mouseleave', () => {
+        if (toast.parentNode && toast.classList.contains('is-visible')) {
+            timer = setTimeout(dismiss, 1800);
+        }
+    });
 
+    container.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('is-visible'));
-    setTimeout(dismiss, 3400);
+    timer = setTimeout(dismiss, 3800);
 }
 
 // ── SHARED AVATAR UPLOAD & DISPLAY HELPERS ───────────────────────────────────
@@ -302,7 +331,7 @@ function cleanDeptLabel(raw) {
 function customConfirm(title, message, callback) {
     document.getElementById('confirmTitle').innerText = title;
     document.getElementById('confirmMessage').innerText = message;
-    
+
     const confirmBtn = document.getElementById('confirmBtn');
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
@@ -315,12 +344,12 @@ function customConfirm(title, message, callback) {
         newConfirmBtn.className = 'btn btn-primary';
         newConfirmBtn.innerText = 'Confirm';
     }
-    
+
     newConfirmBtn.addEventListener('click', () => {
         closeConfirmModal();
         callback();
     });
-    
+
     document.getElementById('confirmModal').classList.add('show');
 }
 
@@ -398,30 +427,89 @@ function getDoctorBookedOnDate(docName, isoDate) {
     }).length;
 }
 
-function updateAdminOverviewKPIs() {
-    const list = cachedPMIPatients || [];
+let execAdminStatsPayload = null;
+
+function setOverviewChartRange(range) {
+    const filterEl = document.getElementById('chart-filter');
+    if (filterEl) filterEl.value = range;
+    document.querySelectorAll('#adminOverviewExecPanel .adm-ov-pill[data-range]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.range === range);
+    });
+    loadChartData();
+}
+
+function jumpToPendingPMI() {
+    navigateToAdminView('pmi');
+    const statusSel = document.getElementById('pmiStatusFilter');
+    if (statusSel) {
+        statusSel.value = 'for_approval';
+        filterPMITable();
+    }
+}
+
+function renderAdminExecOverview(res) {
+    if (!res) return;
+    execAdminStatsPayload = res;
+
     const setVal = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.textContent = String(val);
     };
 
-    const nonCancelled = list.filter(p => {
-        const s = (p.status || '').toLowerCase().trim();
-        return !['cancelled', 'rejected', 'no-show', 'transferred'].includes(s);
-    }).length;
+    const ts = res.today_summary || { total: 0, waiting: 0, ongoing: 0, completed: 0 };
+    setVal('admKpiAppointments', ts.total);
+    setVal('admKpiTodaySub', `${ts.waiting} waiting \u2022 ${ts.ongoing} ongoing \u2022 ${ts.completed} done`);
 
-    const waiting = list.filter(p => {
-        const s = (p.status || '').toLowerCase().trim();
-        return ['pending', 'for_approval', 'for_processing', 'for approval', 'approved', 'confirmed', 'arrived'].includes(s);
-    }).length;
+    const pendingTotal = Number(res.pending_actions || 0);
+    setVal('admKpiPending', pendingTotal);
+    setVal('admKpiPendingSub', `${res.pending_appointments || 0} appointments \u2022 ${res.pending_inquiries || 0} inquiries`);
+    const pendingCard = document.getElementById('admKpiPendingCard');
+    if (pendingCard) pendingCard.classList.toggle('has-attention', pendingTotal > 0);
 
-    const ongoing = list.filter(p => (p.status || '').toLowerCase().trim() === 'ongoing').length;
-    const completed = list.filter(p => (p.status || '').toLowerCase().trim() === 'completed').length;
+    const ds = res.doctor_stats || {};
+    const availDocs = Number(ds.available_doctors || 0);
+    const totalDocs = Number(ds.total_doctors || 0);
+    setVal('admKpiDoctors', availDocs);
+    setVal('admKpiDoctorsSub', `of ${totalDocs} doctors available (IN)`);
 
-    setVal('admKpiAppointments', nonCancelled);
-    setVal('admKpiWaiting', waiting);
-    setVal('admKpiOngoing', ongoing);
-    setVal('admKpiCompleted', completed);
+    const caps = Array.isArray(res.department_capacity_today) ? res.department_capacity_today : [];
+    const totalBooked = caps.reduce((a, c) => a + Number(c.booked || 0), 0);
+    const totalLimit = caps.reduce((a, c) => a + Number(c.limit || 0), 0);
+    const pct = totalLimit > 0 ? Math.min(100, Math.round((totalBooked / totalLimit) * 100)) : 0;
+    setVal('admKpiCapacity', `${pct}%`);
+    setVal('admKpiCapacitySub', `${totalBooked} / ${totalLimit} slots \u2022 ${res.active_staff || 0} active staff`);
+
+    renderOverviewCapacity(caps);
+}
+
+function renderOverviewCapacity(caps) {
+    const wrap = document.getElementById('admDeptCapacityList');
+    if (!wrap) return;
+    if (!caps || caps.length === 0) {
+        wrap.innerHTML = '<div class="adm-exec-empty">No department limits configured.</div>';
+        return;
+    }
+    wrap.innerHTML = caps.map(c => {
+        const pct = Math.min(100, Math.max(0, Number(c.percent || 0)));
+        const tone = pct >= 95 ? 'is-full' : (pct >= 75 ? 'is-warn' : '');
+        return `
+            <div class="adm-cap-item">
+                <div class="adm-cap-row">
+                    <span class="adm-cap-name">${escapeHtml(c.name)}</span>
+                    <span class="adm-cap-meta">${c.booked} / ${c.limit} (${pct}%)</span>
+                </div>
+                <div class="adm-cap-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${escapeHtml(c.name)} capacity">
+                    <div class="adm-cap-fill ${tone}" style="width: ${pct}%;"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateAdminOverviewKPIs() {
+    if (execAdminStatsPayload) {
+        renderAdminExecOverview(execAdminStatsPayload);
+    }
 }
 
 function toggleAdminDocMenu(e) {
@@ -509,6 +597,37 @@ function renderAdminOverviewDoctors() {
     }).join('');
 }
 
+let adminCalDeptFilter = 'all';
+
+function matchesCalDeptFilter(dept) {
+    if (!adminCalDeptFilter || adminCalDeptFilter === 'all') return true;
+    const raw = String(dept || '').toLowerCase();
+    if (adminCalDeptFilter === 'neurology') return raw.includes('neuro');
+    if (adminCalDeptFilter === 'psychiatry') return raw.includes('psych') || raw.includes('opu');
+    return raw.includes('general') || raw.includes('medical') || (!raw.includes('neuro') && !raw.includes('psych') && !raw.includes('opu'));
+}
+
+function setAdminCalDeptFilter(val) {
+    adminCalDeptFilter = val || 'all';
+    renderAdminOverviewCalendar();
+}
+
+function jumpAdminCalendarToday() {
+    adminCalendarAnchor = new Date();
+    renderAdminOverviewCalendar();
+}
+
+function getAppointmentsForCalendarDate(isoDate) {
+    if (!isoDate) return [];
+    return (cachedPMIPatients || []).filter(p => {
+        const st = String(p.status || '').toLowerCase().trim();
+        if (['cancelled', 'rejected', 'no-show', 'transferred'].includes(st)) return false;
+        const pDate = String(p.appointment_date || '').split(' ')[0];
+        if (pDate !== isoDate) return false;
+        return matchesCalDeptFilter(p.department);
+    });
+}
+
 function shiftAdminCalendar(delta) {
     const d = new Date(adminCalendarAnchor.getTime());
     if (adminCalendarMode === 'month') {
@@ -546,7 +665,7 @@ function toIsoDate(d) {
 
 function getDoctorsForCalendarDate(dateObj, includeOut = false) {
     if (!dateObj || dateObj.getDay() === 0) return [];
-    let docs = getFilteredOverviewDoctors();
+    let docs = getFilteredOverviewDoctors().filter(d => matchesCalDeptFilter(d.department));
     if (adminSelectedOverviewDocId) {
         docs = docs.filter(d => (parseInt(d.id, 10) || 0) === adminSelectedOverviewDocId);
     }
@@ -568,6 +687,18 @@ function getDocDeptToneClass(dept) {
     if (raw.includes('neuro')) return 'is-dept-neurology';
     if (raw.includes('psych') || raw.includes('opu')) return 'is-dept-psychiatry';
     return 'is-dept-general';
+}
+
+function formatCompactSlotTag(p) {
+    const slot = String(p.preferred_time_slot || '').toLowerCase();
+    if (slot.includes('afternoon')) return 'PM';
+    if (slot.includes('morning')) return 'AM';
+    const tm = String(p.scheduled_time || '').trim();
+    if (/^\d{2}:\d{2}/.test(tm)) {
+        const hr = parseInt(tm.slice(0, 2), 10);
+        return hr >= 12 ? 'PM' : 'AM';
+    }
+    return '';
 }
 
 function showAdminCalTooltip(el) {
@@ -612,21 +743,24 @@ function renderAdminOverviewCalendar() {
     const wrap = document.getElementById('adminOverviewCalendarWrap');
     const titleEl = document.getElementById('admCalTitle');
     if (!wrap || !titleEl) return;
+    hideAdminCalTooltip();
 
     const anchor = adminCalendarAnchor;
     const todayIso = toIsoDate(new Date());
-    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     if (adminCalendarMode === 'month') {
         titleEl.textContent = anchor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const year = anchor.getFullYear();
         const month = anchor.getMonth();
         const firstDay = new Date(year, month, 1);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
         const startOffset = firstDay.getDay();
+        const totalRows = Math.ceil((startOffset + daysInMonth) / 7);
         const gridStart = new Date(year, month, 1 - startOffset);
 
         let rowsHtml = '';
-        for (let r = 0; r < 6; r++) {
+        for (let r = 0; r < totalRows; r++) {
             let cellsHtml = '';
             for (let c = 0; c < 7; c++) {
                 const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + (r * 7 + c));
@@ -634,41 +768,71 @@ function renderAdminOverviewCalendar() {
                 const isOtherMonth = cellDate.getMonth() !== month;
                 const isToday = iso === todayIso;
                 const isSunday = cellDate.getDay() === 0;
-                const schedDocs = isOtherMonth ? [] : getDoctorsForCalendarDate(cellDate, false);
-
+                const schedDocs = (isOtherMonth || isSunday) ? [] : getDoctorsForCalendarDate(cellDate, false);
+                const dayAppts = (isOtherMonth || isSunday) ? [] : getAppointmentsForCalendarDate(iso);
                 const schedDateLabel = cellDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-                const pills = schedDocs.slice(0, 2).map(d => {
-                    const alias = getPersonInitials(d.name, 'MD');
-                    const rawName = String(d.name || 'Physician').trim();
-                    const fullName = rawName.startsWith('Dr.') ? rawName : `Dr. ${rawName}`;
-                    const compactHours = formatDoctorCompactHours(d);
-                    const fullHours = formatDoctorHoursLabel(d);
-                    return `
-                        <div class="admin-cal-doc-pill" onclick="event.stopPropagation()" data-doc-name="${escapeHtml(fullName)}" data-doc-date="${escapeHtml(schedDateLabel)}" data-doc-time="${escapeHtml(fullHours)}" onmouseenter="showAdminCalTooltip(this)" onmouseleave="hideAdminCalTooltip()">
-                            <span class="admin-cal-doc-dot" aria-hidden="true"></span>
-                            <span class="admin-cal-doc-pill-name">${escapeHtml(alias)}</span>
-                            <span class="admin-cal-doc-pill-time">${escapeHtml(compactHours)}</span>
-                        </div>
-                    `;
-                }).join('');
 
-                const extra = schedDocs.length > 2
-                    ? `<button type="button" class="admin-cal-more-btn" onclick="event.stopPropagation(); openAdminCalendarDay('${iso}')">+${schedDocs.length - 2} more</button>`
-                    : '';
+                let rightBadge = '';
+                if (!isOtherMonth && isSunday) {
+                    rightBadge = '<span class="admin-cal-closed">Closed</span>';
+                } else if (dayAppts.length > 0) {
+                    rightBadge = `<span class="admin-cal-appt-badge">${dayAppts.length} ${dayAppts.length === 1 ? 'visit' : 'visits'}</span>`;
+                }
 
-                const closedTag = (!isOtherMonth && isSunday)
-                    ? '<span class="admin-cal-closed">Closed</span>'
-                    : '';
+                let bodyContent = '';
+                if (!isOtherMonth && !isSunday) {
+                    if (dayAppts.length > 0) {
+                        const apptPills = dayAppts.slice(0, 2).map(p => {
+                            const tone = getDocDeptToneClass(p.department);
+                            const pName = String(p.full_name || 'Patient').trim();
+                            const shortParts = pName.split(/\s+/);
+                            const compactName = shortParts.length > 1 ? `${shortParts[0]} ${shortParts[shortParts.length - 1][0]}.` : pName;
+                            const slotTag = formatCompactSlotTag(p);
+                            const deptLabel = formatDeptTitleCase(p.department || 'General Medical');
+                            const statusLabel = String(p.status || 'pending').replace(/_/g, ' ').toUpperCase();
+                            return `
+                                <div class="admin-cal-event-chip ${tone}" onclick="event.stopPropagation(); openAdminCalendarDay('${iso}')" data-doc-name="${escapeHtml(pName)}" data-doc-date="${escapeHtml(deptLabel + ' · ' + schedDateLabel)}" data-doc-time="${escapeHtml((p.preferred_time_slot || 'Scheduled') + ' · ' + statusLabel)}" onmouseenter="showAdminCalTooltip(this)" onmouseleave="hideAdminCalTooltip()">
+                                    <span class="admin-cal-event-name">${escapeHtml(compactName)}</span>
+                                    ${slotTag ? `<span class="admin-cal-event-slot">${escapeHtml(slotTag)}</span>` : ''}
+                                </div>
+                            `;
+                        }).join('');
+                        const moreAppts = dayAppts.length > 2
+                            ? `<span class="admin-cal-more-link">+${dayAppts.length - 2} more</span>`
+                            : '';
+                        bodyContent = `<div class="admin-cal-events-stack">${apptPills}${moreAppts}</div>`;
+                    }
+
+                    if (schedDocs.length > 0 && (dayAppts.length > 0 || isToday)) {
+                        const hasGen = schedDocs.some(d => getDocDeptToneClass(d.department) === 'is-dept-general');
+                        const hasNeu = schedDocs.some(d => getDocDeptToneClass(d.department) === 'is-dept-neurology');
+                        const hasPsy = schedDocs.some(d => getDocDeptToneClass(d.department) === 'is-dept-psychiatry');
+                        const dots = [
+                            hasGen ? '<span class="admin-cal-mini-dot is-dept-general"></span>' : '',
+                            hasNeu ? '<span class="admin-cal-mini-dot is-dept-neurology"></span>' : '',
+                            hasPsy ? '<span class="admin-cal-mini-dot is-dept-psychiatry"></span>' : ''
+                        ].join('');
+                        bodyContent += `
+                            <div class="admin-cal-duty-meta">
+                                <span class="admin-cal-mini-dots" aria-hidden="true">${dots}</span>
+                                <span>${schedDocs.length} MD on duty</span>
+                            </div>
+                        `;
+                    }
+                }
 
                 const cellClick = (!isOtherMonth && !isSunday) ? `onclick="openAdminCalendarDay('${iso}')"` : '';
+                const hasEventsCls = dayAppts.length > 0 ? ' has-appts' : '';
 
                 cellsHtml += `
-                    <td class="${isOtherMonth ? 'is-other-month' : ''}${isSunday && !isOtherMonth ? ' is-sunday' : ''}${isToday ? ' is-today' : ''}" ${cellClick}>
-                        <div class="admin-cal-day-head-row">
-                            <span class="admin-cal-day-num">${cellDate.getDate()}</span>
-                            ${closedTag}
+                    <td class="${isOtherMonth ? 'is-other-month' : ''}${isSunday && !isOtherMonth ? ' is-sunday' : ''}${isToday ? ' is-today' : ''}${hasEventsCls}" ${cellClick}>
+                        <div class="admin-cal-cell-inner">
+                            <div class="admin-cal-day-head-row">
+                                <span class="admin-cal-day-num">${cellDate.getDate()}</span>
+                                ${rightBadge}
+                            </div>
+                            <div class="admin-cal-cell-body">${bodyContent}</div>
                         </div>
-                        ${pills}${extra}
                     </td>
                 `;
             }
@@ -678,7 +842,7 @@ function renderAdminOverviewCalendar() {
         wrap.innerHTML = `
             <table class="admin-cal-table">
                 <thead>
-                    <tr>${dayNames.map(n => `<th>${n}</th>`).join('')}</tr>
+                    <tr>${dayNames.map((n, idx) => `<th class="${idx === 0 ? 'is-sun-head' : ''}">${n}</th>`).join('')}</tr>
                 </thead>
                 <tbody>${rowsHtml}</tbody>
             </table>
@@ -688,7 +852,7 @@ function renderAdminOverviewCalendar() {
         const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
         titleEl.textContent = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
-        let docs = getFilteredOverviewDoctors();
+        let docs = getFilteredOverviewDoctors().filter(d => matchesCalDeptFilter(d.department));
         if (adminSelectedOverviewDocId) {
             docs = docs.filter(d => (parseInt(d.id, 10) || 0) === adminSelectedOverviewDocId);
         }
@@ -712,7 +876,10 @@ function renderAdminOverviewCalendar() {
         }
 
         const headerCols = `<th>Physician</th>` + weekDays.map(wd =>
-            `<th class="${wd.isToday ? 'is-today-col' : ''}">${wd.dayName} ${wd.dayNum}</th>`
+            `<th class="${wd.isToday ? 'is-today-col' : ''}" onclick="${wd.isSunday ? '' : `openAdminCalendarDay('${wd.iso}')`}" style="${wd.isSunday ? '' : 'cursor:pointer;'}">
+                <span class="admin-wk-head-day">${wd.dayName}</span>
+                <span class="admin-wk-head-num">${wd.dayNum}</span>
+            </th>`
         ).join('');
 
         const bodyRows = docs.map(d => {
@@ -723,12 +890,12 @@ function renderAdminOverviewCalendar() {
 
             const dayCells = weekDays.map(wd => {
                 if (wd.isSunday) {
-                    return `<td class="is-sunday-col">—</td>`;
+                    return `<td class="is-sunday-col">Closed</td>`;
                 }
                 const toneCls = isIn ? ` ${getDocDeptToneClass(d.department)}` : '';
                 return `
                     <td class="${wd.isToday ? 'is-today-col' : ''}">
-                        <span class="admin-cal-shift-pill${toneCls}${isIn ? '' : ' is-out'}" title="${escapeHtml(displayName + ' · ' + formatDoctorHoursLabel(d))}">${isIn ? escapeHtml(compactHours) : 'Out'}</span>
+                        <span class="admin-cal-shift-pill${toneCls}${isIn ? '' : ' is-out'}" title="${escapeHtml(displayName + ' · ' + formatDoctorHoursLabel(d))}">${isIn ? escapeHtml(compactHours) : 'Off'}</span>
                     </td>
                 `;
             }).join('');
@@ -736,7 +903,7 @@ function renderAdminOverviewCalendar() {
             return `
                 <tr>
                     <td class="admin-cal-week-doc-cell">
-                        <div class="table-person-cell" style="gap:8px;">
+                        <div class="table-person-cell" style="gap:10px;">
                             ${renderEntityAvatarHtml(d.profile_image, rawName, 'doctor')}
                             <div style="min-width:0;">
                                 <div class="admin-cal-week-doc-name">${escapeHtml(displayName)}</div>
@@ -765,8 +932,11 @@ function renderAdminOverviewCalendar() {
         if (isSunday) {
             wrap.innerHTML = `
                 <div class="admin-cal-day-header">
-                    <span>${anchor.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
-                    <span>Outpatient Clinics Closed</span>
+                    <div class="admin-cal-day-header-left">
+                        <button type="button" class="admin-cal-back-btn" onclick="setAdminCalendarMode('month')">&larr; Month</button>
+                        <span class="admin-cal-day-date">${anchor.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                    </div>
+                    <span class="admin-cal-day-pill-closed">Outpatient Clinics Closed</span>
                 </div>
                 <div class="admin-ov-empty" style="padding:48px 16px;">Hospital outpatient clinics operate Monday to Saturday and are closed on Sundays.</div>
             `;
@@ -774,59 +944,94 @@ function renderAdminOverviewCalendar() {
         }
 
         const docs = getDoctorsForCalendarDate(anchor, true);
+        const dayAppts = getAppointmentsForCalendarDate(iso);
         const availCount = docs.filter(d => normalizeDocStatus(d.status) === 'in').length;
 
-        if (!docs.length) {
-            wrap.innerHTML = '<div class="admin-ov-empty" style="padding:48px 16px;">No physician schedules found for this day.</div>';
-            return;
-        }
+        const apptsSection = dayAppts.length
+            ? `
+                <div class="admin-cal-day-sec-title">Scheduled Patient Visits (${dayAppts.length})</div>
+                <div class="admin-cal-day-appts-grid">
+                    ${dayAppts.map(p => {
+                const tone = getDocDeptToneClass(p.department);
+                const st = String(p.status || 'pending').replace(/_/g, ' ');
+                return `
+                            <div class="admin-cal-day-appt-card ${tone}" onclick="openPatientDetailsModal('${escapeHtml(p.patient_id)}')">
+                                <div class="admin-cal-day-appt-top">
+                                    <span class="admin-cal-day-appt-name">${escapeHtml(p.full_name || 'Patient')}</span>
+                                    <span class="admin-cal-day-appt-ref">${escapeHtml(p.reference_no || p.patient_id || '')}</span>
+                                </div>
+                                <div class="admin-cal-day-appt-sub">
+                                    <span>${escapeHtml(formatDeptTitleCase(p.department))} &middot; ${escapeHtml(p.preferred_time_slot || 'Morning')}</span>
+                                    <span class="admin-cal-day-appt-st">${escapeHtml(st)}</span>
+                                </div>
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `
+            : '';
+
+        const docsSection = docs.length
+            ? `
+                <div class="admin-cal-day-sec-title">Physician Roster (${availCount} of ${docs.length} on duty)</div>
+                <div class="admin-cal-day-list">
+                    ${docs.map(d => {
+                const isIn = normalizeDocStatus(d.status) === 'in';
+                const rawName = String(d.name || 'Physician').trim();
+                const displayName = rawName.startsWith('Dr.') ? rawName : `Dr. ${rawName}`;
+                const totalSlots = Math.min(100, Math.max(1, parseInt(d.total_slots, 10) || 20));
+                const booked = getDoctorBookedOnDate(rawName, iso);
+                const remaining = Math.max(0, totalSlots - booked);
+
+                return `
+                            <div class="admin-cal-day-item${isIn ? '' : ' is-out-row'}">
+                                <div class="admin-cal-day-left">
+                                    ${renderEntityAvatarHtml(d.profile_image, rawName, 'doctor')}
+                                    <div>
+                                        <div style="font-weight:600; font-size:0.86rem; color:#0f172a;">${escapeHtml(displayName)}</div>
+                                        <div style="font-size:0.74rem; color:#64748b; margin-top:2px;">${escapeHtml(formatDeptTitleCase(d.department))} &bull; ${escapeHtml(d.specialization || 'General Practice')} &bull; ${remaining} / ${totalSlots} slots free</div>
+                                    </div>
+                                </div>
+                                <div class="admin-cal-day-right">
+                                    <span class="admin-cal-day-hours">${escapeHtml(formatDoctorHoursLabel(d))}</span>
+                                    <span class="admin-cal-day-status ${isIn ? 'is-in' : 'is-out'}">${isIn ? 'On Duty' : 'Off'}</span>
+                                </div>
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `
+            : '<div class="admin-ov-empty" style="padding:36px 16px;">No physician schedules found for this filter.</div>';
 
         wrap.innerHTML = `
             <div class="admin-cal-day-header">
-                <span class="admin-cal-day-date">${anchor.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
-                <span>${availCount} of ${docs.length} physicians open</span>
+                <div class="admin-cal-day-header-left">
+                    <button type="button" class="admin-cal-back-btn" onclick="setAdminCalendarMode('month')">&larr; Month</button>
+                    <span class="admin-cal-day-date">${anchor.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+                <span class="admin-cal-day-summary-meta">${dayAppts.length} ${dayAppts.length === 1 ? 'visit' : 'visits'} &middot; ${availCount} MD on duty</span>
             </div>
-            <div class="admin-cal-day-list">
-                ${docs.map(d => {
-                    const isIn = normalizeDocStatus(d.status) === 'in';
-                    const rawName = String(d.name || 'Physician').trim();
-                    const displayName = rawName.startsWith('Dr.') ? rawName : `Dr. ${rawName}`;
-                    const totalSlots = Math.min(100, Math.max(1, parseInt(d.total_slots, 10) || 20));
-                    const booked = getDoctorBookedOnDate(rawName, iso);
-                    const remaining = Math.max(0, totalSlots - booked);
-
-                    return `
-                        <div class="admin-cal-day-item${isIn ? '' : ' is-out-row'}">
-                            <div class="admin-cal-day-left">
-                                ${renderEntityAvatarHtml(d.profile_image, rawName, 'doctor')}
-                                <div>
-                                    <div style="font-weight:600; font-size:0.86rem; color:#111827;">${escapeHtml(displayName)}</div>
-                                    <div style="font-size:0.74rem; color:#6b7280; margin-top:2px;">${escapeHtml(formatDeptTitleCase(d.department))} &bull; ${escapeHtml(d.specialization || 'General Practice')} &bull; ${remaining} / ${totalSlots} slots free</div>
-                                </div>
-                            </div>
-                            <div class="admin-cal-day-right">
-                                <span class="admin-cal-day-hours">${escapeHtml(formatDoctorHoursLabel(d))}</span>
-                                <span class="admin-cal-day-status ${isIn ? 'is-in' : 'is-out'}">${isIn ? 'Open' : 'Out'}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
+            ${apptsSection}
+            ${docsSection}
         `;
     }
 }
 
 async function loadDashboard() {
     try {
-        const res = await fetch('/sdn/api/admin-stats.php').then(r=>r.json());
-        if(res.success) {
+        const res = await fetch('/sdn/api/admin-stats.php').then(r => r.json());
+        if (res.success) {
             updateAdminNotifications(res);
+            renderAdminExecOverview(res);
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 
     updateAdminOverviewKPIs();
     renderAdminOverviewDoctors();
-    renderAdminOverviewCalendar();
+    const calPanel = document.getElementById('adminOverviewCalPanel');
+    if (calPanel && !calPanel.hidden) {
+        renderAdminOverviewCalendar();
+    }
     loadChartData();
     loadDashboardTable();
 }
@@ -860,7 +1065,7 @@ async function loadDashboardTable() {
                 let prevLine = p.previous_appointment_date
                     ? `<div class="date-stack-sub">Previous ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' · ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
                     : '';
-                let safeAppDate = isInquiry 
+                let safeAppDate = isInquiry
                     ? `<span class="badge badge-yellow">Inquiry · ${escapeHtml(p.mode_of_inquiry || 'Online')}</span>`
                     : (`<div class="date-stack">${formatStackedDate(p.appointment_date, p.preferred_time_slot || p.scheduled_time)}${prevLine}</div>`);
                 let safeStatus = escapeHtml(titleStatus(p.status));
@@ -882,7 +1087,7 @@ async function loadDashboardTable() {
                 `;
             }).join('');
         }
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ef4444;">Error loading patient records.</td></tr>';
     }
@@ -892,7 +1097,7 @@ let patientsChartInstance = null;
 
 function resetChartFilter() {
     const filterEl = document.getElementById('chart-filter');
-    if(filterEl) filterEl.value = 'year';
+    if (filterEl) filterEl.value = 'year';
     loadChartData();
 }
 
@@ -902,20 +1107,20 @@ async function loadChartData() {
         if (!canvasEl) return;
         const filterEl = document.getElementById('chart-filter');
         const filterVal = filterEl ? filterEl.value : 'year';
-        
-        const res = await fetch(`/sdn/api/admin-stats.php?chart=${filterVal}`).then(r=>r.json());
-        if(res.success && res.chart_labels) {
+
+        const res = await fetch(`/sdn/api/admin-stats.php?chart=${filterVal}`).then(r => r.json());
+        if (res.success && res.chart_labels) {
             const ctx = canvasEl.getContext('2d');
-            
+
             if (patientsChartInstance) {
                 patientsChartInstance.destroy();
             }
 
             const ds = res.chart_datasets || {};
-            const genData   = ds.general || res.chart_data || [];
+            const genData = ds.general || res.chart_data || [];
             const neuroData = ds.neurology || [];
             const psychData = ds.psychiatry || [];
-            
+
             patientsChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1001,7 +1206,7 @@ async function loadChartData() {
                 }
             });
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 // ── RBAC / STAFF MANAGEMENT ───────────────────────────────────────────────────
@@ -1040,9 +1245,9 @@ function updateRBACCategoryCounts() {
 
 function renderRBACTable(list) {
     const tbody = document.getElementById('rbac-tbody');
-    if(!tbody) return;
+    if (!tbody) return;
 
-    if(!list || list.length === 0) {
+    if (!list || list.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="modern-table-empty">No staff members found matching filters.</td></tr>';
         syncTableScrollbars();
         return;
@@ -1137,14 +1342,18 @@ function resetRBACFilters() {
     filterRBACTable();
 }
 
-async function loadRBAC() {
+async function loadRBAC(silent = false) {
+    if (typeof window.refreshAdminUsersView === 'function') {
+        await window.refreshAdminUsersView(silent);
+        return;
+    }
     try {
-        const res = await fetch('/sdn/api/staff.php').then(r=>r.json());
-        if(res.success && res.data) {
+        const res = await fetch('/sdn/api/staff.php').then(r => r.json());
+        if (res.success && res.data) {
             allStaffList = res.data;
             filterRBACTable();
         }
-    } catch(e) { console.error('Failed to load RBAC staff:', e); }
+    } catch (e) { console.error('Failed to load RBAC staff:', e); }
 }
 
 async function toggleStaffStatus(id, status) {
@@ -1152,30 +1361,32 @@ async function toggleStaffStatus(id, status) {
         try {
             await fetch('/sdn/api/staff.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: 'toggle', user_id: id, status: status})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'toggle', user_id: id, status: status })
             });
             loadRBAC();
             // Also update the modal button if it is open for this same user
-            if(document.getElementById('editStaffId').value == id) {
+            if (document.getElementById('editStaffId').value == id) {
                 updateEditStaffStatusBtn(status);
             }
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     });
 }
 
-function openStaffModal() { 
+function openStaffModal() {
     document.getElementById('staffName').value = '';
     document.getElementById('staffUsername').value = '';
     document.getElementById('staffPass').value = '';
-    document.getElementById('staffDept').value = 'Psychiatry';
+    const confirmEl = document.getElementById('staffPassConfirm');
+    if (confirmEl) confirmEl.value = '';
+    document.getElementById('staffDept').value = 'General Medical';
     setAvatarModalState('staffAdd', null, 'ST');
-    document.getElementById('staffModal').classList.add('show'); 
+    document.getElementById('staffModal').classList.add('show');
 }
 
 function closeStaffModal() {
     const modal = document.getElementById('staffModal');
-    if(modal) modal.classList.remove('show');
+    if (modal) modal.classList.remove('show');
 }
 
 async function submitStaff() {
@@ -1183,9 +1394,10 @@ async function submitStaff() {
     const username = document.getElementById('staffUsername').value.trim();
     const department = document.getElementById('staffDept').value;
     const password = document.getElementById('staffPass').value;
-    
-    if(!full_name || !username || !password || !department) return showToast('All fields required', 'error');
-    
+    const confirmPassword = document.getElementById('staffPassConfirm')?.value ?? password;
+
+    if (!full_name || !username || !password || !department) return showToast('All required fields must be filled.', 'error');
+
     // Validate username complexity
     const usernameRegex = /^[a-zA-Z0-9_]{5,20}$/;
     if (!usernameRegex.test(username)) {
@@ -1195,26 +1407,29 @@ async function submitStaff() {
     if (password.length < 6) {
         return showToast('Password must be at least 6 characters long.', 'error');
     }
-    
+    if (password !== confirmPassword) {
+        return showToast('Passwords do not match.', 'error');
+    }
+
     try {
-        const staffPayload = {action: 'create', full_name, username, department, password};
+        const staffPayload = { action: 'create', full_name, username, department, password };
         if (avatarUploadState.staffAdd.imageData) {
             staffPayload.image_data = avatarUploadState.staffAdd.imageData;
         }
         const res = await fetch('/sdn/api/staff.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(staffPayload)
-        }).then(r=>r.json());
-        
-        if(res.success) {
+        }).then(r => r.json());
+
+        if (res.success) {
             document.getElementById('staffModal').classList.remove('show');
             loadRBAC();
             showToast('Staff created successfully');
         } else {
             showToast(res.message, 'error');
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 function openEditStaffModal(id, fullName, username, department, status) {
@@ -1222,10 +1437,12 @@ function openEditStaffModal(id, fullName, username, department, status) {
     document.getElementById('editStaffId').value = id;
     document.getElementById('editStaffName').value = fullName || '';
     document.getElementById('editStaffUsername').value = username || '';
-    if(document.getElementById('editStaffDept')) {
-        document.getElementById('editStaffDept').value = cleanDeptLabel(department || 'Psychiatry');
+    if (document.getElementById('editStaffDept')) {
+        document.getElementById('editStaffDept').value = formatDeptTitleCase(department || 'General Medical');
     }
-    document.getElementById('editStaffPass').value = ''; // clear password
+    document.getElementById('editStaffPass').value = '';
+    const confirmEl = document.getElementById('editStaffPassConfirm');
+    if (confirmEl) confirmEl.value = '';
     setAvatarModalState('staffEdit', staffRec?.profile_image || null, fullName || username);
     updateEditStaffStatusBtn(status);
     document.getElementById('editStaffModal').classList.add('show');
@@ -1233,24 +1450,20 @@ function openEditStaffModal(id, fullName, username, department, status) {
 
 function closeEditStaffModal() {
     const modal = document.getElementById('editStaffModal');
-    if(modal) modal.classList.remove('show');
+    if (modal) modal.classList.remove('show');
 }
 
 function updateEditStaffStatusBtn(status) {
     const textEl = document.getElementById('editStaffStatusText');
+    const pillEl = document.getElementById('editStaffStatusPill');
     const btn = document.getElementById('editStaffStatusBtn');
-    if(status === 'active') {
-        textEl.innerText = 'Active';
-        textEl.style.color = '#10b981';
-        btn.innerText = 'Disable Account';
-        btn.className = 'btn btn-outline';
-        btn.onclick = () => toggleStaffStatus(document.getElementById('editStaffId').value, 'inactive');
-    } else {
-        textEl.innerText = 'Inactive';
-        textEl.style.color = '#ef4444';
-        btn.innerText = 'Activate Account';
-        btn.className = 'btn btn-primary';
-        btn.onclick = () => toggleStaffStatus(document.getElementById('editStaffId').value, 'active');
+    const isActive = status === 'active';
+    if (textEl) textEl.innerText = isActive ? 'Active' : 'Inactive';
+    if (pillEl) pillEl.classList.toggle('is-inactive', !isActive);
+    if (btn) {
+        btn.innerText = isActive ? 'Disable' : 'Activate';
+        btn.className = isActive ? 'staff-status-toggle-btn' : 'staff-status-toggle-btn is-activate';
+        btn.onclick = () => toggleStaffStatus(document.getElementById('editStaffId').value, isActive ? 'inactive' : 'active');
     }
 }
 
@@ -1259,18 +1472,22 @@ async function submitEditStaff() {
     const full_name = document.getElementById('editStaffName').value.trim();
     const department = document.getElementById('editStaffDept').value;
     const password = document.getElementById('editStaffPass').value;
-    
-    if(!full_name) {
+    const confirmPassword = document.getElementById('editStaffPassConfirm')?.value ?? password;
+
+    if (!full_name) {
         return showToast('Full name is required.', 'error');
     }
 
-    if(password && password.length < 6) {
+    if (password && password.length < 6) {
         return showToast('Password must be at least 6 characters long.', 'error');
+    }
+    if ((password || confirmPassword) && password !== confirmPassword) {
+        return showToast('New password and confirmation do not match.', 'error');
     }
 
     try {
         const payload = { action: 'update_staff', user_id, full_name, department };
-        if(password) {
+        if (password) {
             payload.password = password;
         }
         if (avatarUploadState.staffEdit.imageData) {
@@ -1281,19 +1498,19 @@ async function submitEditStaff() {
 
         const res = await fetch('/sdn/api/staff.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).then(r=>r.json());
-        
-        if(res.success) {
+        }).then(r => r.json());
+
+        if (res.success) {
             closeEditStaffModal();
             loadRBAC();
             showToast('Staff member updated successfully');
         } else {
             showToast(res.message || 'Update failed', 'error');
         }
-    } catch(e) { 
-        console.error(e); 
+    } catch (e) {
+        console.error(e);
         showToast('Error updating staff member', 'error');
     }
 }
@@ -1303,18 +1520,18 @@ async function deleteStaff(user_id) {
         try {
             const res = await fetch('/sdn/api/staff.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: 'delete', user_id})
-            }).then(r=>r.json());
-            
-            if(res.success) {
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', user_id })
+            }).then(r => r.json());
+
+            if (res.success) {
                 document.getElementById('editStaffModal').classList.remove('show');
                 loadRBAC();
                 showToast('Staff account deleted');
             } else {
                 showToast(res.message, 'error');
             }
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     });
 }
 
@@ -1369,41 +1586,77 @@ function updateDoctorCategoryCounts() {
 
 function renderDoctorsTable(list) {
     const tbody = document.getElementById('doctors-tbody');
-    if(!tbody) return;
+    if (!tbody) return;
 
-    if(!list || list.length === 0) {
+    if (!list || list.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="modern-table-empty">No doctors found matching filters.</td></tr>';
         syncTableScrollbars();
         return;
     }
 
     tbody.innerHTML = list.map(d => {
-        let safeName = escapeHtml(d.name);
-        let safeSpec = escapeHtml(d.specialization || 'General');
-        let deptClean = formatDeptTitleCase(d.department || 'N/A');
-        let safeDept = escapeHtml(deptClean);
-        let total = Math.min(100, Math.max(1, parseInt(d.total_slots, 10) || 20));
-        let safeId = parseInt(d.id, 10) || 0;
+        const safeName = escapeHtml(d.name || 'Unnamed Physician');
+        const safeSpec = escapeHtml(d.specialization || 'General');
+        const deptClean = formatDeptTitleCase(d.department || 'N/A');
+        const safeDept = escapeHtml(deptClean);
+        const total = Math.min(100, Math.max(1, parseInt(d.total_slots, 10) || 20));
+        const booked = Math.max(0, parseInt(d.booked_today, 10) || 0);
+        const pct = Math.min(100, Math.round((booked / total) * 100));
+        const barTone = pct >= 100 ? 'is-full' : (pct >= 80 ? 'is-warn' : '');
+        const safeId = parseInt(d.id, 10) || 0;
+        const isIn = normalizeDocStatus(d.status) === 'in';
+        const nextStatus = isIn ? 'out' : 'in';
+
+        const metaParts = [];
+        if (d.title && !(d.name || '').toLowerCase().includes(d.title.toLowerCase())) {
+            metaParts.push(d.title);
+        }
+        if (d.license_number) {
+            metaParts.push(`PRC #${d.license_number}`);
+        }
+        const subMetaHtml = metaParts.length
+            ? `<div class="doc-sub-meta">${escapeHtml(metaParts.join(' · '))}</div>`
+            : '';
+
+        const statusBtnHtml = `<button type="button" class="doc-status-btn ${isIn ? 'is-in' : 'is-out'}" onclick="toggleDoctorDuty(${safeId}, '${nextStatus}')" title="Click to mark ${isIn ? 'Off Duty (OUT)' : 'On Duty (IN)'}">
+            <span class="doc-status-dot"></span>
+            <span>${isIn ? 'On Duty' : 'Off Duty'}</span>
+        </button>`;
+
+        const toggleIcon = isIn
+            ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>'
+            : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
 
         return `
         <tr>
             <td class="cell-primary">
                 <div class="table-person-cell">
                     ${renderEntityAvatarHtml(d.profile_image, d.name, 'doctor')}
-                    <span>${safeName}</span>
+                    <div class="doc-name-col">
+                        <span class="doc-name-main">${safeName}</span>
+                        ${subMetaHtml}
+                    </div>
                 </div>
             </td>
             <td class="cell-secondary">${safeSpec}</td>
             <td><span class="table-dept-tag">${safeDept}</span></td>
-            <td class="cell-tabular"><span class="capacity-val">${total}</span><span class="capacity-total"> / 100</span></td>
-            <td>${formatDoctorStatusBadge(d.status)}</td>
+            <td class="cell-tabular">
+                <div class="doc-load-wrap">
+                    <div class="doc-load-nums"><span class="capacity-val">${booked}</span><span class="capacity-total"> / ${total}</span></div>
+                    <div class="doc-load-track" aria-hidden="true"><div class="doc-load-fill ${barTone}" style="width:${pct}%;"></div></div>
+                </div>
+            </td>
+            <td>${statusBtnHtml}</td>
             <td class="col-actions">
                 <div class="row-actions">
-                    <button type="button" class="table-action-btn table-action-icon" aria-label="Edit doctor" title="Edit" onclick="openEditDoctorModal(${safeId})">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    <button type="button" class="table-action-btn table-action-icon" aria-label="Edit doctor" title="Edit doctor" onclick="openEditDoctorModal(${safeId})">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     </button>
-                    <button type="button" class="table-action-btn table-action-icon danger" aria-label="Delete doctor" title="Delete" onclick="deleteDoctor(${safeId})">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    <button type="button" class="table-action-btn table-action-icon ${isIn ? '' : 'is-restore'}" aria-label="Toggle duty status" title="${isIn ? 'Mark Off Duty (OUT)' : 'Mark On Duty (IN)'}" onclick="toggleDoctorDuty(${safeId}, '${nextStatus}')">
+                        ${toggleIcon}
+                    </button>
+                    <button type="button" class="table-action-btn table-action-icon danger" aria-label="Delete doctor" title="Delete doctor" onclick="deleteDoctor(${safeId})">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
                 </div>
             </td>
@@ -1412,6 +1665,43 @@ function renderDoctorsTable(list) {
     }).join('');
 
     syncTableScrollbars();
+}
+
+async function toggleDoctorDuty(id, nextStatus) {
+    try {
+        const res = await fetch('/sdn/api/doctors.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'toggle_leave', id, status: nextStatus })
+        }).then(r => r.json());
+        if (res.success) {
+            showToast(nextStatus === 'out' ? 'Doctor marked Off Duty (OUT)' : 'Doctor marked On Duty (IN)');
+            await loadDoctors();
+        } else {
+            showToast(res.message || 'Failed to update doctor status', 'error');
+        }
+    } catch (e) {
+        console.error('Toggle doctor duty failed:', e);
+        showToast('Failed to update doctor status', 'error');
+    }
+}
+
+function updateDoctorKPIs(summary) {
+    const list = allDoctorsList || [];
+    const total = summary?.total_doctors ?? list.length;
+    const onDuty = summary?.on_duty ?? list.filter(d => normalizeDocStatus(d.status) === 'in').length;
+    const offDuty = summary?.off_duty ?? Math.max(0, total - onDuty);
+    const booked = summary?.booked_today ?? list.reduce((s, d) => s + (parseInt(d.booked_today, 10) || 0), 0);
+    const cap = summary?.total_capacity ?? list.filter(d => normalizeDocStatus(d.status) === 'in').reduce((s, d) => s + (parseInt(d.total_slots, 10) || 20), 0);
+
+    const elTotal = document.getElementById('docStatTotal');
+    const elIn = document.getElementById('docStatIn');
+    const elOut = document.getElementById('docStatOut');
+    const elCap = document.getElementById('docStatCapacity');
+    if (elTotal) elTotal.textContent = total;
+    if (elIn) elIn.textContent = onDuty;
+    if (elOut) elOut.textContent = offDuty;
+    if (elCap) elCap.textContent = `${booked} / ${cap}`;
 }
 
 function filterDoctorsTable() {
@@ -1437,10 +1727,12 @@ function filterDoctorsTable() {
         list = list.filter(d => normalizeDocStatus(d.status) === statusVal);
     }
 
-    // Filter by search query (name, specialization, department)
+    // Filter by search query (name, PRC license, title, specialization, department)
     if (searchVal) {
-        list = list.filter(d => 
+        list = list.filter(d =>
             (d.name || '').toLowerCase().includes(searchVal) ||
+            (d.license_number || '').toLowerCase().includes(searchVal) ||
+            (d.title || '').toLowerCase().includes(searchVal) ||
             (d.specialization || '').toLowerCase().includes(searchVal) ||
             (d.department || '').toLowerCase().includes(searchVal)
         );
@@ -1468,14 +1760,15 @@ function resetDoctorFilters() {
 
 async function loadDoctors() {
     try {
-        const res = await fetch('/sdn/api/doctors.php?mode=manage').then(r=>r.json());
-        if(res.success && res.data) {
+        const res = await fetch('/sdn/api/doctors.php?mode=manage').then(r => r.json());
+        if (res.success && res.data) {
             allDoctorsList = res.data;
+            updateDoctorKPIs(res.summary);
             filterDoctorsTable();
             renderAdminOverviewDoctors();
             renderAdminOverviewCalendar();
         }
-    } catch(e) { console.error('Failed to load doctors:', e); }
+    } catch (e) { console.error('Failed to load doctors:', e); }
 }
 
 function clearDoctorModalErrors() {
@@ -1498,13 +1791,13 @@ function openAddDoctorModal() {
     document.getElementById('docStatus').value = 'in';
     setAvatarModalState('doctor', null, 'DR');
     const delBtn = document.getElementById('btnDeleteDoctorModal');
-    if(delBtn) delBtn.style.display = 'none';
+    if (delBtn) delBtn.style.display = 'none';
     document.getElementById('doctorModal').classList.add('show');
 }
 
 function openEditDoctorModal(id) {
     const doc = allDoctorsList.find(d => d.id == id);
-    if(!doc) return;
+    if (!doc) return;
 
     clearDoctorModalErrors();
     document.getElementById('doctorModalTitle').innerText = 'Edit Doctor: ' + doc.name;
@@ -1519,13 +1812,13 @@ function openEditDoctorModal(id) {
     document.getElementById('docStatus').value = normalizeDocStatus(doc.status);
     setAvatarModalState('doctor', doc.profile_image || null, doc.name);
     const delBtn = document.getElementById('btnDeleteDoctorModal');
-    if(delBtn) delBtn.style.display = 'inline-block';
+    if (delBtn) delBtn.style.display = 'inline-block';
     document.getElementById('doctorModal').classList.add('show');
 }
 
 function handleModalDeleteDoctor() {
     const id = document.getElementById('editDoctorId').value;
-    if(id) {
+    if (id) {
         closeDoctorModal();
         deleteDoctor(id);
     }
@@ -1534,7 +1827,7 @@ function handleModalDeleteDoctor() {
 function closeDoctorModal() {
     clearDoctorModalErrors();
     const modal = document.getElementById('doctorModal');
-    if(modal) modal.classList.remove('show');
+    if (modal) modal.classList.remove('show');
 }
 
 async function submitDoctorForm() {
@@ -1614,18 +1907,18 @@ async function submitDoctorForm() {
     try {
         const res = await fetch('/sdn/api/doctors.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).then(r=>r.json());
+        }).then(r => r.json());
 
-        if(res.success) {
+        if (res.success) {
             closeDoctorModal();
             loadDoctors();
             showToast(isEdit ? 'Doctor updated successfully!' : 'Doctor added successfully!');
         } else {
             showToast(res.message || 'Operation failed', 'error');
         }
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         showToast('Error saving doctor.', 'error');
     }
@@ -1638,15 +1931,15 @@ async function deleteDoctor(doctorId) {
         try {
             const res = await fetch(`/sdn/api/doctors.php?doctor_id=${doctorId}`, {
                 method: 'DELETE'
-            }).then(r=>r.json());
+            }).then(r => r.json());
 
-            if(res.success) {
+            if (res.success) {
                 loadDoctors();
                 showToast('Doctor deleted successfully.');
             } else {
                 showToast(res.message || 'Failed to delete doctor', 'error');
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             showToast('Error deleting doctor.', 'error');
         }
@@ -1659,18 +1952,30 @@ function filterPMITable() {
     const tbody = document.getElementById('pmi-tbody');
     if (!tbody) return;
 
+    const deptFilter = (document.getElementById('pmiDeptFilter')?.value || 'all').toLowerCase();
     const statusFilter = document.getElementById('pmiStatusFilter')?.value || 'all';
     const searchQuery = (document.getElementById('pmiSearchInput')?.value || '').toLowerCase().trim();
 
     let list = cachedPMIPatients || [];
 
-    // 1. Filter by status (aligned with current consultation flow)
+    // 1. Filter by department
+    if (deptFilter !== 'all') {
+        list = list.filter(p => {
+            const d = (p.department || '').toLowerCase();
+            if (deptFilter === 'general') return d.includes('general') || d.includes('medical');
+            if (deptFilter === 'neurology') return d.includes('neuro');
+            if (deptFilter === 'psychiatry') return d.includes('psych') || d.includes('opu');
+            return d.includes(deptFilter);
+        });
+    }
+
+    // 2. Filter by status (aligned with current consultation flow)
     if (statusFilter !== 'all') {
         const normSt = p => (p.status || '').toLowerCase().trim();
         if (statusFilter === 'inquiry') {
             list = list.filter(p => p.inquiry_only == 1 || p.inquiry_only === true || p.inquiry_only === '1' || p.consultation_nature === 'General Inquiry');
         } else if (statusFilter === 'for_approval') {
-            list = list.filter(p => ['for_approval', 'for_processing', 'pending', 'for approval'].includes(normSt(p)));
+            list = list.filter(p => ['for_approval', 'for_processing', 'pending', 'for approval'].includes(normSt(p)) || Number(p.has_pending_approval) === 1);
         } else if (statusFilter === 'approved') {
             list = list.filter(p => ['approved', 'confirmed'].includes(normSt(p)));
         } else if (statusFilter === 'in_clinic') {
@@ -1682,12 +1987,15 @@ function filterPMITable() {
         }
     }
 
-    // 2. Filter by patient name or patient ID
+    // 3. Filter by patient name, canonical ID, HRN, or phone
     if (searchQuery) {
-        list = list.filter(p => 
+        list = list.filter(p =>
             ((p.full_name || '').toLowerCase().includes(searchQuery)) ||
+            ((p.canonical_patient_id || '').toLowerCase().includes(searchQuery)) ||
             ((p.patient_id || '').toLowerCase().includes(searchQuery)) ||
-            ((p.reference_no || '').toLowerCase().includes(searchQuery))
+            ((p.hrn || '').toLowerCase().includes(searchQuery)) ||
+            ((p.reference_no || '').toLowerCase().includes(searchQuery)) ||
+            ((p.contact_number || '').toLowerCase().includes(searchQuery))
         );
     }
 
@@ -1697,7 +2005,19 @@ function filterPMITable() {
     }
 
     tbody.innerHTML = list.map(p => {
-        const st = (p.status || '').toLowerCase().trim();
+        const approvalStatuses = ['for_approval', 'for_processing', 'pending', 'for approval'];
+        const ownStatus = (p.status || '').toLowerCase().trim();
+        const showPendingVisit = statusFilter === 'for_approval'
+            && !approvalStatuses.includes(ownStatus)
+            && Number(p.has_pending_approval) === 1;
+        const st = showPendingVisit
+            ? String(p.pending_status || 'for_approval').toLowerCase().trim()
+            : ownStatus;
+        const rowLookupId = showPendingVisit
+            ? (p.pending_patient_id || p.patient_id || p.id || '')
+            : (p.patient_id || p.id || '');
+        const rowDepartment = showPendingVisit ? (p.pending_department || p.department) : p.department;
+        const rowInquiry = showPendingVisit ? p.pending_inquiry_only : p.inquiry_only;
         let b = 'badge-yellow';
         let statusLabel = titleStatus(st);
         if (st === 'approved' || st === 'confirmed') {
@@ -1723,32 +2043,53 @@ function filterPMITable() {
             statusLabel = 'For Approval';
         }
 
-        const isInquiry = p.inquiry_only == 1 || p.inquiry_only === true || p.inquiry_only === '1';
+        const isInquiry = rowInquiry == 1 || rowInquiry === true || rowInquiry === '1';
         const inquiryTag = isInquiry
             ? `<span class="badge badge-yellow" style="margin-left:6px;">Inquiry</span>`
             : '';
 
-        let safeId = escapeHtml(p.patient_id || p.id || '');
-        let safeName = escapeHtml(p.full_name);
-        let safeDept = escapeHtml(cleanDeptLabel(p.department));
-        let safeStatus = escapeHtml(statusLabel);
-        let prevTag = p.previous_appointment_date
-            ? `<div style="margin-top:3px; font-size:0.72rem; font-weight:600; color:#0369a1; background:#e0f2fe; border:1px solid #bae6fd; display:inline-flex; align-items:center; gap:4px; padding:1px 7px; border-radius:999px;" title="Previous appointment date and time">
-                 <span>Prev visit: ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</span>
-               </div>`
+        const lookupId = escapeHtml(rowLookupId);
+        const displayId = escapeHtml(showPendingVisit ? rowLookupId : (p.canonical_patient_id || p.patient_id || p.id || ''));
+        const safeName = escapeHtml(p.full_name || 'Unnamed Patient');
+        const demoParts = [];
+        if (p.gender) demoParts.push(p.gender);
+        if (p.age) demoParts.push(`${p.age} yrs`);
+        if (p.contact_number && p.contact_number !== 'None') demoParts.push(p.contact_number);
+        const demoLine = demoParts.length
+            ? `<div style="font-size:0.74rem; color:#64748b; margin-top:2px;">${escapeHtml(demoParts.join(' · '))}</div>`
             : '';
 
+        const totalVisits = Number(p.total_visits || p.visit_count || 1);
+        const visitsPillStyle = totalVisits >= 2
+            ? 'background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;'
+            : 'background:#f8fafc; color:#475569; border:1px solid #e2e8f0;';
+        const visitsPill = `<span style="display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:0.71rem; font-weight:600; ${visitsPillStyle}">${totalVisits} ${totalVisits === 1 ? 'visit' : 'visits'}</span>`;
+        const safeDept = escapeHtml(cleanDeptLabel(rowDepartment));
+        const pendingDateRaw = showPendingVisit ? String(p.pending_appointment_date || '').split(' ')[0] : '';
+        const pendingDateLabel = pendingDateRaw
+            ? new Date(pendingDateRaw + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : '';
+        const lastVisitText = showPendingVisit
+            ? (pendingDateLabel ? `${escapeHtml(pendingDateLabel)} · ${safeDept}` : safeDept)
+            : (p.last_visit_date ? `${escapeHtml(p.last_visit_date)} · ${safeDept}` : safeDept);
+        const safeStatus = escapeHtml(statusLabel);
+
         return `
-        <tr class="clickable-row" onclick="openPatientDetailsModal('${safeId}')" title="Click to view full patient profile">
-            <td><small style="font-weight:600; color:var(--deep-green);">${safeId}</small></td>
+        <tr class="clickable-row" onclick="openPatientDetailsModal('${lookupId}')" title="Click to view full patient profile and visit history">
+            <td>
+                <small style="font-weight:600; color:var(--deep-green);">${displayId}</small>
+            </td>
             <td>
                 <div><strong>${safeName}</strong>${inquiryTag}</div>
-                ${prevTag}
+                ${demoLine}
             </td>
-            <td>${safeDept}</td>
+            <td>
+                <div>${visitsPill}</div>
+                <div style="font-size:0.75rem; color:#475569; margin-top:3px;">${lastVisitText}</div>
+            </td>
             <td><span class="badge ${b}">${safeStatus}</span></td>
             <td>
-                <button type="button" class="btn-table-action btn-table-details" onclick="event.stopPropagation(); openPatientDetailsModal('${safeId}')" title="View Details">
+                <button type="button" class="btn-table-action btn-table-details" onclick="event.stopPropagation(); openPatientDetailsModal('${lookupId}')" title="View Details">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     <span>View</span>
                 </button>
@@ -1763,6 +2104,8 @@ function filterPMITable() {
 function resetPMIFilter() {
     const filterEl = document.getElementById('pmi-filter');
     if (filterEl) filterEl.value = 'all';
+    const deptEl = document.getElementById('pmiDeptFilter');
+    if (deptEl) deptEl.value = 'all';
     const statusEl = document.getElementById('pmiStatusFilter');
     if (statusEl) statusEl.value = 'all';
     const searchEl = document.getElementById('pmiSearchInput');
@@ -1775,23 +2118,28 @@ async function loadPMI() {
         const filterEl = document.getElementById('pmi-filter');
         const filterVal = filterEl ? filterEl.value : 'all';
 
-        const res = await fetch(`/sdn/api/patients.php?filter=${filterVal}`).then(r=>r.json());
-        if(res.success && res.data) {
+        const res = await fetch(`/sdn/api/patients.php?filter=${encodeURIComponent(filterVal)}&deduplicate=1`).then(r => r.json());
+        if (res.success && res.data) {
             cachedPMIPatients = res.data;
             filterPMITable();
             updateAdminOverviewKPIs();
             renderAdminOverviewDoctors();
             renderAdminOverviewCalendar();
 
-            const elApp = document.getElementById('pmi-stat-appointments');
-            const elSlots = document.getElementById('pmi-stat-slots');
+            const summary = res.summary || {};
             const elPts = document.getElementById('pmi-stat-patients');
-            if(elApp) elApp.innerText = cachedPMIPatients.length;
-            if(elSlots) elSlots.innerText = "-";
-            const uniquePatients = new Set(cachedPMIPatients.map(p => p.full_name || p.patient_id)).size;
-            if(elPts) elPts.innerText = uniquePatients;
+            const elRet = document.getElementById('pmi-stat-returning');
+            const elApp = document.getElementById('pmi-stat-appointments');
+
+            const uniqueCount = summary.unique_patients ?? cachedPMIPatients.length;
+            const returningCount = summary.returning_patients ?? cachedPMIPatients.filter(p => Number(p.total_visits || p.visit_count || 1) >= 2).length;
+            const encounterCount = summary.total_encounters ?? cachedPMIPatients.reduce((sum, p) => sum + Number(p.total_visits || 1), 0);
+
+            if (elPts) elPts.innerText = uniqueCount;
+            if (elRet) elRet.innerText = returningCount;
+            if (elApp) elApp.innerText = encounterCount;
         }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
 }
 
 async function openPatientDetailsModal(patient_id) {
@@ -1853,86 +2201,103 @@ async function openPatientDetailsModal(patient_id) {
             }
         }
 
-        if (isInquiry) {
-            body.innerHTML = `
-                <div class="pv-summary-bar">
-                    <div class="pv-summary-left">
-                        <div class="pv-avatar">${escapeHtml((p.full_name || 'P').charAt(0).toUpperCase())}</div>
-                        <div>
-                            <div class="pv-patient-name">${escapeHtml(p.full_name)}</div>
-                            <div class="pv-patient-meta">Ref: <strong>${escapeHtml(p.reference_no || p.patient_id)}</strong>${p.hrn ? ` &bull; HRN: <strong>${escapeHtml(p.hrn)}</strong>` : ''}</div>
+        const nameParts = String(p.full_name || 'P').trim().split(/\s+/).filter(Boolean);
+        const initials = nameParts.length > 1
+            ? (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase()
+            : (nameParts[0] || 'P').charAt(0).toUpperCase();
+        const phoneIconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>';
+        const summaryBarHtml = `
+            <div class="pv-summary-bar">
+                <div class="pv-summary-left">
+                    <div class="pv-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
+                    <div class="pv-summary-identity">
+                        <div class="pv-patient-name">${escapeHtml(p.full_name || 'Unnamed Patient')}</div>
+                        <div class="pv-id-chips">
+                            <span class="pv-id-chip">Ref: <strong>${escapeHtml(p.reference_no || p.patient_id)}</strong></span>
                         </div>
                     </div>
-                    <div class="pv-summary-right">
-                        ${phone !== 'None' ? `<a href="tel:${escapeHtml(phone)}" class="pv-call-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><span>${escapeHtml(phone)}</span></a>` : ''}
-                    </div>
                 </div>
+                <div class="pv-summary-right">
+                    ${phone !== 'None'
+                ? `<a href="tel:${escapeHtml(phone)}" class="pv-call-pill">${phoneIconSvg}<span>${isInquiry ? escapeHtml(phone) : 'Call ' + escapeHtml(phone)}</span></a>`
+                : `<span class="pv-no-phone">No phone on file</span>`}
+                </div>
+            </div>
+        `;
+
+        if (isInquiry) {
+            body.innerHTML = `
+                ${summaryBarHtml}
 
                 ${showVerificationProtocol ? `
                 <div class="pv-callout">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    ${phoneIconSvg}
                     <span><strong>Inquiry Follow-up Protocol:</strong> Contact inquirer at <strong>${escapeHtml(phone)}</strong> to address their inquiry or guide them to clinic services.</span>
                 </div>` : ''}
 
                 <div class="pv-grid">
                     <div class="pv-card">
                         <div class="pv-card-title">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                             <span>Inquirer Profile</span>
                         </div>
-                        <div class="pv-info-list">
-                            <div class="pv-info-row">
-                                <span class="pv-label">Appointment Recipient</span>
-                                <span class="pv-val">${escapeHtml(p.appointment_recipient || 'Patient (Me)')}${p.relationship_to_patient ? ' (' + escapeHtml(p.relationship_to_patient) + ')' : ''}</span>
+                        <div class="pv-kv-grid">
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Gender &amp; Age</span>
+                                <span class="pv-kv-val">${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Gender &amp; Age</span>
-                                <span class="pv-val">${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs (${escapeHtml(p.birthdate || 'N/A')})</span>
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Birthdate</span>
+                                <span class="pv-kv-val">${escapeHtml(p.birthdate || 'N/A')}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Accompanying Companion</span>
-                                <span class="pv-val">${(p.with_companion == 1 || p.with_companion === true || p.with_companion === '1') ? 'Yes' : 'No'}</span>
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Recipient</span>
+                                <span class="pv-kv-val">${escapeHtml(p.appointment_recipient || 'Patient (Me)')}${p.relationship_to_patient ? ' (' + escapeHtml(p.relationship_to_patient) + ')' : ''}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Email Address</span>
-                                <span class="pv-val">${escapeHtml(p.email || 'None')}</span>
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Companion</span>
+                                <span class="pv-kv-val">${(p.with_companion == 1 || p.with_companion === true || p.with_companion === '1') ? 'Yes' : 'No'}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Address</span>
-                                <span class="pv-val">${escapeHtml(p.address || 'None provided')}</span>
+                            <div class="pv-kv pv-kv-full">
+                                <span class="pv-kv-label">Email Address</span>
+                                <span class="pv-kv-val">${escapeHtml(p.email || 'None')}</span>
+                            </div>
+                            <div class="pv-kv pv-kv-full">
+                                <span class="pv-kv-label">Address</span>
+                                <span class="pv-kv-val">${escapeHtml(p.address || 'None provided')}</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="pv-card">
                         <div class="pv-card-title">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                             <span>Inquiry Details</span>
                         </div>
-                        <div class="pv-info-list">
-                            <div class="pv-info-row">
-                                <span class="pv-label">Department</span>
-                                <span class="pv-val"><strong>${escapeHtml(deptFormatted)}</strong></span>
+                        <div class="pv-kv-grid">
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Department</span>
+                                <span class="pv-kv-val pv-kv-strong">${escapeHtml(deptFormatted)}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Mode of Inquiry</span>
-                                <span class="pv-val">${escapeHtml(p.mode_of_inquiry || 'Online Portal')}</span>
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Mode of Inquiry</span>
+                                <span class="pv-kv-val">${escapeHtml(p.mode_of_inquiry || 'Online Portal')}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Existing Medical Conditions</span>
-                                <span class="pv-val">${escapeHtml(p.existing_medical_conditions || 'None')}</span>
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Referral Source</span>
+                                <span class="pv-kv-val">${escapeHtml(p.referral_source || 'None')}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Current Medications</span>
-                                <span class="pv-val">${escapeHtml(p.current_medications || 'None')}</span>
+                            <div class="pv-kv">
+                                <span class="pv-kv-label">Submitted</span>
+                                <span class="pv-kv-val">${escapeHtml(p.created_at || 'Today')}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Referral Source</span>
-                                <span class="pv-val">${escapeHtml(p.referral_source || 'None')}</span>
+                            <div class="pv-kv pv-kv-full">
+                                <span class="pv-kv-label">Existing Medical Conditions</span>
+                                <span class="pv-kv-val">${escapeHtml(p.existing_medical_conditions || 'None')}</span>
                             </div>
-                            <div class="pv-info-row">
-                                <span class="pv-label">Submitted</span>
-                                <span class="pv-val">${escapeHtml(p.created_at || 'Today')}</span>
+                            <div class="pv-kv pv-kv-full">
+                                <span class="pv-kv-label">Current Medications</span>
+                                <span class="pv-kv-val">${escapeHtml(p.current_medications || 'None')}</span>
                             </div>
                         </div>
                     </div>
@@ -1940,12 +2305,18 @@ async function openPatientDetailsModal(patient_id) {
 
                 <div class="pv-card">
                     <div class="pv-card-title">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                         <span>Inquiry Subject &amp; Details</span>
                     </div>
-                    <div class="pv-text-block">${escapeHtml(p.chief_complaints || 'General Inquiry')}</div>
+                    <div class="pv-complaint-box">
+                        <span class="pv-kv-label">Subject</span>
+                        <div class="pv-complaint-text">${escapeHtml(p.chief_complaints || 'General Inquiry')}</div>
+                    </div>
                     ${(p.illness_description || p.recommendation_remarks) ? `
-                    <div class="pv-text-block" style="margin-top:8px;">${escapeHtml(p.illness_description || p.recommendation_remarks)}</div>` : ''}
+                    <div class="pv-note-strip">
+                        <span class="pv-kv-label">Additional Details</span>
+                        <div class="pv-complaint-text">${escapeHtml(p.illness_description || p.recommendation_remarks)}</div>
+                    </div>` : ''}
                 </div>
             `;
 
@@ -1972,170 +2343,213 @@ async function openPatientDetailsModal(patient_id) {
                     </div>
                     <div class="patient-modal-btn-group">
                         <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
-                        ${canResolveInquiry ? `<button type="button" class="btn btn-primary" style="background:#059669; border-color:#059669; color:#fff;" onclick="promptResolveInquiry('${escapeHtml(p.patient_id)}', '${escapeHtml(p.full_name)}')">Resolve Inquiry</button>` : ''}
+                        ${canResolveInquiry ? `<button type="button" class="pv-btn-primary" onclick="promptResolveInquiry('${escapeHtml(p.patient_id)}', '${escapeHtml(p.full_name)}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Resolve Inquiry</span></button>` : ''}
                     </div>
                 `;
             }
             return;
         }
 
+        const bookingTypeLabel = p.patient_type
+            ? p.patient_type.charAt(0).toUpperCase() + p.patient_type.slice(1)
+            : 'N/A';
+        const consultModeLabel = (!p.consultation_mode || /^in-person$/i.test(p.consultation_mode))
+            ? 'Face-to-Face'
+            : p.consultation_mode;
+        const scheduleSlotText = `${p.appointment_date || 'N/A'}${p.preferred_time_slot ? ' • ' + p.preferred_time_slot : (p.scheduled_time ? ' • ' + p.scheduled_time : '')}`;
+        const activeMedsFormatted = p.active_medications ? (() => {
+            try {
+                const v = typeof p.active_medications === 'string' && (p.active_medications.trim().startsWith('[') || p.active_medications.trim().startsWith('{'))
+                    ? JSON.parse(p.active_medications)
+                    : p.active_medications;
+                const arr = Array.isArray(v) ? v : (v && typeof v === 'object' ? [v] : null);
+                return arr
+                    ? arr.map(m => typeof m === 'string' ? m : ([m.name || m.medicine || '', m.dosage || ''].filter(Boolean).join(' — ') + (m.quantity ? ` (Qty: ${m.quantity})` : ''))).filter(Boolean).join('; ')
+                    : String(p.active_medications);
+            } catch (e) {
+                return String(p.active_medications);
+            }
+        })() : '';
+        const completedPrev = Array.isArray(p.previous_appointments)
+            ? p.previous_appointments.filter(prev => (prev.status || '').toLowerCase() === 'completed')
+            : [];
+
         body.innerHTML = `
-            <div class="pv-summary-bar">
-                <div class="pv-summary-left">
-                    <div class="pv-avatar">${escapeHtml((p.full_name || 'P').charAt(0).toUpperCase())}</div>
-                    <div>
-                        <div class="pv-patient-name">${escapeHtml(p.full_name)}</div>
-                        <div class="pv-patient-meta">Ref: <strong>${escapeHtml(p.reference_no || p.patient_id)}</strong>${p.hrn ? ` &bull; HRN: <strong>${escapeHtml(p.hrn)}</strong>` : ''}</div>
-                    </div>
-                </div>
-                <div class="pv-summary-right">
-                    ${phone !== 'None' ? `<a href="tel:${escapeHtml(phone)}" class="pv-call-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><span>Call: ${escapeHtml(phone)}</span></a>` : `<span class="pv-no-phone">No phone</span>`}
-                </div>
-            </div>
+            ${summaryBarHtml}
 
             ${showVerificationProtocol ? `
             <div class="pv-callout">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                ${phoneIconSvg}
                 <span><strong>Verification Protocol:</strong> Call patient at <strong>${escapeHtml(phone)}</strong> to confirm appointment validity. If unreachable or unverified, mark as No-Show.</span>
             </div>` : ''}
 
             <div class="pv-grid">
                 <div class="pv-card">
                     <div class="pv-card-title">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <span>Personal Information</span>
                     </div>
-                    <div class="pv-info-list">
-                        <div class="pv-info-row">
-                            <span class="pv-label">Appointment Recipient</span>
-                            <span class="pv-val">${escapeHtml(p.appointment_recipient || 'Patient (Me)')}${p.relationship_to_patient ? ' (' + escapeHtml(p.relationship_to_patient) + ')' : ''}</span>
+                    <div class="pv-kv-grid">
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Gender &amp; Age</span>
+                            <span class="pv-kv-val">${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs</span>
                         </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Gender &amp; Age</span>
-                            <span class="pv-val">${escapeHtml(p.gender || 'N/A')} &bull; ${escapeHtml(p.age || 'N/A')} yrs old</span>
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Birthdate</span>
+                            <span class="pv-kv-val">${escapeHtml(p.birthdate || 'N/A')}</span>
                         </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Birthdate</span>
-                            <span class="pv-val">${escapeHtml(p.birthdate || 'N/A')}</span>
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Recipient</span>
+                            <span class="pv-kv-val">${escapeHtml(p.appointment_recipient || 'Patient (Me)')}${p.relationship_to_patient ? ' (' + escapeHtml(p.relationship_to_patient) + ')' : ''}</span>
                         </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Email</span>
-                            <span class="pv-val">${escapeHtml(p.email || 'None')}</span>
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Companion</span>
+                            <span class="pv-kv-val">${p.with_companion == 1 ? 'Yes (Accompanied)' : 'No (Unaccompanied)'}</span>
                         </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Address</span>
-                            <span class="pv-val">${escapeHtml(p.address || 'None')}</span>
+                        <div class="pv-kv pv-kv-full">
+                            <span class="pv-kv-label">Email Address</span>
+                            <span class="pv-kv-val">${escapeHtml(p.email || 'None')}</span>
                         </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Companion</span>
-                            <span class="pv-val">${p.with_companion == 1 ? 'Yes (Accompanied)' : 'No (Unaccompanied)'}</span>
+                        <div class="pv-kv pv-kv-full">
+                            <span class="pv-kv-label">Home Address</span>
+                            <span class="pv-kv-val">${escapeHtml(p.address || 'None')}</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="pv-card">
                     <div class="pv-card-title">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                         <span>Appointment Details</span>
                     </div>
-                    <div class="pv-info-list">
-                        <div class="pv-info-row">
-                            <span class="pv-label">Department</span>
-                            <span class="pv-val"><strong>${escapeHtml(deptFormatted)}</strong></span>
+                    <div class="pv-kv-grid">
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Department</span>
+                            <span class="pv-kv-val pv-kv-strong">${escapeHtml(deptFormatted)}</span>
                         </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Date &amp; Time Slot</span>
-                            <span class="pv-val">${escapeHtml(p.appointment_date || 'N/A')}${p.preferred_time_slot ? ' &bull; ' + escapeHtml(p.preferred_time_slot) : (p.scheduled_time ? ' &bull; ' + escapeHtml(p.scheduled_time) : '')}</span>
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Consultation Mode</span>
+                            <span class="pv-kv-val">${escapeHtml(consultModeLabel)}</span>
+                        </div>
+                        <div class="pv-kv pv-kv-full">
+                            <span class="pv-kv-label">Schedule &amp; Time Slot</span>
+                            <span class="pv-kv-val pv-kv-strong">${escapeHtml(scheduleSlotText)}</span>
+                        </div>
+                        <div class="pv-kv pv-kv-full">
+                            <span class="pv-kv-label">Attending Doctor</span>
+                            <span class="pv-kv-val">${escapeHtml(p.assigned_doctor || 'Unassigned')}</span>
+                        </div>
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Booking Type</span>
+                            <span class="pv-kv-val">${escapeHtml(bookingTypeLabel)} (${p.unscheduled_walkin ? 'Walk-in' : 'Online'})</span>
+                        </div>
+                        <div class="pv-kv">
+                            <span class="pv-kv-label">Referral Source</span>
+                            <span class="pv-kv-val">${escapeHtml(p.referral_source ? cleanDeptLabel(p.referral_source) : 'None')}</span>
                         </div>
                         ${p.previous_appointment_date ? `
-                        <div class="pv-info-row">
-                            <span class="pv-label">Previous Visit</span>
-                            <span class="pv-val" style="color:#0369a1; font-weight:700;">${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</span>
+                        <div class="pv-kv pv-kv-full">
+                            <span class="pv-kv-label">Previous Visit</span>
+                            <span class="pv-kv-val pv-kv-accent">${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' &bull; ' + escapeHtml(p.previous_appointment_time) : ''}</span>
                         </div>` : ''}
-                        <div class="pv-info-row">
-                            <span class="pv-label">Booking Type</span>
-                            <span class="pv-val">${escapeHtml(p.patient_type || 'N/A')} (${p.unscheduled_walkin ? 'Walk-in' : 'Online'})</span>
-                        </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Consultation Mode</span>
-                            <span class="pv-val">${escapeHtml(p.consultation_mode || 'In-Person')}</span>
-                        </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Doctor</span>
-                            <span class="pv-val">${escapeHtml(p.assigned_doctor || 'Unassigned')}</span>
-                        </div>
-                        <div class="pv-info-row">
-                            <span class="pv-label">Referral Source</span>
-                            <span class="pv-val">${escapeHtml(p.referral_source ? cleanDeptLabel(p.referral_source) : 'None')}</span>
-                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="pv-card">
                 <div class="pv-card-title">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                     <span>Medical Information &amp; Chief Complaint</span>
                 </div>
-                <div class="pv-text-block">${escapeHtml(p.chief_complaints || 'None listed')}</div>
-                <div class="pv-info-list" style="margin-top:10px;">
-                    <div class="pv-info-row">
-                        <span class="pv-label">Existing Medical Conditions</span>
-                        <span class="pv-val">${escapeHtml(p.existing_medical_conditions || 'None')}</span>
-                    </div>
-                    <div class="pv-info-row">
-                        <span class="pv-label">Current Medications</span>
-                        <span class="pv-val">${escapeHtml(p.current_medications || 'None')}</span>
-                    </div>
+                <div class="pv-complaint-box">
+                    <span class="pv-kv-label">Chief Complaint</span>
+                    <div class="pv-complaint-text">${escapeHtml(p.chief_complaints || 'None listed')}</div>
                 </div>
-                ${p.illness_description ? `<div class="pv-text-block" style="margin-top:8px;"><strong>Details:</strong> ${escapeHtml(p.illness_description)}</div>` : ''}
-                ${p.recommendation_remarks ? `<div class="pv-text-block" style="margin-top:8px;"><strong>Remarks:</strong> ${escapeHtml(p.recommendation_remarks)}</div>` : ''}
+                <div class="pv-kv-grid pv-kv-medical">
+                    <div class="pv-kv">
+                        <span class="pv-kv-label">Existing Medical Conditions</span>
+                        <span class="pv-kv-val">${escapeHtml(p.existing_medical_conditions || 'None')}</span>
+                    </div>
+                    <div class="pv-kv">
+                        <span class="pv-kv-label">Current Medications</span>
+                        <span class="pv-kv-val">${escapeHtml(p.current_medications || 'None')}</span>
+                    </div>
+                    ${p.illness_description ? `
+                    <div class="pv-kv pv-kv-full">
+                        <span class="pv-kv-label">Illness Details</span>
+                        <span class="pv-kv-val">${escapeHtml(p.illness_description)}</span>
+                    </div>` : ''}
+                    ${p.recommendation_remarks ? `
+                    <div class="pv-kv pv-kv-full">
+                        <span class="pv-kv-label">Remarks</span>
+                        <span class="pv-kv-val">${escapeHtml(p.recommendation_remarks)}</span>
+                    </div>` : ''}
+                </div>
             </div>
 
             ${(p.medical_history_diagnosis || p.medical_history_treatment || p.medical_history_prescription || p.active_medications || p.latest_progress_note) ? `
-            <div class="pv-card" style="margin-top:12px;">
+            <div class="pv-card pv-card-clinical">
                 <div class="pv-card-title">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                     <span>Clinical History &amp; Medical Notes</span>
                 </div>
-                <div class="pv-info-list">
-                    ${p.medical_history_diagnosis ? `<div class="pv-info-row"><span class="pv-label">Diagnosis</span><span class="pv-val"><strong>${escapeHtml(p.medical_history_diagnosis)}</strong></span></div>` : ''}
-                    ${p.medical_history_treatment ? `<div class="pv-info-row"><span class="pv-label">Treatment Plan</span><span class="pv-val">${escapeHtml(p.medical_history_treatment)}</span></div>` : ''}
-                    ${p.medical_history_prescription ? `<div class="pv-info-row"><span class="pv-label">Prescription</span><span class="pv-val">${escapeHtml(p.medical_history_prescription)}</span></div>` : ''}
-                    ${p.active_medications ? `<div class="pv-info-row"><span class="pv-label">Active Medications</span><span class="pv-val">${escapeHtml((() => { try { const v = typeof p.active_medications === 'string' && (p.active_medications.trim().startsWith('[') || p.active_medications.trim().startsWith('{')) ? JSON.parse(p.active_medications) : p.active_medications; const arr = Array.isArray(v) ? v : (v && typeof v === 'object' ? [v] : null); return arr ? arr.map(m => typeof m === 'string' ? m : ([m.name || m.medicine || '', m.dosage || ''].filter(Boolean).join(' — ') + (m.quantity ? ` (Qty: ${m.quantity})` : ''))).filter(Boolean).join('; ') : String(p.active_medications); } catch (e) { return String(p.active_medications); } })())}</span></div>` : ''}
-                    ${p.next_visit_date ? `<div class="pv-info-row"><span class="pv-label">Next Follow-Up</span><span class="pv-val"><strong>${escapeHtml(p.next_visit_date)}</strong></span></div>` : ''}
-                    ${p.latest_progress_note ? `<div class="pv-info-row"><span class="pv-label">Progress Note</span><span class="pv-val">${escapeHtml(p.latest_progress_note.note)}</span></div>` : ''}
+                <div class="pv-kv-grid">
+                    ${p.medical_history_diagnosis ? `
+                    <div class="pv-kv${p.next_visit_date ? '' : ' pv-kv-full'}">
+                        <span class="pv-kv-label">Diagnosis</span>
+                        <span class="pv-kv-val pv-kv-strong">${escapeHtml(p.medical_history_diagnosis)}</span>
+                    </div>` : ''}
+                    ${p.next_visit_date ? `
+                    <div class="pv-kv${p.medical_history_diagnosis ? '' : ' pv-kv-full'}">
+                        <span class="pv-kv-label">Next Follow-Up</span>
+                        <span class="pv-kv-val pv-kv-accent">${escapeHtml(p.next_visit_date)}</span>
+                    </div>` : ''}
+                    ${p.medical_history_treatment ? `
+                    <div class="pv-kv pv-kv-full">
+                        <span class="pv-kv-label">Treatment Plan</span>
+                        <span class="pv-kv-val">${escapeHtml(p.medical_history_treatment)}</span>
+                    </div>` : ''}
+                    ${p.medical_history_prescription ? `
+                    <div class="pv-kv pv-kv-full">
+                        <span class="pv-kv-label">Prescription</span>
+                        <span class="pv-kv-val">${escapeHtml(p.medical_history_prescription)}</span>
+                    </div>` : ''}
+                    ${activeMedsFormatted ? `
+                    <div class="pv-kv pv-kv-full">
+                        <span class="pv-kv-label">Active Medications</span>
+                        <span class="pv-kv-val">${escapeHtml(activeMedsFormatted)}</span>
+                    </div>` : ''}
+                    ${p.latest_progress_note ? `
+                    <div class="pv-kv pv-kv-full">
+                        <span class="pv-kv-label">Progress Note</span>
+                        <span class="pv-kv-val">${escapeHtml(p.latest_progress_note.note)}</span>
+                    </div>` : ''}
                 </div>
             </div>` : ''}
 
-            ${(() => {
-                const completedPrev = Array.isArray(p.previous_appointments)
-                    ? p.previous_appointments.filter(prev => (prev.status || '').toLowerCase() === 'completed')
-                    : [];
-                return completedPrev.length > 0 ? `
-            <div class="pv-card" style="margin-top:12px;">
+            ${completedPrev.length > 0 ? `
+            <div class="pv-card">
                 <div class="pv-card-title">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     <span>Previous Appointments History (${completedPrev.length})</span>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+                <div class="pv-history-list">
                     ${completedPrev.map(prev => `
-                        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:9px 12px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-                            <div>
-                                <div style="font-size:0.86rem; font-weight:700; color:#0f172a;">
-                                    ${escapeHtml(prev.date_formatted || prev.appointment_date)} &bull; <span style="color:#0369a1;">${escapeHtml(prev.time_formatted || '8:00 AM')}</span>
+                        <div class="pv-history-item">
+                            <div class="pv-history-main">
+                                <div class="pv-history-date">
+                                    ${escapeHtml(prev.date_formatted || prev.appointment_date)} <span class="pv-history-time">&bull; ${escapeHtml(prev.time_formatted || '8:00 AM')}</span>
                                 </div>
-                                <div style="font-size:0.78rem; color:#475569; margin-top:2px;">
+                                <div class="pv-history-meta">
                                     ${escapeHtml(cleanDeptLabel(prev.department || 'Clinic'))} &bull; ${escapeHtml(prev.assigned_doctor || 'Attending Physician')} (${escapeHtml(prev.patient_id)})
                                 </div>
-                                ${prev.diagnosis ? `<div style="font-size:0.78rem; color:#15803d; margin-top:2px;"><strong>Diagnosis:</strong> ${escapeHtml(prev.diagnosis)}</div>` : ''}
+                                ${prev.diagnosis ? `<div class="pv-history-dx"><strong>Diagnosis:</strong> ${escapeHtml(prev.diagnosis)}</div>` : ''}
                             </div>
-                            <span class="badge" style="font-size:0.68rem;">${escapeHtml((prev.status || '').toUpperCase())}</span>
+                            <span class="badge badge-blue pv-history-badge">${escapeHtml((prev.status || '').toUpperCase())}</span>
                         </div>
                     `).join('')}
                 </div>
-            </div>` : '';
-            })()}
+            </div>` : ''}
         `;
 
         if (actions) {
@@ -2158,17 +2572,25 @@ async function openPatientDetailsModal(patient_id) {
             } else if (p.status === 'transferred') {
                 statusBadge = 'badge-purple';
             }
+            window._lastAdminDetailPatient = p;
+            const allowSlip = Boolean(window.PatientSlip && window.PatientSlip.canGenerateSlip(p));
+            const slipKind = allowSlip ? window.PatientSlip.resolveSlipType(p) : 'appointment';
+            const slipBtnText = slipKind === 'followUp'
+                ? 'Print Follow-Up Slip'
+                : (slipKind === 'rescheduled' ? 'Print Rescheduled Slip' : 'Print Appointment Slip');
+            const printIconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>';
             actions.innerHTML = `
                 <div class="patient-modal-status-col">
                     <span class="badge ${statusBadge}">${escapeHtml(statusText)}</span>
                 </div>
                 <div class="patient-modal-btn-group">
                     <button type="button" class="btn btn-outline" onclick="closePatientDetailsModal()">Close</button>
+                    ${allowSlip ? `<button type="button" class="pv-btn-primary" onclick="openAdminPatientSlip()">${printIconSvg}<span>${slipBtnText}</span></button>` : ''}
                 </div>
             `;
         }
 
-    } catch(err) {
+    } catch (err) {
         console.error(err);
         body.innerHTML = '<p style="text-align:center; color:#ef4444; padding:24px 0;">Error fetching appointment details.</p>';
     }
@@ -2177,6 +2599,25 @@ async function openPatientDetailsModal(patient_id) {
 function closePatientDetailsModal() {
     const modal = document.getElementById('patientDetailsModal');
     if (modal) modal.classList.remove('show');
+}
+
+function openAdminPatientSlip() {
+    const p = window._lastAdminDetailPatient;
+    if (!p || !window.PatientSlip || !window.PatientSlip.canGenerateSlip(p)) return;
+    window.PatientSlip.openModal({
+        slipType: window.PatientSlip.resolveSlipType(p),
+        patientId: p.patient_id || p.reference_no || '',
+        patientName: p.full_name || '',
+        patientType: p.patient_type || 'New',
+        appointmentDate: p.appointment_date || '',
+        appointmentTime: p.preferred_time_slot || p.scheduled_time || '',
+        specialty: p.department || '',
+        consultType: p.consultation_nature || p.consultation_mode || 'Face-to-Face',
+        remarks: p.recommendation_remarks || p.chief_complaints || '',
+        encodedBy: p.medical_history_recorded_by || p.receiver || 'Admin',
+        attendedDate: p.medical_history_date || p.appointment_date || '',
+        nextVisitDate: p.next_visit_date || ''
+    });
 }
 
 function showStaffConfirmDialog({
@@ -2452,7 +2893,7 @@ async function executeVerificationStatus(patient_id, action, extraData = {}) {
         const payload = Object.assign({ action, patient_id }, extraData);
         const res = await fetch('/sdn/api/patients.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         }).then(r => r.json());
 
@@ -2470,8 +2911,8 @@ async function executeVerificationStatus(patient_id, action, extraData = {}) {
         } else {
             showToast(res.message || 'Operation failed', 'error');
         }
-    } catch(e) { 
-        console.error(e); 
+    } catch (e) {
+        console.error(e);
         showToast('Error updating patient status', 'error');
     }
 }
@@ -2530,7 +2971,7 @@ function promptResolveInquiry(patient_id, patientName) {
                 btn.disabled = false;
                 btn.textContent = 'Confirm Resolved';
             }
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             showToast('Server error while resolving inquiry.', 'error');
             btn.disabled = false;
@@ -2580,7 +3021,7 @@ function saveReadNotifIdSet(setObj) {
     try {
         const recent = Array.from(setObj).slice(-60);
         localStorage.setItem('sdn_admin_notif_read_ids', JSON.stringify(recent));
-    } catch (e) {}
+    } catch (e) { }
 }
 
 function markAllAdminNotificationsRead(e) {
@@ -2628,7 +3069,7 @@ function updateAdminNotifications(statsRes) {
 
     const items = [];
     const pendingAppts = parseInt(statsRes.pending_appointments, 10) || 0;
-    const pendingInq   = parseInt(statsRes.pending_inquiries, 10) || 0;
+    const pendingInq = parseInt(statsRes.pending_inquiries, 10) || 0;
     const pendingTotal = parseInt(statsRes.pending_actions, 10) || (pendingAppts + pendingInq);
     const unassignedUp = parseInt(statsRes.unassigned_upcoming, 10) || 0;
 
@@ -2841,13 +3282,13 @@ async function loadAudit() {
             allAuditLogs = res.data;
             filterAndSortAuditTable();
         }
-    } catch(e) { console.error('Error loading audit trail:', e); }
+    } catch (e) { console.error('Error loading audit trail:', e); }
 }
 function togglePasswordVisibility(inputId) {
     const input = document.getElementById(inputId);
     const icon = document.getElementById('eyeIcon-' + inputId);
     if (!input || !icon) return;
-    
+
     if (input.type === 'password') {
         input.type = 'text';
         icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
@@ -3030,7 +3471,7 @@ function printReports() {
             : (dateRaw || '—');
         const pillCls = p.readiness_state === 'ready' ? 'is-ready'
             : (p.readiness_state === 'in_clinic' ? 'is-info'
-            : (p.readiness_state === 'inquiry' ? 'is-inquiry' : 'is-warn'));
+                : (p.readiness_state === 'inquiry' ? 'is-inquiry' : 'is-warn'));
 
         return `
             <tr>
@@ -3306,149 +3747,483 @@ function applyCustomReportDateRange() {
     loadReports();
 }
 
-async function loadReports() {
-    const rangeLabels = {
-        today: 'Showing Consultation Report for Today',
-        past_7: 'Showing Consultation Report for the Past 7 Days',
-        past_30: 'Showing Consultation Report for the Past 30 Days',
-        past_month: 'Showing Consultation Report for the Past 1 Month',
-        custom: 'Showing Consultation Report for Selected Date Range',
-        all: 'Showing All Time Consultation Report'
-    };
-    const startVal = document.getElementById('reportStartDate')?.value || '';
-    const endVal = document.getElementById('reportEndDate')?.value || '';
-    const rangeLabelEl = document.getElementById('reportRangeLabel');
-    if (rangeLabelEl) {
-        const deptName = currentReportDept === 'all' ? 'All Departments' : formatDeptTitleCase(currentReportDept);
-        const customText = (startVal || endVal) ? ` (${startVal || '…'} to ${endVal || '…'})` : '';
-        rangeLabelEl.textContent = `${rangeLabels[currentReportRange] || rangeLabels.today}${customText} · ${deptName}`;
+// ── Streamlined Report Generation Dashboard ─────────────────────────────────
+const REPORT_GEN_SCHEMAS = {
+    diagnosis: {
+        label: 'Diagnosis',
+        columns: [
+            { key: 'date', label: 'Date', numeric: true },
+            { key: 'patient_name', label: 'Patient' },
+            { key: 'department', label: 'Department' },
+            { key: 'diagnosis', label: 'Diagnosis' },
+            { key: 'doctor_name', label: 'Attending Physician' }
+        ]
+    },
+    appointments: {
+        label: 'Appointments',
+        columns: [
+            { key: 'date', label: 'Date', numeric: true },
+            { key: 'reference_no', label: 'Ref No.', numeric: true },
+            { key: 'patient_name', label: 'Patient' },
+            { key: 'department', label: 'Department' },
+            { key: 'status', label: 'Status' }
+        ]
+    },
+    patients: {
+        label: 'Patients',
+        columns: [
+            { key: 'patient_id', label: 'Patient ID', numeric: true },
+            { key: 'full_name', label: 'Full Name' },
+            { key: 'gender', label: 'Gender' },
+            { key: 'age', label: 'Age', numeric: true },
+            { key: 'registered_at', label: 'Registered', numeric: true }
+        ]
+    },
+    doctors: {
+        label: 'Doctors',
+        columns: [
+            { key: 'name', label: 'Physician' },
+            { key: 'department', label: 'Department' },
+            { key: 'specialization', label: 'Specialization' },
+            { key: 'consultations_count', label: 'Consultations', numeric: true },
+            { key: 'status', label: 'Status' }
+        ]
+    },
+    medication: {
+        label: 'Medication',
+        columns: [
+            { key: 'date', label: 'Date', numeric: true },
+            { key: 'patient_name', label: 'Patient' },
+            { key: 'medication', label: 'Medication' },
+            { key: 'dosage', label: 'Dosage' },
+            { key: 'prescribed_by', label: 'Prescribed By' }
+        ]
+    }
+};
+
+let repGenActiveTab = 'appointments';
+let repGenRows = [];
+let repGenAbortCtrl = null;
+let repGenInitialized = false;
+
+function getLocalIsoDate(offsetDays = 0) {
+    const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000 + offsetDays * 86400000);
+    return d.toISOString().slice(0, 10);
+}
+
+let repGenLastQuery = null;
+
+function formatReportDateRangeLabel(fromVal, toVal) {
+    if (fromVal && toVal) return `${fromVal} to ${toVal}`;
+    if (fromVal) return `From ${fromVal}`;
+    if (toVal) return `Up to ${toVal}`;
+    return 'All dates';
+}
+
+function initReportGenDates() {
+    const fromEl = document.getElementById('repGenFrom');
+    const toEl = document.getElementById('repGenTo');
+    if (!fromEl || !toEl) return;
+    const today = getLocalIsoDate(0);
+    const allowFuture = repGenActiveTab === 'appointments';
+    if (allowFuture) {
+        fromEl.removeAttribute('max');
+        toEl.removeAttribute('max');
+    } else {
+        fromEl.max = today;
+        toEl.max = today;
+        if (fromEl.value && fromEl.value > today) fromEl.value = today;
+        if (toEl.value && toEl.value > today) toEl.value = today;
+    }
+    if (fromEl.value && toEl.value && fromEl.value > toEl.value) {
+        fromEl.value = toEl.value;
+    }
+}
+
+function renderReportGenHeaders() {
+    const schema = REPORT_GEN_SCHEMAS[repGenActiveTab] || REPORT_GEN_SCHEMAS.appointments;
+    const thead = document.getElementById('repGenThead');
+    const titleEl = document.getElementById('repGenTableTitle');
+    if (titleEl) titleEl.textContent = `${schema.label} Report`;
+    if (thead) {
+        thead.innerHTML = `<tr>${schema.columns.map(c => `<th scope="col">${escapeHtml(c.label)}</th>`).join('')}</tr>`;
+    }
+}
+
+function renderReportGenRows(loading = false) {
+    const schema = REPORT_GEN_SCHEMAS[repGenActiveTab] || REPORT_GEN_SCHEMAS.appointments;
+    const tbody = document.getElementById('repGenTbody');
+    const metaEl = document.getElementById('repGenTableMeta');
+    const printBtn = document.getElementById('btnRepGenPrint');
+    const exportBtn = document.getElementById('btnRepGenExport');
+    const fromVal = repGenLastQuery ? repGenLastQuery.from : (document.getElementById('repGenFrom')?.value || '');
+    const toVal = repGenLastQuery ? repGenLastQuery.to : (document.getElementById('repGenTo')?.value || '');
+
+    if (metaEl) {
+        const countText = `${repGenRows.length} ${repGenRows.length === 1 ? 'record' : 'records'}`;
+        const rangeLabel = formatReportDateRangeLabel(fromVal, toVal);
+        metaEl.textContent = loading ? `Loading ${schema.label.toLowerCase()} records…` : `${rangeLabel} · ${countText}`;
+    }
+    const hasRows = !loading && repGenRows.length > 0;
+    if (printBtn) printBtn.disabled = !hasRows;
+    if (exportBtn) exportBtn.disabled = !hasRows;
+
+    if (!tbody) return;
+    if (loading) {
+        tbody.innerHTML = `<tr><td colspan="${schema.columns.length}" class="repgen-empty">Loading ${escapeHtml(schema.label.toLowerCase())} records…</td></tr>`;
+        return;
+    }
+    if (!repGenRows.length) {
+        tbody.innerHTML = `<tr><td colspan="${schema.columns.length}" class="repgen-empty">No ${escapeHtml(schema.label.toLowerCase())} records found for the selected filters.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = repGenRows.map(row => `
+        <tr>
+            ${schema.columns.map(col => `<td class="${col.numeric ? 'is-num' : ''}">${escapeHtml(row[col.key] ?? '—')}</td>`).join('')}
+        </tr>
+    `).join('');
+}
+
+function setReportGenError(msg) {
+    const errEl = document.getElementById('repGenError');
+    if (!errEl) return;
+    errEl.textContent = msg || '';
+    errEl.hidden = !msg;
+}
+
+function selectReportCategory(tab) {
+    if (!REPORT_GEN_SCHEMAS[tab]) return;
+    repGenActiveTab = tab;
+    document.querySelectorAll('#repGenTabs .repgen-tab').forEach(btn => {
+        const isActive = btn.dataset.category === tab;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    initReportGenDates();
+    renderReportGenHeaders();
+    generateCategoryReport();
+}
+
+async function generateCategoryReport(e, silent = false) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    initReportGenDates();
+
+    const fromVal = (document.getElementById('repGenFrom')?.value || '').trim();
+    const toVal = (document.getElementById('repGenTo')?.value || '').trim();
+    const deptVal = (document.getElementById('repGenDept')?.value || '').trim();
+    const genBtn = document.getElementById('btnGenerateReport');
+    const refreshBtn = document.getElementById('btnRefreshReport');
+    const today = getLocalIsoDate(0);
+    const allowFuture = repGenActiveTab === 'appointments';
+
+    if (fromVal && toVal && fromVal > toVal) {
+        if (!silent) setReportGenError('From date cannot be later than To date.');
+        return;
+    }
+    if (!allowFuture && ((fromVal && fromVal > today) || (toVal && toVal > today))) {
+        if (!silent) setReportGenError('Select a valid past or current date range.');
+        return;
+    }
+
+    if (!silent) setReportGenError('');
+    if (repGenAbortCtrl) repGenAbortCtrl.abort();
+    repGenAbortCtrl = new AbortController();
+
+    renderReportGenHeaders();
+    if (!silent) {
+        renderReportGenRows(true);
+        if (genBtn) {
+            genBtn.disabled = true;
+            genBtn.setAttribute('aria-busy', 'true');
+            genBtn.textContent = 'Generating…';
+        }
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.classList.add('is-spinning');
+            refreshBtn.setAttribute('aria-busy', 'true');
+        }
     }
 
     try {
-        let url = `/sdn/api/reports.php?range=${encodeURIComponent(currentReportRange)}&department=${encodeURIComponent(currentReportDept)}&_=${Date.now()}`;
-        if (startVal) url += `&start_date=${encodeURIComponent(startVal)}`;
-        if (endVal) url += `&end_date=${encodeURIComponent(endVal)}`;
-        const res = await fetch(url).then(r => r.json());
+        const params = new URLSearchParams({
+            category: repGenActiveTab,
+            _: String(Date.now())
+        });
+        if (fromVal) params.set('from', fromVal);
+        if (toVal) params.set('to', toVal);
+        if (deptVal) params.set('department', deptVal);
 
-        const repData = res.data || res;
-        if (!res.success || !repData || !repData.summary) {
+        const res = await fetch(`/sdn/api/reports.php?${params.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: repGenAbortCtrl.signal
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+            throw new Error(json.message || `Request failed (${res.status})`);
+        }
+        repGenRows = Array.isArray(json.data) ? json.data : [];
+        repGenLastQuery = {
+            category: json.category || repGenActiveTab,
+            from: json.from ?? fromVal,
+            to: json.to ?? toVal,
+            department: deptVal
+        };
+        renderReportGenRows(false);
+    } catch (err) {
+        if (err.name === 'AbortError') return;
+        if (!silent) {
+            repGenRows = [];
+            renderReportGenRows(false);
+            setReportGenError(err.message || 'Unable to load report data.');
+        }
+    } finally {
+        if (!silent) {
+            if (genBtn) {
+                genBtn.disabled = false;
+                genBtn.removeAttribute('aria-busy');
+                genBtn.textContent = 'Generate Report';
+            }
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('is-spinning');
+                refreshBtn.removeAttribute('aria-busy');
+            }
+        }
+    }
+}
+
+function exportCategoryExcel() {
+    if (!repGenRows.length) return;
+    const q = repGenLastQuery || {
+        category: repGenActiveTab,
+        from: (document.getElementById('repGenFrom')?.value || '').trim(),
+        to: (document.getElementById('repGenTo')?.value || '').trim(),
+        department: (document.getElementById('repGenDept')?.value || '').trim()
+    };
+    const params = new URLSearchParams({
+        category: q.category,
+        export_excel: '1'
+    });
+    if (q.from) params.set('from', q.from);
+    if (q.to) params.set('to', q.to);
+    if (q.department) params.set('department', q.department);
+    const a = document.createElement('a');
+    a.href = `/sdn/api/reports.php?${params.toString()}`;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast(`Exporting ${REPORT_GEN_SCHEMAS[q.category].label} report…`);
+}
+
+function printCategoryReport() {
+    if (!repGenRows.length) return;
+    const q = repGenLastQuery || {
+        category: repGenActiveTab,
+        from: document.getElementById('repGenFrom')?.value || '',
+        to: document.getElementById('repGenTo')?.value || '',
+        department: document.getElementById('repGenDept')?.value || ''
+    };
+    const schema = REPORT_GEN_SCHEMAS[q.category] || REPORT_GEN_SCHEMAS.appointments;
+    const rangeLabel = formatReportDateRangeLabel(q.from, q.to);
+    const deptVal = q.department || 'All Departments';
+    const sealUrl = window.location.origin + '/sdn/public/assets/mmwgh_logo.png';
+    const generatedAt = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+    const headCells = schema.columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('');
+    const bodyRows = repGenRows.map(r =>
+        `<tr>${schema.columns.map(c => `<td>${escapeHtml(r[c.key] ?? '—')}</td>`).join('')}</tr>`
+    ).join('');
+
+    const win = window.open('', '_blank', 'width=960,height=720');
+    if (!win) {
+        window.print();
+        return;
+    }
+    win.document.write(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${escapeHtml(schema.label)} Report | MMWGH</title>
+        <style>
+            body{font-family:Inter,-apple-system,sans-serif;color:#111827;margin:28px;}
+            .hd{display:flex;align-items:center;gap:14px;border-bottom:2px solid #166534;padding-bottom:12px;margin-bottom:16px;}
+            .hd img{width:46px;height:46px;object-fit:contain;}
+            .hd h1{font-size:16px;margin:0;color:#14532d;}
+            .hd p{font-size:12px;margin:3px 0 0;color:#4b5563;}
+            table{width:100%;border-collapse:collapse;font-size:12px;}
+            th{text-align:left;padding:8px 10px;background:#f3f4f6;border-bottom:1px solid #d1d5db;font-size:11px;text-transform:uppercase;color:#374151;}
+            td{padding:8px 10px;border-bottom:1px solid #e5e7eb;}
+            tbody tr:nth-child(even){background:#f9fafb;}
+            @media print{body{margin:12mm;}}
+        </style></head><body>
+        <div class="hd">
+            <img src="${sealUrl}" alt="MMWGH">
+            <div>
+                <h1>MARIVELES MENTAL WELLNESS AND GENERAL HOSPITAL — ${escapeHtml(schema.label.toUpperCase())} REPORT</h1>
+                <p>Date Range: ${escapeHtml(rangeLabel)} &middot; Department: ${escapeHtml(deptVal)} &middot; ${repGenRows.length} records &middot; Generated ${escapeHtml(generatedAt)}</p>
+            </div>
+        </div>
+        <table><thead><tr>${headCells}</tr></thead><tbody>${bodyRows}</tbody></table>
+        <script>window.onload=function(){window.print();};<\/script>
+    </body></html>`);
+    win.document.close();
+}
+
+async function loadReports(silent = false) {
+    if (!document.getElementById('repGenForm')) return;
+    initReportGenDates();
+    if (!repGenInitialized) {
+        repGenInitialized = true;
+        renderReportGenHeaders();
+    }
+    await generateCategoryReport(null, silent);
+}
+
+window.selectReportCategory = selectReportCategory;
+window.generateCategoryReport = generateCategoryReport;
+window.exportCategoryExcel = exportCategoryExcel;
+window.printCategoryReport = printCategoryReport;
+
+    async function _legacyLoadReports() {
+        const rangeLabels = {
+            today: 'Showing Consultation Report for Today',
+            past_7: 'Showing Consultation Report for the Past 7 Days',
+            past_30: 'Showing Consultation Report for the Past 30 Days',
+            past_month: 'Showing Consultation Report for the Past 1 Month',
+            custom: 'Showing Consultation Report for Selected Date Range',
+            all: 'Showing All Time Consultation Report'
+        };
+        const startVal = document.getElementById('reportStartDate')?.value || '';
+        const endVal = document.getElementById('reportEndDate')?.value || '';
+        const rangeLabelEl = document.getElementById('reportRangeLabel');
+        if (rangeLabelEl) {
+            const deptName = currentReportDept === 'all' ? 'All Departments' : formatDeptTitleCase(currentReportDept);
+            const customText = (startVal || endVal) ? ` (${startVal || '…'} to ${endVal || '…'})` : '';
+            rangeLabelEl.textContent = `${rangeLabels[currentReportRange] || rangeLabels.today}${customText} · ${deptName}`;
+        }
+
+        try {
+            let url = `/sdn/api/reports.php?range=${encodeURIComponent(currentReportRange)}&department=${encodeURIComponent(currentReportDept)}&_=${Date.now()}`;
+            if (startVal) url += `&start_date=${encodeURIComponent(startVal)}`;
+            if (endVal) url += `&end_date=${encodeURIComponent(endVal)}`;
+            const res = await fetch(url).then(r => r.json());
+
+            const repData = res.data || res;
+            if (!res.success || !repData || !repData.summary) {
+                const tbody = document.getElementById('reportUpcomingTbody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="modern-table-empty" style="color:#ef4444;">Failed to load reports data.</td></tr>';
+                }
+                return;
+            }
+
+            cachedReportsData = repData;
+            const summary = repData.summary || {};
+            const depts = repData.departments || [];
+            const chartSeries = repData.chart_series || [];
+
+            // Update 4 Consultation Report KPI Cards (Patients, Doctors, Completed, Medications)
+            const setEl = (id, text) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = text;
+            };
+
+            setEl('repKpiTotal', Number(summary.total_patients || 0).toLocaleString());
+            setEl('repKpiSubTotal', `${summary.total_online || 0} online · ${summary.total_walkin || 0} walk-in / unscheduled`);
+
+            setEl('repKpiReady', Number(summary.total_doctors_active || 0).toLocaleString());
+            setEl('repKpiSubReady', 'Active doctors with consultations');
+
+            setEl('repKpiCompleted', Number(summary.total_completed || 0).toLocaleString());
+            setEl('repKpiSubCompleted', `${summary.completion_rate_text || '0%'} completion rate`);
+
+            setEl('repKpiNoshow', Number(summary.total_medications_prescribed || 0).toLocaleString());
+            setEl('repKpiSubNoshow', 'Total prescriptions logged');
+
+            setEl('reportLastUpdated', `Updated: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+
+            const chartTitleEl = document.getElementById('repChartTitle');
+            if (chartTitleEl) {
+                chartTitleEl.textContent = currentReportRange === 'all'
+                    ? 'Appointments by Month'
+                    : 'Appointments by Day';
+            }
+
+            renderReportsAnalyticsChart(chartSeries);
+            renderUpcomingPatientsTable();
+        } catch (e) {
+            console.error('Error fetching reports:', e);
             const tbody = document.getElementById('reportUpcomingTbody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="6" class="modern-table-empty" style="color:#ef4444;">Failed to load reports data.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="modern-table-empty" style="color:#ef4444;">Error connecting to reports server.</td></tr>';
             }
-            return;
-        }
-
-        cachedReportsData = repData;
-        const summary = repData.summary || {};
-        const depts = repData.departments || [];
-        const chartSeries = repData.chart_series || [];
-
-        // Update 4 Consultation Report KPI Cards (Patients, Doctors, Completed, Medications)
-        const setEl = (id, text) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = text;
-        };
-
-        setEl('repKpiTotal', Number(summary.total_patients || 0).toLocaleString());
-        setEl('repKpiSubTotal', `${summary.total_online || 0} online · ${summary.total_walkin || 0} walk-in / unscheduled`);
-
-        setEl('repKpiReady', Number(summary.total_doctors_active || 0).toLocaleString());
-        setEl('repKpiSubReady', 'Active doctors with consultations');
-
-        setEl('repKpiCompleted', Number(summary.total_completed || 0).toLocaleString());
-        setEl('repKpiSubCompleted', `${summary.completion_rate_text || '0%'} completion rate`);
-
-        setEl('repKpiNoshow', Number(summary.total_medications_prescribed || 0).toLocaleString());
-        setEl('repKpiSubNoshow', 'Total prescriptions logged');
-
-        setEl('reportLastUpdated', `Updated: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
-
-        const chartTitleEl = document.getElementById('repChartTitle');
-        if (chartTitleEl) {
-            chartTitleEl.textContent = currentReportRange === 'all'
-                ? 'Appointments by Month'
-                : 'Appointments by Day';
-        }
-
-        renderReportsAnalyticsChart(chartSeries);
-        renderUpcomingPatientsTable();
-    } catch (e) {
-        console.error('Error fetching reports:', e);
-        const tbody = document.getElementById('reportUpcomingTbody');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="6" class="modern-table-empty" style="color:#ef4444;">Error connecting to reports server.</td></tr>';
         }
     }
-}
 
-function renderReportsAnalyticsChart(chartSeries) {
-    const canvas = document.getElementById('reportsAnalyticsChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    function renderReportsAnalyticsChart(chartSeries) {
+        const canvas = document.getElementById('reportsAnalyticsChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
 
-    if (reportsAnalyticsChartInstance) {
-        reportsAnalyticsChartInstance.destroy();
-    }
+        if (reportsAnalyticsChartInstance) {
+            reportsAnalyticsChartInstance.destroy();
+        }
 
-    const series = (chartSeries && chartSeries.length > 0)
-        ? chartSeries
-        : [{ label: 'No Scheduled Visits', general: 0, neurology: 0, psychiatry: 0 }];
+        const series = (chartSeries && chartSeries.length > 0)
+            ? chartSeries
+            : [{ label: 'No Scheduled Visits', general: 0, neurology: 0, psychiatry: 0 }];
 
-    const labels = series.map(s => s.label);
-    const totalData = series.map(s => Number(s.general || 0) + Number(s.neurology || 0) + Number(s.psychiatry || 0));
+        const labels = series.map(s => s.label);
+        const totalData = series.map(s => Number(s.general || 0) + Number(s.neurology || 0) + Number(s.psychiatry || 0));
 
-    reportsAnalyticsChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Appointments',
-                    data: totalData,
-                    backgroundColor: '#15803d',
-                    borderRadius: 6,
-                    maxBarThickness: 40
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: false }
+        reportsAnalyticsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Appointments',
+                        data: totalData,
+                        backgroundColor: '#15803d',
+                        borderRadius: 6,
+                        maxBarThickness: 40
+                    }
+                ]
             },
-            scales: {
-                x: {
-                    ticks: { color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '500' } },
-                    grid: { display: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false }
                 },
-                y: {
-                    beginAtZero: true,
-                    ticks: { precision: 0, color: '#64748b' },
-                    grid: { color: '#f1f5f9' }
+                scales: {
+                    x: {
+                        ticks: { color: '#475569', font: { family: "'Inter', sans-serif", size: 11, weight: '500' } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, color: '#64748b' },
+                        grid: { color: '#f1f5f9' }
+                    }
                 }
             }
-        }
-    });
-}
+        });
+    }
 
-function renderReportReadinessPanel(summary) {
-    const body = document.getElementById('reportReadinessBody');
-    if (!body) return;
+    function renderReportReadinessPanel(summary) {
+        const body = document.getElementById('reportReadinessBody');
+        if (!body) return;
 
-    const morning = Number(summary.morning_count || 0);
-    const afternoon = Number(summary.afternoon_count || 0);
-    const shiftTotal = morning + afternoon;
-    const mPct = shiftTotal > 0 ? Math.round((morning / shiftTotal) * 100) : 50;
-    const aPct = shiftTotal > 0 ? (100 - mPct) : 50;
+        const morning = Number(summary.morning_count || 0);
+        const afternoon = Number(summary.afternoon_count || 0);
+        const shiftTotal = morning + afternoon;
+        const mPct = shiftTotal > 0 ? Math.round((morning / shiftTotal) * 100) : 50;
+        const aPct = shiftTotal > 0 ? (100 - mPct) : 50;
 
-    const upcomingTotal = Number(summary.total_upcoming || 0);
-    const assignedCount = Number(summary.assigned_doctor_count || 0);
-    const docPct = upcomingTotal > 0 ? Math.round((assignedCount / upcomingTotal) * 100) : 0;
+        const upcomingTotal = Number(summary.total_upcoming || 0);
+        const assignedCount = Number(summary.assigned_doctor_count || 0);
+        const docPct = upcomingTotal > 0 ? Math.round((assignedCount / upcomingTotal) * 100) : 0;
 
-    body.innerHTML = `
+        body.innerHTML = `
         <div class="rep-metric-block">
             <div class="rep-metric-head">
                 <span>Time Block Balance</span>
@@ -3489,47 +4264,47 @@ function renderReportReadinessPanel(summary) {
             </div>
         </div>
     `;
-}
-
-function renderUpcomingPatientsTable() {
-    const tbody = document.getElementById('reportUpcomingTbody');
-    if (!tbody) return;
-
-    const rawList = (cachedReportsData && Array.isArray(cachedReportsData.upcoming_patients))
-        ? cachedReportsData.upcoming_patients
-        : [];
-    const q = (document.getElementById('reportSearchInput')?.value || '').trim().toLowerCase();
-
-    const searched = q
-        ? rawList.filter(p =>
-            (p.full_name || '').toLowerCase().includes(q) ||
-            (p.patient_id || '').toLowerCase().includes(q) ||
-            (p.assigned_doctor || '').toLowerCase().includes(q) ||
-            (p.normalized_department || p.department || '').toLowerCase().includes(q)
-        )
-        : rawList;
-
-    const list = searched;
-
-    if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="modern-table-empty">No appointments match the selected filters.</td></tr>';
-        return;
     }
 
-    tbody.innerHTML = list.map(p => {
-        const isInquiry = p.readiness_state === 'inquiry';
-        const timeText = p.time_block === 'Afternoon' ? 'Afternoon (1PM–5PM)' : 'Morning (8AM–12PM)';
-        const typeLabel = isInquiry ? 'Inquiry' : (p.is_walkin ? 'Walk-in' : 'Online');
-        const docText = isInquiry
-            ? 'General Inquiry'
-            : (p.assigned_doctor && p.assigned_doctor !== 'None' ? escapeHtml(p.assigned_doctor) : '<span style="color:#b45309;font-weight:600;">Unassigned</span>');
+    function renderUpcomingPatientsTable() {
+        const tbody = document.getElementById('reportUpcomingTbody');
+        if (!tbody) return;
 
-        const pillCls = p.readiness_state === 'ready' ? 'is-ready'
-            : (p.readiness_state === 'in_clinic' ? 'is-info'
-            : (p.readiness_state === 'inquiry' ? 'is-inquiry' : 'is-warn'));
+        const rawList = (cachedReportsData && Array.isArray(cachedReportsData.upcoming_patients))
+            ? cachedReportsData.upcoming_patients
+            : [];
+        const q = (document.getElementById('reportSearchInput')?.value || '').trim().toLowerCase();
 
-        const safeId = escapeHtml(p.patient_id);
-        return `
+        const searched = q
+            ? rawList.filter(p =>
+                (p.full_name || '').toLowerCase().includes(q) ||
+                (p.patient_id || '').toLowerCase().includes(q) ||
+                (p.assigned_doctor || '').toLowerCase().includes(q) ||
+                (p.normalized_department || p.department || '').toLowerCase().includes(q)
+            )
+            : rawList;
+
+        const list = searched;
+
+        if (!list.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="modern-table-empty">No appointments match the selected filters.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = list.map(p => {
+            const isInquiry = p.readiness_state === 'inquiry';
+            const timeText = p.time_block === 'Afternoon' ? 'Afternoon (1PM–5PM)' : 'Morning (8AM–12PM)';
+            const typeLabel = isInquiry ? 'Inquiry' : (p.is_walkin ? 'Walk-in' : 'Online');
+            const docText = isInquiry
+                ? 'General Inquiry'
+                : (p.assigned_doctor && p.assigned_doctor !== 'None' ? escapeHtml(p.assigned_doctor) : '<span style="color:#b45309;font-weight:600;">Unassigned</span>');
+
+            const pillCls = p.readiness_state === 'ready' ? 'is-ready'
+                : (p.readiness_state === 'in_clinic' ? 'is-info'
+                    : (p.readiness_state === 'inquiry' ? 'is-inquiry' : 'is-warn'));
+
+            const safeId = escapeHtml(p.patient_id);
+            return `
             <tr class="clickable-row" onclick="openPatientDetailsModal('${safeId}')" title="Click to view patient details">
                 <td>${formatStackedDate(p.record_date || p.appointment_date, timeText)}</td>
                 <td>
@@ -3541,18 +4316,18 @@ function renderUpcomingPatientsTable() {
                 <td><span class="rep-readiness-pill ${pillCls}">${escapeHtml(p.readiness_label || 'Pending')}</span></td>
             </tr>
         `;
-    }).join('');
-}
-
-function renderDepartmentsSummaryTable(depts) {
-    const tbody = document.getElementById('reportDeptsTbody');
-    if (!tbody) return;
-    if (!depts || !depts.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="modern-table-empty">No department summary available.</td></tr>';
-        return;
+        }).join('');
     }
 
-    tbody.innerHTML = depts.map(d => `
+    function renderDepartmentsSummaryTable(depts) {
+        const tbody = document.getElementById('reportDeptsTbody');
+        if (!tbody) return;
+        if (!depts || !depts.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="modern-table-empty">No department summary available.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = depts.map(d => `
         <tr>
             <td><span class="table-dept-tag">${escapeHtml(cleanDeptLabel(d.name))}</span></td>
             <td><strong>${Number(d.upcoming || 0)}</strong></td>
@@ -3562,20 +4337,20 @@ function renderDepartmentsSummaryTable(depts) {
             <td>${Number(d.completed || 0)} (${d.completion_rate || 0}%)</td>
         </tr>
     `).join('');
-}
-
-function renderDailyReportsTable(dailyList) {
-    const tbody = document.getElementById('reportDailyTbody');
-    if (!tbody) return;
-
-    if (!dailyList || dailyList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="modern-table-empty">No daily records found for the selected filter range.</td></tr>';
-        return;
     }
 
-    tbody.innerHTML = dailyList.map(item => {
-        const dName = cleanDeptLabel(item.department || '');
-        return `
+    function renderDailyReportsTable(dailyList) {
+        const tbody = document.getElementById('reportDailyTbody');
+        if (!tbody) return;
+
+        if (!dailyList || dailyList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="modern-table-empty">No daily records found for the selected filter range.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = dailyList.map(item => {
+            const dName = cleanDeptLabel(item.department || '');
+            return `
             <tr>
                 <td>${formatStackedDate(item.date || item.formatted_date)}</td>
                 <td><span class="table-dept-tag">${escapeHtml(dName)}</span></td>
@@ -3586,21 +4361,21 @@ function renderDailyReportsTable(dailyList) {
                 <td><span class="rep-readiness-pill is-ready">${item.completion_rate}%</span></td>
             </tr>
         `;
-    }).join('');
-}
-
-function renderMonthlyReportsTable(monthlyList) {
-    const tbody = document.getElementById('reportMonthlyTbody');
-    if (!tbody) return;
-
-    if (!monthlyList || monthlyList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="modern-table-empty">No monthly records found for the selected filter range.</td></tr>';
-        return;
+        }).join('');
     }
 
-    tbody.innerHTML = monthlyList.map(item => {
-        const dName = cleanDeptLabel(item.department || '');
-        return `
+    function renderMonthlyReportsTable(monthlyList) {
+        const tbody = document.getElementById('reportMonthlyTbody');
+        if (!tbody) return;
+
+        if (!monthlyList || monthlyList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="modern-table-empty">No monthly records found for the selected filter range.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = monthlyList.map(item => {
+            const dName = cleanDeptLabel(item.department || '');
+            return `
             <tr>
                 <td><strong>${escapeHtml(item.month_label || item.month)}</strong></td>
                 <td><span class="table-dept-tag">${escapeHtml(dName)}</span></td>
@@ -3611,67 +4386,67 @@ function renderMonthlyReportsTable(monthlyList) {
                 <td><span class="rep-readiness-pill is-ready">${item.completion_rate}%</span></td>
             </tr>
         `;
-    }).join('');
-}
-
-function titleStatus(value) {
-    const raw = String(value || '').replace(/[_-]+/g, ' ').trim().toLowerCase();
-    if (!raw) return '';
-    return raw.replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatStackedDate(dateStr, timeStr) {
-    if (!dateStr) return '<div class="date-stack-sub">—</div>';
-    const raw = String(dateStr).trim();
-    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    const d = iso ? new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00`) : new Date(raw);
-    if (isNaN(d.getTime())) {
-        return `<div class="date-stack-main">${escapeHtml(raw)}</div>`;
+        }).join('');
     }
-    const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    let timeLabel = '';
-    if (timeStr) {
-        const parts = String(timeStr).split(':');
-        const hour = parseInt(parts[0], 10);
-        if (parts.length >= 2 && !isNaN(hour)) {
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const h12 = hour % 12 || 12;
-            timeLabel = `${h12}:${parts[1]} ${ampm}`;
-        } else {
-            timeLabel = String(timeStr);
+
+    function titleStatus(value) {
+        const raw = String(value || '').replace(/[_-]+/g, ' ').trim().toLowerCase();
+        if (!raw) return '';
+        return raw.replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function formatStackedDate(dateStr, timeStr) {
+        if (!dateStr) return '<div class="date-stack-sub">—</div>';
+        const raw = String(dateStr).trim();
+        const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        const d = iso ? new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00`) : new Date(raw);
+        if (isNaN(d.getTime())) {
+            return `<div class="date-stack-main">${escapeHtml(raw)}</div>`;
         }
+        const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        let timeLabel = '';
+        if (timeStr) {
+            const parts = String(timeStr).split(':');
+            const hour = parseInt(parts[0], 10);
+            if (parts.length >= 2 && !isNaN(hour)) {
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const h12 = hour % 12 || 12;
+                timeLabel = `${h12}:${parts[1]} ${ampm}`;
+            } else {
+                timeLabel = String(timeStr);
+            }
+        }
+        return `<div class="date-stack-main">${escapeHtml(monthDay)}</div><div class="date-stack-sub">${d.getFullYear()}${timeLabel ? ' · ' + escapeHtml(timeLabel) : ''}</div>`;
     }
-    return `<div class="date-stack-main">${escapeHtml(monthDay)}</div><div class="date-stack-sub">${d.getFullYear()}${timeLabel ? ' · ' + escapeHtml(timeLabel) : ''}</div>`;
-}
 
-function formatStackedTimestamp(ts) {
-    if (!ts) return '<div class="date-stack-sub">—</div>';
-    const d = new Date(String(ts).replace(' ', 'T'));
-    if (isNaN(d.getTime())) return `<div class="date-stack-main">${escapeHtml(String(ts))}</div>`;
-    const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    return `<div class="date-stack-main">${monthDay}</div><div class="date-stack-sub">${d.getFullYear()} · ${time}</div>`;
-}
+    function formatStackedTimestamp(ts) {
+        if (!ts) return '<div class="date-stack-sub">—</div>';
+        const d = new Date(String(ts).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return `<div class="date-stack-main">${escapeHtml(String(ts))}</div>`;
+        const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        return `<div class="date-stack-main">${monthDay}</div><div class="date-stack-sub">${d.getFullYear()} · ${time}</div>`;
+    }
 
-window.toggleRowMenu = function(event, btn) {
-    event.preventDefault();
-    event.stopPropagation();
-    const pop = btn.parentElement.querySelector('.row-menu-pop');
-    if (!pop) return;
-    const willOpen = !pop.classList.contains('open');
-    document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
-    document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
-    if (!willOpen) return;
-    const rect = btn.getBoundingClientRect();
-    pop.style.position = 'fixed';
-    pop.style.top = (rect.bottom + 6) + 'px';
-    pop.style.left = Math.max(8, rect.right - 176) + 'px';
-    pop.classList.add('open');
-    btn.setAttribute('aria-expanded', 'true');
-};
+    window.toggleRowMenu = function (event, btn) {
+        event.preventDefault();
+        event.stopPropagation();
+        const pop = btn.parentElement.querySelector('.row-menu-pop');
+        if (!pop) return;
+        const willOpen = !pop.classList.contains('open');
+        document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
+        if (!willOpen) return;
+        const rect = btn.getBoundingClientRect();
+        pop.style.position = 'fixed';
+        pop.style.top = (rect.bottom + 6) + 'px';
+        pop.style.left = Math.max(8, rect.right - 176) + 'px';
+        pop.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+    };
 
-document.addEventListener('click', () => {
-    document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
-    document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
-});
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.row-menu-pop.open').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.row-menu-btn[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
+    });
 

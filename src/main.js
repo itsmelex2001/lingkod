@@ -6,6 +6,9 @@ import SchedulesApp from './SchedulesApp.svelte'
 import NewPatientRegistrationApp from './NewPatientRegistrationApp.svelte'
 import BookingSelectionModal from './components/booking/BookingSelectionModal.svelte'
 import PatientDashboardApp from './PatientDashboardApp.svelte'
+import PatientLoginOtp from './components/auth/PatientLoginOtp.svelte'
+import AdminSettingsPage from './components/admin/settings/AdminSettingsPage.svelte'
+import UserManagementPage from './components/admin/users/UserManagementPage.svelte'
 
 if (document.getElementById('app')) {
   const app = mount(App, {
@@ -50,6 +53,37 @@ if (document.getElementById('patient-dashboard-app')) {
     props: {
       patientName: patientDashboardEl.dataset.patientName || '',
       patientId: patientDashboardEl.dataset.patientId || ''
+    }
+  })
+}
+
+if (document.getElementById('patient-login-otp-app')) {
+  const el = document.getElementById('patient-login-otp-app');
+  mount(PatientLoginOtp, {
+    target: el,
+    props: {
+      apiBase: el.dataset.apiBase || '/sdn/api',
+      useLaravelApi: el.dataset.useLaravelApi === 'true'
+    }
+  })
+}
+
+if (document.getElementById('admin-settings-app')) {
+  const el = document.getElementById('admin-settings-app');
+  mount(AdminSettingsPage, {
+    target: el,
+    props: {
+      apiBase: el.dataset.apiBase || '/sdn/api',
+    }
+  })
+}
+
+if (document.getElementById('admin-users-app')) {
+  const el = document.getElementById('admin-users-app');
+  mount(UserManagementPage, {
+    target: el,
+    props: {
+      apiBase: el.dataset.apiBase || '/sdn/api/admin-users-router.php',
     }
   })
 }

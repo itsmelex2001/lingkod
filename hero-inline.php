@@ -14,7 +14,6 @@
         </h2>
       </div>
       
-      <!-- Authentic Avallon Alt brush script -->
       <img src="/sdn/public/assets/lingkod_brush.png?v=<?= time() ?>" alt="Lingkod" class="lingkod-brush-inline" />
     </div>
 
@@ -122,7 +121,6 @@
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65), 1px 2px 3px rgba(0, 0, 0, 0.5);
   }
 
-  /* Authentic Avallon Alt brush script rendering */
   .lingkod-brush-inline {
     height: clamp(160px, 19vw, 245px);
     width: auto;
@@ -130,7 +128,6 @@
     filter: drop-shadow(2px 4px 10px rgba(0, 0, 0, 0.45));
     user-select: none;
     pointer-events: none;
-    transform: rotate(-1deg);
     display: inline-block;
   }
 
@@ -179,25 +176,31 @@
   }
 
   .hero-btn-book-inline {
-    background-color: #009a17;
+    background-color: #04561e;
     color: #ffffff;
     font-weight: 700;
-    letter-spacing: 0.2px;
-    border: 2px solid transparent;
+    letter-spacing: 0.1px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 14px;
+    min-width: 268px;
+    height: 54px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
   }
 
   .hero-btn-book-inline:hover {
-    background-color: #008814;
+    background-color: #034818;
     color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.5);
     transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
   }
 
   .hero-btn-book-inline:active,
   .hero-btn-book-inline:focus {
     transform: translateY(0);
-    background-color: #007511;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+    background-color: #023812;
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
     outline: none;
   }
 

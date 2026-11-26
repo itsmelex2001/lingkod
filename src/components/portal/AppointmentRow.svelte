@@ -2,6 +2,7 @@
   import StatusPill from './StatusPill.svelte';
 
   export let appointment;
+  export let isUpcomingTab = false;
   export let onView = (appt) => {};
   export let onReschedule = (appt) => {};
 
@@ -11,47 +12,69 @@
     if (dept.includes('neuro')) return '#2b7fd4';
     return '#0f9d74';
   })();
+
+  $: isFollowUp = (() => {
+    const raw = (appointment.visit_type || '').toLowerCase();
+    if (raw) return raw.includes('follow');
+    return Boolean(appointment.previous_appointment_date);
+  })();
+
+  $: visitTypeLabel = isFollowUp ? 'Follow-up' : 'Initial';
+  $: showRescheduledBadge = isUpcomingTab && Boolean(appointment.is_rescheduled || appointment.rescheduled_by_staff);
 </script>
 
-<div class="px-5 py-4 border-b border-[#f3f4f6] last:border-none flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#fafafa] transition" style="padding: 16px 20px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-  <div class="flex items-start sm:items-center gap-4 min-w-0" style="display: flex; align-items: center; gap: 16px; min-width: 0;">
-    <!-- Date Block -->
-    <div class="w-14 shrink-0 text-left" style="width: 60px; min-width: 60px; text-align: left;">
-      <span class="block text-xs font-bold text-[#111827]" style="display: block; font-size: 12px; font-weight: 700; color: #111827;">{appointment.date || 'TBD'}</span>
-      <span class="block text-[11px] text-[#6b7280]" style="display: block; font-size: 11px; color: #6b7280;">{appointment.time || '8:00 AM'}</span>
+<div class="px-5 py-4 border-b border-gray-100 last:border-none flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/70 transition-colors">
+  <div class="flex items-start sm:items-center gap-4 min-w-0">
+    <div class="w-16 shrink-0 text-left tabular-nums">
+      <span class="block text-xs font-bold text-gray-900">{appointment.date || 'TBD'}</span>
+      <span class="block text-[11px] text-gray-500">{appointment.time || '8:00 AM'}</span>
     </div>
 
-    <!-- Divider -->
-    <div class="hidden sm:block w-px h-8 bg-[#e5e7eb] shrink-0" style="width: 1px; height: 32px; background: #e5e7eb; flex-shrink: 0;"></div>
+    <div class="hidden sm:block w-px h-8 bg-gray-200 shrink-0"></div>
 
-    <!-- Department & Doctor -->
-    <div class="space-y-1 min-w-0" style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
-      <div class="flex items-center gap-2 flex-wrap" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#111827]" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #111827;">
-          <span class="w-2 h-2 rounded-full" style="width: 8px; height: 8px; border-radius: 50%; background: {deptDotColor}; display: inline-block;"></span>
+    <div class="space-y-1 min-w-0">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-900">
+          <span class="w-2 h-2 rounded-full shrink-0" style="background: {deptDotColor};"></span>
           {appointment.department || 'General Medical'}
         </span>
-        <span class="text-xs text-[#9ca3af]" style="font-size: 12px; color: #9ca3af;">·</span>
-        <span class="text-xs text-[#6b7280]" style="font-size: 12px; color: #6b7280;">{appointment.mode || 'Face-to-Face'}</span>
+
+        <span
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border {isFollowUp
+            ? 'bg-sky-100 text-sky-800 border-sky-200'
+            : 'bg-slate-100 text-slate-700 border-slate-200'}"
+        >
+          {visitTypeLabel}
+        </span>
+
+        {#if showRescheduledBadge}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+            Rescheduled
+          </span>
+        {/if}
+
+        <span class="text-xs text-gray-400" aria-hidden="true">·</span>
+        <span class="text-xs text-gray-500">{appointment.mode || 'Face-to-Face'}</span>
         <StatusPill status={appointment.status} />
       </div>
 
-      <div class="text-xs text-[#4b5563] truncate" style="font-size: 12px; color: #4b5563;">
+      <div class="text-xs text-gray-600 truncate">
         {appointment.doctor || 'Attending Physician'}
+        {#if showRescheduledBadge && appointment.rescheduled_from_date}
+          <span class="text-amber-800 font-medium"> · Moved from {appointment.rescheduled_from_date}</span>
+        {/if}
         {#if appointment.chief_complaints && appointment.chief_complaints !== 'General consultation'}
-          <span class="text-[#6b7280] font-normal italic" style="color: #6b7280; font-style: italic;"> — "{appointment.chief_complaints}"</span>
+          <span class="text-gray-500 font-normal italic"> — "{appointment.chief_complaints}"</span>
         {/if}
       </div>
     </div>
   </div>
 
-  <!-- Row Actions -->
-  <div class="flex items-center gap-2 self-end sm:self-center shrink-0" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+  <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
     {#if appointment.can_reschedule}
       <button
         type="button"
-        class="px-2.5 py-1 rounded text-xs font-medium text-[#4b5563] border border-[#e5e7eb] hover:bg-white hover:text-[#111827] transition"
-        style="padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e7eb; background: white; font-size: 12px; font-weight: 500; color: #4b5563; cursor: pointer;"
+        class="px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-900 transition"
         on:click={() => onReschedule(appointment)}
       >
         Reschedule
@@ -60,8 +83,7 @@
 
     <button
       type="button"
-      class="px-2.5 py-1 rounded text-xs font-semibold text-[#166534] bg-[#f0fdf4] hover:bg-[#dcfce7] border border-[#bbf7d0] transition"
-      style="padding: 4px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; font-size: 12px; font-weight: 600; color: #166534; cursor: pointer;"
+      class="px-2.5 py-1.5 rounded-md text-xs font-semibold text-[#166534] bg-[#f0fdf4] hover:bg-[#dcfce7] border border-[#bbf7d0] transition"
       on:click={() => onView(appointment)}
     >
       Details

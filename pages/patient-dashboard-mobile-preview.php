@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * pages/patient-dashboard.php
  * MMWGH LINGKOD â€” Patient Portal
@@ -1552,7 +1552,6 @@ $initials  = count($nameParts) >= 2
             </div>
             <div class="brand-text-block">
               <span class="brand-sub" data-i18n="brand_sub">Mariveles Mental Wellness and General Hospital</span>
-              <span class="brand-title">LINGKOD</span>
             </div>
           </div>
 
@@ -1600,7 +1599,6 @@ $initials  = count($nameParts) >= 2
           <div class="topbar-left">
             <a href="#view-dashboard" class="mobile-topbar-brand" onclick="switchView('dashboard'); return false;">
               <img src="/sdn/public/assets/v3_lingkod_logo_green.png" alt="LINGKOD" class="mobile-topbar-logo" />
-              <span class="mobile-topbar-title">LINGKOD</span>
             </a>
             <span class="topbar-id-chip" id="topPatientIdChip">ID: <?= htmlspecialchars($patientId ?: 'Verified') ?></span>
           </div>
@@ -1649,7 +1647,7 @@ $initials  = count($nameParts) >= 2
                 </button>
                 <a href="/sdn/api/patient_logout.php" class="profile-dd-item profile-dd-logout">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                  <span>Logout</span>
+                  <span>Sign out</span>
                 </a>
               </div>
             </div>
@@ -1668,7 +1666,7 @@ $initials  = count($nameParts) >= 2
                 <div class="hero-eyebrow">
                   <span>Patient Portal</span>
                 </div>
-                <h1 id="heroGreeting">Good morning, <?= htmlspecialchars($firstName) ?></h1>
+                <h1 id="heroGreeting">Good morning, <?= htmlspecialchars($patientName) ?></h1>
                 <p data-i18n="hero_sub">Manage your hospital appointments and book consultations across MMWGH departments.</p>
                 <button type="button" class="mobile-hero-id-chip" id="mobileHeroIdChip" aria-label="Copy Patient ID">
                   <span id="mobileHeroIdText">ID: <?= htmlspecialchars($patientId ?: 'Verified') ?></span>
@@ -2114,8 +2112,8 @@ $initials  = count($nameParts) >= 2
         });
 
         const name = (portalData.profile && portalData.profile.full_name)
-          ? portalData.profile.full_name.trim().split(' ')[0]
-          : '<?= htmlspecialchars($firstName) ?>';
+          ? portalData.profile.full_name.trim()
+          : '<?= htmlspecialchars($patientName, ENT_QUOTES, 'UTF-8') ?>';
         const heroEl = document.getElementById('heroGreeting');
         if (heroEl) heroEl.textContent = `${getGreetingPrefix()}, ${name}`;
 
@@ -2395,7 +2393,7 @@ $initials  = count($nameParts) >= 2
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
               </div>
               <div class="empty-state-title">No Upcoming Appointments</div>
-              <p class="empty-state-desc">You do not have any upcoming clinic visits scheduled. Book an in-person or telemedicine consultation with our physicians.</p>
+              <p class="empty-state-desc">You do not have any upcoming clinic visits scheduled. Book a face-to-face or telemedicine consultation with our physicians.</p>
               <div class="empty-state-actions">
                 <a href="/sdn/pages/patient-book-appointment.php" class="btn-primary-action">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
