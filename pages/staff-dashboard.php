@@ -91,8 +91,8 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/sdn/public/css/staff-dashboard-clean.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/sdn/public/css/staff-dashboard-clean.css?v=20261128">
+    <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=20261128">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 </head>
 <body>
@@ -1112,7 +1112,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
         window.STAFF_USER_ID = <?= json_encode($userId) ?>;
         window.STAFF_FIRST_NAME = <?= json_encode($firstName) ?>;
     </script>
-    <script src="/sdn/public/js/patient-slip.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/staff-dashboard-clean.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/patient-slip.js?v=20261128"></script>
+    <script src="/sdn/public/js/staff-dashboard-clean.js?v=20261128"></script>
 </body>
 </html>

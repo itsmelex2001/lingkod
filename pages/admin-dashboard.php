@@ -56,11 +56,11 @@ $csrfToken = $_SESSION['csrf_token'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Portal | LINGKOD</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
-    <link rel="stylesheet" href="/sdn/public/css/admin-portal.css?v=<?= time() ?>" />
-    <link rel="stylesheet" href="/sdn/public/css/portal-chrome.css?v=<?= time() ?>" />
-    <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=<?= time() ?>" />
-    <link rel="stylesheet" href="/sdn/dist/assets/main.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/global.css?v=20261128" />
+    <link rel="stylesheet" href="/sdn/public/css/admin-portal.css?v=20261128" />
+    <link rel="stylesheet" href="/sdn/public/css/portal-chrome.css?v=20261128" />
+    <link rel="stylesheet" href="/sdn/public/css/enterprise-portal.css?v=20261128" />
+    <link rel="stylesheet" href="/sdn/dist/assets/main.css?v=20261128" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         body, body * {
@@ -1036,9 +1036,9 @@ $csrfToken = $_SESSION['csrf_token'];
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/sdn/public/js/patient-slip.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/admin-portal.js?v=<?= time() ?>"></script>
-    <script type="module" src="/sdn/dist/assets/main.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/patient-slip.js?v=20261128"></script>
+    <script src="/sdn/public/js/admin-portal.js?v=20261128"></script>
+    <script type="module" src="/sdn/dist/assets/main.js?v=20261128"></script>
     <script>
       (function () {
         const toggleBtn = document.getElementById('adminSidebarToggle');

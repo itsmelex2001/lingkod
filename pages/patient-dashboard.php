@@ -2724,7 +2724,7 @@ $initials  = count($nameParts) >= 2
         .metrics-row, .med-specs-grid, .settings-grid { grid-template-columns: 1fr; }
       }
     </style>
-      <link rel="stylesheet" href="/sdn/assets/css/dashboard-mobile.css?v=<?= time() ?>" />
+      <link rel="stylesheet" href="/sdn/assets/css/dashboard-mobile.css?v=20261128" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   </head>
   <body>
@@ -4924,8 +4924,8 @@ $initials  = count($nameParts) >= 2
         }
       });
     </script>
-      <script src="/sdn/public/js/patient-slip.js?v=<?= time() ?>"></script>
-      <script src="/sdn/assets/js/dashboard-mobile.js?v=<?= time() ?>"></script>
+      <script src="/sdn/public/js/patient-slip.js?v=20261128"></script>
+      <script src="/sdn/assets/js/dashboard-mobile.js?v=20261128"></script>
   </body>
 </html>
 

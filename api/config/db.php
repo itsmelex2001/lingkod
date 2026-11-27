@@ -152,28 +152,36 @@ if (!function_exists('dbDriver')) {
 
     function dbTableColumns(PDO $pdo, string $table): array
     {
+        static $cache = [];
+        if (isset($cache[$table])) {
+            return $cache[$table];
+        }
         if (dbIsPgsql()) {
             $stmt = $pdo->prepare(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ?"
             );
             $stmt->execute([$table]);
-            return $stmt->fetchAll(PDO::FETCH_COLUMN);
+            return $cache[$table] = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
-        return $pdo->query("SHOW COLUMNS FROM `" . str_replace('`', '', $table) . "`")->fetchAll(PDO::FETCH_COLUMN);
+        return $cache[$table] = $pdo->query("SHOW COLUMNS FROM `" . str_replace('`', '', $table) . "`")->fetchAll(PDO::FETCH_COLUMN);
     }
 
     function dbTableExists(PDO $pdo, string $table): bool
     {
+        static $cache = [];
+        if (isset($cache[$table])) {
+            return $cache[$table];
+        }
         if (dbIsPgsql()) {
             $stmt = $pdo->prepare(
                 "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ? LIMIT 1"
             );
             $stmt->execute([$table]);
-            return (bool) $stmt->fetchColumn();
+            return $cache[$table] = (bool) $stmt->fetchColumn();
         }
         $stmt = $pdo->prepare("SHOW TABLES LIKE ?");
         $stmt->execute([$table]);
-        return (bool) $stmt->fetchColumn();
+        return $cache[$table] = (bool) $stmt->fetchColumn();
     }
 
     function dbNextPatientId(PDO $pdo): string
@@ -469,22 +477,21 @@ if (!dbIsPgsql()) {
     }
 }
 
-// Normalize registered-only account profiles (PostgreSQL + MySQL safe)
-try {
-    $emptyDateClause = dbIsPgsql()
-        ? 'appointment_date IS NULL'
-        : "(appointment_date IS NULL OR appointment_date = '0000-00-00')";
-    @$pdo->exec("
-        UPDATE patients
-        SET status = 'registered'
-        WHERE LOWER(TRIM(COALESCE(status, ''))) IN ('pending', 'for_approval', 'for_processing', 'for approval')
-          AND $emptyDateClause
-          AND (department IS NULL OR TRIM(department) = '')
-          AND (chief_complaints IS NULL OR TRIM(chief_complaints) = '')
-          AND (consultation_nature IS NULL OR TRIM(consultation_nature) = '')
-          AND COALESCE(unscheduled_walkin, 0) = 0
-          AND COALESCE(inquiry_only, 0) = 0
-    ");
-} catch (Throwable $ignore) {
-    // Continue gracefully
+// Normalize legacy registered-only rows on local MySQL only (avoid per-request write scan on cloud Postgres)
+if (!dbIsPgsql()) {
+    try {
+        @$pdo->exec("
+            UPDATE patients
+            SET status = 'registered'
+            WHERE LOWER(TRIM(COALESCE(status, ''))) IN ('pending', 'for_approval', 'for_processing', 'for approval')
+              AND (appointment_date IS NULL OR appointment_date = '0000-00-00')
+              AND (department IS NULL OR TRIM(department) = '')
+              AND (chief_complaints IS NULL OR TRIM(chief_complaints) = '')
+              AND (consultation_nature IS NULL OR TRIM(consultation_nature) = '')
+              AND COALESCE(unscheduled_walkin, 0) = 0
+              AND COALESCE(inquiry_only, 0) = 0
+        ");
+    } catch (Throwable $ignore) {
+        // Continue gracefully
+    }
 }

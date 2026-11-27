@@ -7,10 +7,10 @@
     <title>OPU Psychiatry Registration | LINGKOD</title>
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/forms.css?v=<?= time() ?>" />
-    <link rel="stylesheet" href="/sdn/public/css/modal-export.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/forms.css?v=20261128" />
+    <link rel="stylesheet" href="/sdn/public/css/modal-export.css?v=20261128" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link rel="stylesheet" href="/sdn/public/css/regis-psychiatry.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/regis-psychiatry.css?v=20261128" />
   </head>
   <body>
     <?php require_once __DIR__ . '/privacy-consent-modal.php'; ?>
@@ -437,11 +437,11 @@
       </div>
     </div>
 
-    <script src="/sdn/public/js/utils.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/navigation.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/print-pdf-setup.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/regis-stepper.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/regis-psychiatry.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/modal-export.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/utils.js?v=20261128"></script>
+    <script src="/sdn/public/js/navigation.js?v=20261128"></script>
+    <script src="/sdn/public/js/print-pdf-setup.js?v=20261128"></script>
+    <script src="/sdn/public/js/regis-stepper.js?v=20261128"></script>
+    <script src="/sdn/public/js/regis-psychiatry.js?v=20261128"></script>
+    <script src="/sdn/public/js/modal-export.js?v=20261128"></script>
   </body>
 </html>

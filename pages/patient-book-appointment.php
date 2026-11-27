@@ -157,7 +157,7 @@ $profileBootstrap = [
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/sdn/assets/css/book-appointment-v2.css?v=<?= time() ?>" />
+    <link rel="stylesheet" href="/sdn/assets/css/book-appointment-v2.css?v=20261128" />
   </head>
   <body class="privacy-locked">
     <!-- Data Privacy Act (R.A. 10173) Modal Overlay -->
@@ -814,8 +814,8 @@ $profileBootstrap = [
     <script>
       window.BA_V2_PROFILE = <?= json_encode($profileBootstrap, JSON_UNESCAPED_UNICODE) ?>;
     </script>
-    <script src="/sdn/public/js/patient-slip.js?v=<?= time() ?>"></script>
-    <script src="/sdn/assets/js/book-appointment-v2.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/patient-slip.js?v=20261128"></script>
+    <script src="/sdn/assets/js/book-appointment-v2.js?v=20261128"></script>
     <script>
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;

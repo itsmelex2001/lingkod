@@ -13,10 +13,16 @@
   "routes": [
     {
       "src": "^/sdn/((?:public|assets|dist)/.+)$",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
       "dest": "/$1"
     },
     {
       "src": "^/((?:public|assets|dist)/.+)$",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
       "dest": "/$1"
     },
     {

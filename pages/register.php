@@ -10,8 +10,8 @@ session_start();
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>">
-  <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=<?= time() ?>">
+  <link rel="stylesheet" href="/sdn/public/css/global.css?v=20261128">
+  <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=20261128">
   <style>
     :root {
       --bg-canvas: #f8fafc;
