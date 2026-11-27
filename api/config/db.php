@@ -37,6 +37,35 @@ if (!function_exists('envValue')) {
         }
         return $default;
     }
+
+    /**
+     * Resolve trusted public base URL for emails (ignores unreplaced <placeholder> values
+     * and falls back to Vercel's system VERCEL_PROJECT_PRODUCTION_URL / VERCEL_URL).
+     */
+    function appBaseUrl(): string
+    {
+        $appUrl = trim((string) envValue('APP_URL', ''));
+        if ($appUrl !== '' && !str_contains($appUrl, '<') && !str_contains($appUrl, '>')) {
+            return rtrim($appUrl, '/');
+        }
+        $vercelProd = trim((string) envValue('VERCEL_PROJECT_PRODUCTION_URL', ''));
+        if ($vercelProd !== '') {
+            return 'https://' . rtrim(preg_replace('#^https?://#i', '', $vercelProd), '/');
+        }
+        $vercelUrl = trim((string) envValue('VERCEL_URL', ''));
+        if ($vercelUrl !== '') {
+            return 'https://' . rtrim(preg_replace('#^https?://#i', '', $vercelUrl), '/');
+        }
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        if ($host !== '' && !str_contains($host, '<') && !str_contains($host, '>')) {
+            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+            $scheme = $isHttps ? 'https' : 'http';
+            $isLocal = str_starts_with($host, 'localhost') || str_starts_with($host, '127.0.0.1');
+            return $isLocal ? "{$scheme}://{$host}/sdn" : "{$scheme}://{$host}";
+        }
+        return 'http://localhost/sdn';
+    }
 }
 
 // ── Parse DATABASE_URL (Supabase URI) or individual DB_* variables ───────────

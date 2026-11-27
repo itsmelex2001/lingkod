@@ -356,17 +356,8 @@ try {
     $_SESSION['pending_otp_mode']       = 'verify_only';
     $_SESSION['pending_otp_sent_at']    = time();
 
-    // ── 6. Construct Verification URL (APP_URL on Vercel/prod, host fallback locally) & Flush Fast Response ─────
-    $configuredAppUrl = rtrim((string) envValue('APP_URL', ''), '/');
-    if ($configuredAppUrl !== '') {
-        $basePortalUrl = $configuredAppUrl;
-    } else {
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-        $protocol = $isHttps ? 'https' : 'http';
-        $basePortalUrl = "{$protocol}://{$host}/sdn";
-    }
+    // ── 6. Construct Verification URL (APP_URL / Vercel production URL / local fallback) & Flush Fast Response ─────
+    $basePortalUrl   = appBaseUrl();
     $verificationUrl = "{$basePortalUrl}/pages/verify-otp.php?token={$token}";
 
     $domain = substr(strrchr($email, "@"), 1);

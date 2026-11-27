@@ -134,8 +134,8 @@ try {
         ':id'      => $patient['id']
     ]);
 
-    // 4. Construct reset URL strictly from trusted APP_URL (never untrusted Host header)
-    $baseUrl  = rtrim((string) envValue('APP_URL', 'http://localhost/sdn'), '/');
+    // 4. Construct reset URL from trusted APP_URL or Vercel production URL
+    $baseUrl  = appBaseUrl();
     $resetUrl = "{$baseUrl}/pages/patient-reset-password.php?token=" . urlencode($token);
 
     // 5. Build basic plain text email

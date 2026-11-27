@@ -153,8 +153,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':id'       => $patient['id']
         ]);
 
-        // Send basic text confirmation email using trusted APP_URL
-        $baseUrl  = rtrim((string) envValue('APP_URL', 'http://localhost/sdn'), '/');
+        // Send basic text confirmation email using trusted APP_URL or Vercel production URL
+        $baseUrl  = appBaseUrl();
         $loginUrl = "{$baseUrl}/pages/patient-login.php";
 
         $patientName = !empty($patient['full_name']) ? $patient['full_name'] : 'Patient';
