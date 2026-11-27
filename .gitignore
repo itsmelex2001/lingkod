@@ -33,7 +33,7 @@ dist-ssr
 .env.local
 .env.backup
 
-# Composer dependencies
-vendor/
+# Composer dependencies (keep root vendor/ for Vercel serverless PHPMailer)
+backend/vendor/
 
 !.env.example
