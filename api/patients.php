@@ -1358,11 +1358,7 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         $upd->execute([$patientId]);
 
         // 2. Generate new sequential patient ID for target department
-        $year = date('Y');
-        $seqStmt = $pdo->query("SELECT MAX(CAST(SUBSTRING(patient_id, 9) AS UNSIGNED)) as max_seq FROM patients WHERE patient_id LIKE 'PT-$year-%'");
-        $maxSeq = (int)($seqStmt->fetchColumn() ?: 0);
-        $newSeq = str_pad($maxSeq + 1, 3, '0', STR_PAD_LEFT);
-        $newPatientId = "PT-$year-$newSeq";
+        $newPatientId = dbNextPatientId($pdo);
 
         $ins = $pdo->prepare(
             "INSERT INTO patients (

@@ -129,15 +129,7 @@ $scheduledTime  = !empty($b['scheduled_time']) ? trim($b['scheduled_time']) : nu
 
 // ── 8. Generate Unique Patient ID ────────────────────────────────────────────
 function generatePatientId(PDO $pdo): string {
-    $year = date('Y');
-    $stmt = $pdo->prepare(
-        "SELECT MAX(CAST(SUBSTRING_INDEX(patient_id, '-', -1) AS UNSIGNED))
-         FROM patients
-         WHERE patient_id LIKE ?"
-    );
-    $stmt->execute(["PT-$year-%"]);
-    $max = (int) $stmt->fetchColumn(); 
-    return 'PT-' . $year . '-' . str_pad($max + 1, 3, '0', STR_PAD_LEFT);
+    return dbNextPatientId($pdo);
 }
 
 $rawDept = strtolower(trim($b['department'] ?? ''));

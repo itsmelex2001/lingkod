@@ -185,15 +185,7 @@ foreach ($existingBookings as $eb) {
 
 // 6. Generate sequential PT ID and insert appointment
 function getNextPatientId(PDO $pdo): string {
-    $year = date('Y');
-    $stmt = $pdo->prepare("
-        SELECT MAX(CAST(SUBSTRING_INDEX(patient_id, '-', -1) AS UNSIGNED))
-        FROM patients
-        WHERE patient_id LIKE ?
-    ");
-    $stmt->execute(["PT-$year-%"]);
-    $max = (int)$stmt->fetchColumn();
-    return 'PT-' . $year . '-' . str_pad($max + 1, 3, '0', STR_PAD_LEFT);
+    return dbNextPatientId($pdo);
 }
 
 try {

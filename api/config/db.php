@@ -175,6 +175,23 @@ if (!function_exists('dbDriver')) {
         $stmt->execute([$table]);
         return (bool) $stmt->fetchColumn();
     }
+
+    function dbNextPatientId(PDO $pdo): string
+    {
+        $year = date('Y');
+        $stmt = $pdo->prepare('SELECT patient_id FROM patients WHERE patient_id LIKE ?');
+        $stmt->execute(["PT-$year-%"]);
+        $max = 0;
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $pid) {
+            if (preg_match('/^PT-' . preg_quote($year, '/') . '-(\d+)$/', (string) $pid, $m)) {
+                $n = (int) $m[1];
+                if ($n > $max) {
+                    $max = $n;
+                }
+            }
+        }
+        return 'PT-' . $year . '-' . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
+    }
 }
 
 if (!function_exists('createPdoConnection')) {
