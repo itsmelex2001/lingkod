@@ -1,11 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "fluid": false,
   "functions": {
     "api/vercel_router.php": {
       "runtime": "vercel-php@0.7.3",
       "maxDuration": 10,
-      "includeFiles": "{index.php,*-inline.php,cron_reminders.php,pages/**,api/**,vendor/**,public/assets/**,assets/images/**}"
+      "includeFiles": "{index.php,*-inline.php,cron_reminders.php,pages/**,api/**,vendor/**,public/assets/mmwgh_logo.png,public/assets/v3_lingkod_logo_email.png,public/assets/v3_lingkod_logo_green.png}"
     }
   },
   "routes": [
