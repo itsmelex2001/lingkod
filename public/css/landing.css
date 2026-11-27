@@ -546,7 +546,7 @@ body {
 
 /* ── Landing Original 3-Stop Gradient Navbar ── */
 .navbar.navbar-hero-solid {
-  height: 104px;
+  height: 92px;
   padding: 0 2.5rem;
   background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
@@ -566,7 +566,7 @@ body {
 }
 
 .navbar.navbar-hero-solid .logo {
-  height: 104px;
+  height: 92px;
   gap: 10px;
   flex-shrink: 1;
   min-width: 0;
@@ -624,16 +624,15 @@ body {
   padding: 8px 20px;
   border-radius: 10px;
   border: 1.5px solid #ffffff;
-  background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
+  background: #1f862f;
   color: #ffffff;
   font-size: 0.88rem;
   font-weight: 600;
   text-decoration: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.22);
 }
 
 .navbar.navbar-hero-solid .btn-patient-portal::after {
@@ -641,8 +640,7 @@ body {
 }
 
 .navbar.navbar-hero-solid .btn-patient-portal:hover {
-  background: linear-gradient(90deg, #22ad49 0%, #72ce4b 50%, #03601e 100%);
-  filter: brightness(1.06);
+  background: #177326;
   border-color: #ffffff;
   color: #ffffff;
 }
@@ -708,12 +706,12 @@ body {
 
 @media (max-width: 768px) {
   .navbar.navbar-hero-solid {
-    height: 66px;
+    height: 62px;
     padding: 0 1rem;
   }
 
   .navbar.navbar-hero-solid .logo {
-    height: 66px;
+    height: 62px;
   }
 
   .navbar.navbar-hero-solid .logo img.logo-ver2-img {
@@ -725,7 +723,7 @@ body {
   }
 
   .navbar.navbar-hero-solid .nav-links {
-    top: 66px;
+    top: 62px;
     gap: 4px;
   }
 
