@@ -13,16 +13,56 @@
  * POST {action:'referral', patient_id, department} → refer to another department
  */
 
+date_default_timezone_set('Asia/Manila');
 session_start();
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
 
 requireAuth();
 
+$authRole = strtolower(trim((string)($_SESSION['role'] ?? '')));
+if (!in_array($authRole, ['admin', 'superadmin', 'staff'], true)) {
+    respondErr('Forbidden. Clinical staff or administrator access required.', 403);
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
+    $stripSensitiveFields = static function (array $row): array {
+        static $sensitive = [
+            'password', 'otp_code', 'otp_hash', 'otp_expires_at', 'otp_attempts',
+            'reset_token', 'reset_token_expires_at', 'verification_token', 'remember_token',
+        ];
+        foreach ($sensitive as $col) {
+            unset($row[$col]);
+        }
+        return $row;
+    };
+
+    $normalizeDeptBucket = static function (?string $dept): string {
+        $d = strtolower(trim((string)$dept));
+        if ($d === '' || str_contains($d, 'triage')) return '';
+        if (str_contains($d, 'psych') || str_contains($d, 'opu')) return 'psychiatry';
+        if (str_contains($d, 'neuro')) return 'neurology';
+        if (str_contains($d, 'general') || str_contains($d, 'medical') || str_contains($d, 'cardio')) return 'general';
+        return $d;
+    };
+
+    $resolveStaffDeptBucket = static function (PDO $pdo) use ($authRole, $normalizeDeptBucket): string {
+        if ($authRole !== 'staff') return '';
+        $dept = trim((string)($_SESSION['department'] ?? ''));
+        $username = (string)($_SESSION['user'] ?? '');
+        if ($username !== '') {
+            try {
+                $stmtDept = $pdo->prepare("SELECT department FROM users WHERE username = ? LIMIT 1");
+                $stmtDept->execute([$username]);
+                $fetchedDept = trim((string)($stmtDept->fetchColumn() ?: ''));
+                if ($fetchedDept !== '') $dept = $fetchedDept;
+            } catch (Throwable $ignore) {}
+        }
+        return $normalizeDeptBucket($dept);
+    };
 
     // Helper: attach previous appointments & visit count for a single patient or list
     $attachPreviousHistory = function(PDO $pdo, array &$rows, bool $includeFullHistory = false): void {
@@ -36,16 +76,58 @@ if ($method === 'GET') {
             $allRecords = [];
         }
 
-        // Group records by canonical patient identity
+        // Normalize patient name (also stripping optional single-letter middle initial)
+        // so same-person variants ("Alex Gallardo" vs "Alex B. Gallardo") link cleanly,
+        // while dependents ("Andrea Anque") sharing an account owner's email/user_id stay isolated.
+        $normalizePersonName = static function (array $r): string {
+            $raw = trim((string)($r['full_name'] ?? ''));
+            if ($raw === '') {
+                $raw = trim(implode(' ', array_filter([
+                    trim((string)($r['first_name'] ?? '')),
+                    trim((string)($r['last_name'] ?? '')),
+                ])));
+            }
+            $clean = strtolower(preg_replace('/\s+/', ' ', $raw));
+            $parts = $clean !== '' ? explode(' ', $clean) : [];
+            if (count($parts) >= 3) {
+                $filtered = [$parts[0]];
+                for ($i = 1; $i < count($parts) - 1; $i++) {
+                    if (!preg_match('/^[a-z]\.?$/', $parts[$i])) {
+                        $filtered[] = $parts[$i];
+                    }
+                }
+                $filtered[] = end($parts);
+                return implode(' ', $filtered);
+            }
+            return $clean;
+        };
+
+        $buildPersonKeys = static function (array $r) use ($normalizePersonName): array {
+            $nameKey = $normalizePersonName($r);
+            $birth   = trim((string)($r['birthdate'] ?? ''));
+            $email   = strtolower(trim((string)($r['email'] ?? '')));
+            $keys = [];
+            if ($nameKey !== '') {
+                if ($birth !== '' && $birth !== '0000-00-00') {
+                    $keys[] = 'nb:' . $nameKey . '|' . $birth;
+                }
+                if ($email !== '') {
+                    $keys[] = 'ne:' . $nameKey . '|' . $email;
+                }
+                if (empty($keys)) {
+                    $keys[] = 'n:' . $nameKey;
+                }
+            } else {
+                if (!empty($r['hrn']))   $keys[] = 'h:' . strtolower(trim((string)$r['hrn']));
+                if (!empty($r['email'])) $keys[] = 'e:' . $email;
+            }
+            return $keys;
+        };
+
+        // Group records by person-scoped identity (never unioning different people on shared email/user_id)
         $byIdentity = [];
         foreach ($allRecords as $rec) {
-            $keys = [];
-            if (!empty($rec['user_id'])) $keys[] = 'u:' . $rec['user_id'];
-            if (!empty($rec['hrn']))     $keys[] = 'h:' . strtolower(trim($rec['hrn']));
-            if (!empty($rec['email']))   $keys[] = 'e:' . strtolower(trim($rec['email']));
-            if (!empty($rec['full_name'])) $keys[] = 'n:' . strtolower(preg_replace('/\s+/', ' ', trim($rec['full_name'])));
-
-            foreach ($keys as $k) {
+            foreach ($buildPersonKeys($rec) as $k) {
                 $byIdentity[$k][$rec['id']] = $rec;
             }
         }
@@ -62,16 +144,15 @@ if ($method === 'GET') {
                 }
             }
 
-            $lookupKeys = [];
-            if (!empty($row['user_id']))   $lookupKeys[] = 'u:' . $row['user_id'];
-            if (!empty($row['hrn']))       $lookupKeys[] = 'h:' . strtolower(trim($row['hrn']));
-            if (!empty($row['email']))     $lookupKeys[] = 'e:' . strtolower(trim($row['email']));
-            if (!empty($row['full_name'])) $lookupKeys[] = 'n:' . strtolower(preg_replace('/\s+/', ' ', trim($row['full_name'])));
-
+            $rowNameKey = $normalizePersonName($row);
             $matchedMap = [];
-            foreach ($lookupKeys as $lk) {
+            foreach ($buildPersonKeys($row) as $lk) {
                 if (!empty($byIdentity[$lk])) {
                     foreach ($byIdentity[$lk] as $cid => $crec) {
+                        $cNameKey = $normalizePersonName($crec);
+                        if ($rowNameKey !== '' && $cNameKey !== '' && $cNameKey !== $rowNameKey) {
+                            continue;
+                        }
                         $matchedMap[$cid] = $crec;
                     }
                 }
@@ -136,13 +217,16 @@ if ($method === 'GET') {
         unset($row);
     };
 
-    // Search patients by name (or ID) for QR Scanner / quick lookup
+    // Search patients by name (or ID) for QR Scanner / quick lookup (demographics only; no auth secrets or clinical notes)
     if (isset($_GET['q']) && trim((string)$_GET['q']) !== '') {
         $q = trim((string)$_GET['q']);
         $like = '%' . $q . '%';
         try {
             $stmt = $pdo->prepare(
-                "SELECT * FROM patients
+                "SELECT id, user_id, patient_id, reference_no, hrn, full_name, first_name, last_name, middle_initial,
+                        gender, birthdate, age, contact_number, email, address, department, status,
+                        appointment_date, preferred_time_slot, consultation_mode, patient_type, profile_image, created_at
+                 FROM patients
                  WHERE LOWER(COALESCE(full_name, '')) LIKE LOWER(?)
                     OR LOWER(CONCAT_WS(' ', first_name, middle_initial, last_name)) LIKE LOWER(?)
                     OR LOWER(COALESCE(patient_id, '')) = LOWER(?)
@@ -156,14 +240,18 @@ if ($method === 'GET') {
             $rawRows = [];
         }
 
-        // Deduplicate by patient identity (keep latest record, preserve non-empty profile_image)
+        // Deduplicate by person-scoped identity (keep latest record, preserve non-empty profile_image)
         $byKey = [];
         foreach ($rawRows as $r) {
-            $key = !empty($r['user_id'])
-                ? 'u:' . $r['user_id']
-                : (!empty($r['email'])
-                    ? 'e:' . strtolower(trim($r['email']))
-                    : 'n:' . strtolower(preg_replace('/\s+/', ' ', trim($r['full_name'] ?? ''))) . '|' . trim((string)($r['birthdate'] ?? '')));
+            $r = $stripSensitiveFields($r);
+            $nameKey = strtolower(preg_replace('/\s+/', ' ', trim((string)($r['full_name'] ?? ''))));
+            $birthKey = trim((string)($r['birthdate'] ?? ''));
+            $emailKey = strtolower(trim((string)($r['email'] ?? '')));
+            $key = ($nameKey !== '' && $birthKey !== '' && $birthKey !== '0000-00-00')
+                ? 'nb:' . $nameKey . '|' . $birthKey
+                : (($nameKey !== '' && $emailKey !== '')
+                    ? 'ne:' . $nameKey . '|' . $emailKey
+                    : 'id:' . ($r['id'] ?? '0'));
 
             if (!isset($byKey[$key])) {
                 $byKey[$key] = $r;
@@ -179,6 +267,7 @@ if ($method === 'GET') {
     // Single patient by ?id=
     if (!empty($_GET['id'])) {
         $id = trim($_GET['id']);
+        $staffDeptBucket = $resolveStaffDeptBucket($pdo);
         try {
             $stmt = $pdo->prepare(
                 "SELECT * FROM patients
@@ -204,6 +293,17 @@ if ($method === 'GET') {
 
         if (!$patient) respondErr("Patient $id not found.", 404);
 
+        // Enforce department isolation for clinical staff (allow neutral unbooked 'registered' profile stubs for QR intake)
+        if ($authRole === 'staff') {
+            $patientDeptBucket = $normalizeDeptBucket($patient['department'] ?? '');
+            $isUnbookedProfile = strtolower(trim((string)($patient['status'] ?? ''))) === 'registered' && $patientDeptBucket === '';
+            if (!$isUnbookedProfile && ($staffDeptBucket === '' || ($patientDeptBucket !== '' && $patientDeptBucket !== $staffDeptBucket))) {
+                respondErr('Forbidden. This patient record belongs to another department.', 403);
+            }
+        }
+
+        $patient = $stripSensitiveFields($patient);
+
         try {
             $notePid = $patient['patient_id'] ?? $id;
             $noteStmt = $pdo->prepare("SELECT note, noted_by, created_at FROM progress_notes WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1");
@@ -217,6 +317,13 @@ if ($method === 'GET') {
             $singleWrap = [$patient];
             $attachPreviousHistory($pdo, $singleWrap, true);
             $patient = $singleWrap[0];
+            // Scope prior clinical history to the staff user's own department
+            if ($authRole === 'staff' && !empty($patient['previous_appointments']) && is_array($patient['previous_appointments'])) {
+                $patient['previous_appointments'] = array_values(array_filter(
+                    $patient['previous_appointments'],
+                    static fn(array $prev): bool => $normalizeDeptBucket($prev['department'] ?? '') === $staffDeptBucket
+                ));
+            }
         } catch (Throwable $e) {
             error_log("Error attaching patient history: " . $e->getMessage());
         }
@@ -240,32 +347,43 @@ if ($method === 'GET') {
     
     $bookedOnlySql = "LOWER(COALESCE(p.status, '')) <> 'registered' AND (p.appointment_date IS NOT NULL OR (p.department IS NOT NULL AND p.department <> '') OR (p.chief_complaints IS NOT NULL AND p.chief_complaints <> '') OR (p.consultation_nature IS NOT NULL AND p.consultation_nature <> '') OR p.unscheduled_walkin = 1)";
 
+    date_default_timezone_set('Asia/Manila');
+    $pCreatedDateExpr = dbIsPgsql() ? 'CAST(p.created_at AS DATE)' : 'DATE(p.created_at)';
+    $pWeekStart = date('Y-m-d', strtotime('monday this week'));
+    $pWeekEnd   = date('Y-m-d', strtotime($pWeekStart . ' +6 days'));
+    $pMonthStart = date('Y-m-01');
+    $pMonthEnd   = date('Y-m-t');
+    $pYearStart  = date('Y-01-01');
+    $pYearEnd    = date('Y-12-31');
+
     if (in_array(strtolower((string)$role), ['admin', 'superadmin'], true)) {
         $filterSql = "AND $bookedOnlySql";
         if ($filter === 'week') {
-            $filterSql .= " AND YEARWEEK(p.created_at, 1) = YEARWEEK(CURDATE(), 1)";
+            $filterSql .= " AND {$pCreatedDateExpr} BETWEEN '{$pWeekStart}' AND '{$pWeekEnd}'";
         } elseif ($filter === 'month') {
-            $filterSql .= " AND MONTH(p.created_at) = MONTH(CURDATE()) AND YEAR(p.created_at) = YEAR(CURDATE())";
+            $filterSql .= " AND {$pCreatedDateExpr} BETWEEN '{$pMonthStart}' AND '{$pMonthEnd}'";
         } elseif ($filter === 'year') {
-            $filterSql .= " AND YEAR(p.created_at) = YEAR(CURDATE())";
+            $filterSql .= " AND {$pCreatedDateExpr} BETWEEN '{$pYearStart}' AND '{$pYearEnd}'";
         }
 
         $hasRefNoCol = false;
         try {
-            $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+            $cols = dbTableColumns($pdo, 'patients');
             $hasRefNoCol = in_array('reference_no', $cols, true);
-            if (!in_array('vitals_json', $cols, true)) {
-                @$pdo->exec("ALTER TABLE patients ADD COLUMN vitals_json TEXT NULL");
-            }
-            if (!in_array('follow_up_notes', $cols, true)) {
-                @$pdo->exec("ALTER TABLE patients ADD COLUMN follow_up_notes TEXT NULL");
-            }
-            $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
-            if (!in_array('title', $docCols, true)) {
-                @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
-            }
-            if (!in_array('license_number', $docCols, true)) {
-                @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+            if (!dbIsPgsql()) {
+                if (!in_array('vitals_json', $cols, true)) {
+                    @$pdo->exec("ALTER TABLE patients ADD COLUMN vitals_json TEXT NULL");
+                }
+                if (!in_array('follow_up_notes', $cols, true)) {
+                    @$pdo->exec("ALTER TABLE patients ADD COLUMN follow_up_notes TEXT NULL");
+                }
+                $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
+                if (!in_array('title', $docCols, true)) {
+                    @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
+                }
+                if (!in_array('license_number', $docCols, true)) {
+                    @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+                }
             }
         } catch (Throwable $ignoreRef) {}
         $refSelect = $hasRefNoCol ? 'p.reference_no,' : 'NULL AS reference_no,';
@@ -283,6 +401,7 @@ if ($method === 'GET') {
                     p.medical_history_recorded_by, p.medical_history_date,
                     p.next_visit_date, p.vitals_json, p.follow_up_notes,
                     p.rescheduled_by_staff, p.rescheduled_from_date, p.rescheduled_at,
+                    p.teleconsult_platform, p.teleconsult_link, p.teleconsult_notes,
                     p.reminder_status, p.reminder_sent_at, p.created_at,
                     d.id AS doctor_id, d.status AS doctor_status, d.title AS doctor_title, d.license_number AS doctor_license
              FROM patients p
@@ -297,6 +416,7 @@ if ($method === 'GET') {
         if (!empty($_GET['deduplicate'])) {
             $totalEncounters = count($rows);
             $grouped = [];
+            $keyAliases = [];
             $backfillFields = ['hrn', 'gender', 'age', 'birthdate', 'contact_number', 'email', 'address'];
 
             foreach ($rows as $row) {
@@ -305,16 +425,35 @@ if ($method === 'GET') {
                 $emailNorm = strtolower(trim((string)($row['email'] ?? '')));
                 $genderVal = strtolower(trim((string)($row['gender'] ?? '')));
 
+                $candidates = [];
                 if ($nameNorm !== '' && $birthVal !== '' && $birthVal !== '0000-00-00') {
-                    $key = 'nb:' . $nameNorm . '|' . $birthVal;
-                } elseif ($nameNorm !== '' && $emailNorm !== '') {
-                    $key = 'ne:' . $nameNorm . '|' . $emailNorm;
-                } elseif ($nameNorm !== '' && $genderVal !== '') {
-                    $key = 'ng:' . $nameNorm . '|' . $genderVal;
-                } elseif ($nameNorm !== '') {
-                    $key = 'n:' . $nameNorm;
-                } else {
-                    $key = 'id:' . ($row['id'] ?? $row['patient_id'] ?? uniqid('', true));
+                    $candidates[] = 'nb:' . $nameNorm . '|' . $birthVal;
+                }
+                if ($nameNorm !== '' && $emailNorm !== '') {
+                    $candidates[] = 'ne:' . $nameNorm . '|' . $emailNorm;
+                }
+                if (empty($candidates)) {
+                    if ($nameNorm !== '' && $genderVal !== '') {
+                        $candidates[] = 'ng:' . $nameNorm . '|' . $genderVal;
+                    } elseif ($nameNorm !== '') {
+                        $candidates[] = 'n:' . $nameNorm;
+                    } else {
+                        $candidates[] = 'id:' . ($row['id'] ?? $row['patient_id'] ?? uniqid('', true));
+                    }
+                }
+
+                $key = null;
+                foreach ($candidates as $cand) {
+                    if (isset($keyAliases[$cand])) {
+                        $key = $keyAliases[$cand];
+                        break;
+                    }
+                }
+                if ($key === null) {
+                    $key = $candidates[0];
+                }
+                foreach ($candidates as $cand) {
+                    $keyAliases[$cand] = $key;
                 }
 
                 $rowDateRaw = !empty($row['appointment_date']) && $row['appointment_date'] !== '0000-00-00'
@@ -407,31 +546,33 @@ if ($method === 'GET') {
     }
     
     if ($filter === 'week') {
-        $whereClauses[] = "YEARWEEK(p.created_at, 1) = YEARWEEK(CURDATE(), 1)";
+        $whereClauses[] = "{$pCreatedDateExpr} BETWEEN '{$pWeekStart}' AND '{$pWeekEnd}'";
     } elseif ($filter === 'month') {
-        $whereClauses[] = "MONTH(p.created_at) = MONTH(CURDATE()) AND YEAR(p.created_at) = YEAR(CURDATE())";
+        $whereClauses[] = "{$pCreatedDateExpr} BETWEEN '{$pMonthStart}' AND '{$pMonthEnd}'";
     } elseif ($filter === 'year') {
-        $whereClauses[] = "YEAR(p.created_at) = YEAR(CURDATE())";
+        $whereClauses[] = "{$pCreatedDateExpr} BETWEEN '{$pYearStart}' AND '{$pYearEnd}'";
     }
     
     $whereSql = count($whereClauses) > 0 ? "WHERE " . implode(" AND ", $whereClauses) : "";
     
     $hasRefNoCol = false;
     try {
-        $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+        $cols = dbTableColumns($pdo, 'patients');
         $hasRefNoCol = in_array('reference_no', $cols, true);
-        if (!in_array('vitals_json', $cols, true)) {
-            @$pdo->exec("ALTER TABLE patients ADD COLUMN vitals_json TEXT NULL");
-        }
-        if (!in_array('follow_up_notes', $cols, true)) {
-            @$pdo->exec("ALTER TABLE patients ADD COLUMN follow_up_notes TEXT NULL");
-        }
-        $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
-        if (!in_array('title', $docCols, true)) {
-            @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
-        }
-        if (!in_array('license_number', $docCols, true)) {
-            @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+        if (!dbIsPgsql()) {
+            if (!in_array('vitals_json', $cols, true)) {
+                @$pdo->exec("ALTER TABLE patients ADD COLUMN vitals_json TEXT NULL");
+            }
+            if (!in_array('follow_up_notes', $cols, true)) {
+                @$pdo->exec("ALTER TABLE patients ADD COLUMN follow_up_notes TEXT NULL");
+            }
+            $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('title', $docCols, true)) {
+                @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
+            }
+            if (!in_array('license_number', $docCols, true)) {
+                @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+            }
         }
     } catch (Throwable $ignoreRef) {}
     $refSelect = $hasRefNoCol ? 'p.reference_no,' : 'NULL AS reference_no,';
@@ -449,6 +590,7 @@ if ($method === 'GET') {
                 p.medical_history_recorded_by, p.medical_history_date,
                 p.next_visit_date, p.vitals_json, p.follow_up_notes,
                 p.rescheduled_by_staff, p.rescheduled_from_date, p.rescheduled_at,
+                p.teleconsult_platform, p.teleconsult_link, p.teleconsult_notes,
                 p.reminder_status, p.reminder_sent_at, p.created_at,
                 d.id AS doctor_id, d.status AS doctor_status, d.title AS doctor_title, d.license_number AS doctor_license
          FROM patients p
@@ -469,10 +611,10 @@ if ($method === 'POST') {
     $patientId = $body['patient_id'] ?? '';
     $actor     = sessionUser();
 
-    // CSRF verification if security token header is supplied
+    // Mandatory CSRF verification on all state-changing staff/admin actions
     $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($body['csrf_token'] ?? null);
-    if ($csrfToken && !verifyCsrfToken($csrfToken)) {
-        respondErr('Security check failed: Invalid or expired CSRF token. Please refresh the page.', 403);
+    if (!$csrfToken || !verifyCsrfToken((string)$csrfToken)) {
+        respondErr('Security check failed: Missing or invalid CSRF token. Please refresh the page.', 403);
     }
 
     if ($patientId === '') respondErr('patient_id is required.');
@@ -579,12 +721,38 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         return $row ?: null;
     }
 
+    $extractTeleconsult = static function (array $b): array {
+        $hasAny = array_key_exists('teleconsult_platform', $b)
+            || array_key_exists('teleconsult_link', $b)
+            || array_key_exists('teleconsult_notes', $b);
+        if (!$hasAny) {
+            return ['provided' => false, 'platform' => null, 'link' => null, 'notes' => null];
+        }
+        $platform = substr(trim((string)($b['teleconsult_platform'] ?? '')), 0, 50);
+        $link     = substr(trim((string)($b['teleconsult_link'] ?? '')), 0, 500);
+        $notes    = substr(trim((string)($b['teleconsult_notes'] ?? '')), 0, 255);
+        if ($link !== '') {
+            $scheme = strtolower((string)(parse_url($link, PHP_URL_SCHEME) ?? ''));
+            if (!in_array($scheme, ['http', 'https'], true) || !filter_var($link, FILTER_VALIDATE_URL)) {
+                respondErr('Please enter a valid https:// teleconsultation meeting link.', 422);
+            }
+        }
+        return [
+            'provided' => true,
+            'platform' => $platform !== '' ? $platform : null,
+            'link'     => $link !== '' ? $link : null,
+            'notes'    => $notes !== '' ? $notes : null,
+        ];
+    };
+
     // ── 1. Approve / Accept ──────────────────────────────────────────────
     if ($action === 'approve' || $action === 'accept') {
         $currSt = strtolower(trim($patient['status'] ?? ''));
         if (!in_array($currSt, ['pending', 'for_approval', 'for_processing', 'for approval'], true)) {
             respondErr("Patient is already {$patient['status']}.");
         }
+
+        $tc = $extractTeleconsult($body);
 
         $isInquiry = !empty($patient['inquiry_only'])
             || strcasecmp(trim($patient['consultation_nature'] ?? ''), 'General Inquiry') === 0
@@ -630,8 +798,8 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                     department = ?,
                     specialty = ?,
                     assigned_doctor = CASE WHEN ? <> '' THEN ? ELSE assigned_doctor END,
-                    assigned_date = CASE WHEN ? <> '' AND assigned_date IS NULL THEN CURDATE() ELSE assigned_date END,
-                    updated_at = NOW() 
+                    assigned_date = CASE WHEN ? <> '' AND assigned_date IS NULL THEN CURRENT_DATE ELSE assigned_date END,
+                    updated_at = CURRENT_TIMESTAMP 
                 WHERE patient_id = ?
             ");
             $upd->execute([$cleanDept, $cleanDept . ' Consultation', $effectiveDoctor, $effectiveDoctor, $effectiveDoctor, $patientId]);
@@ -640,11 +808,15 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                 "UPDATE patients
                  SET status = 'approved',
                      assigned_doctor = CASE WHEN ? <> '' THEN ? ELSE assigned_doctor END,
-                     assigned_date = CASE WHEN ? <> '' AND assigned_date IS NULL THEN CURDATE() ELSE assigned_date END,
-                     updated_at = NOW()
+                     assigned_date = CASE WHEN ? <> '' AND assigned_date IS NULL THEN CURRENT_DATE ELSE assigned_date END,
+                     updated_at = CURRENT_TIMESTAMP
                  WHERE patient_id = ?"
             );
             $upd->execute([$effectiveDoctor, $effectiveDoctor, $effectiveDoctor, $patientId]);
+        }
+        if ($tc['provided']) {
+            $pdo->prepare("UPDATE patients SET teleconsult_platform = ?, teleconsult_link = ?, teleconsult_notes = ? WHERE patient_id = ?")
+                ->execute([$tc['platform'], $tc['link'], $tc['notes'], $patientId]);
         }
         addLog($pdo, 'info', 'Patient Approved', $actor,
                "Patient $patientId ($name) was approved and scheduled for $dept" . ($effectiveDoctor ? " with $effectiveDoctor." : "."));
@@ -656,6 +828,7 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         $timeFormatted = !empty($patient['scheduled_time'])
             ? date('g:i A', strtotime($patient['scheduled_time']))
             : '8:00 AM';
+        $consultMode = trim((string)($patient['consultation_mode'] ?? 'Face-to-Face')) ?: 'Face-to-Face';
 
         if (!empty($patient['email'])) {
             try {
@@ -666,7 +839,8 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                     $dateFormatted,
                     $timeFormatted,
                     $patientId,
-                    'confirmed'
+                    'confirmed',
+                    $consultMode
                 );
             } catch (\Throwable $e) {
                 error_log("[patients.php approve] Email error: " . $e->getMessage());
@@ -680,7 +854,8 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                     $patient['contact_number'],
                     $dateFormatted,
                     $timeFormatted,
-                    $patientId
+                    $patientId,
+                    $consultMode
                 );
             } catch (\Throwable $e) {
                 error_log("[patients.php approve] SMS error: " . $e->getMessage());
@@ -774,7 +949,7 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         $canonicalDoc = $doc['name'];
         $upd = $pdo->prepare(
             "UPDATE patients
-             SET assigned_doctor = ?, assigned_date = CURDATE(), updated_at = NOW()
+             SET assigned_doctor = ?, assigned_date = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP
              WHERE patient_id = ?"
         );
         $upd->execute([$canonicalDoc, $patientId]);
@@ -796,10 +971,14 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         $newDate = trim($body['appointment_date'] ?? '');
         $rawSlot = trim($body['preferred_time_slot'] ?? '');
         $approveNow = !empty($body['approve_now']);
+        $tc = $extractTeleconsult($body);
 
         if ($doctor === '') respondErr('Attending physician is required.', 422);
         if ($newDate === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $newDate)) {
             respondErr('A valid appointment date (YYYY-MM-DD) is required.', 422);
+        }
+        if ($newDate < date('Y-m-d')) {
+            respondErr('Appointment date cannot be in the past.', 422);
         }
         if ((int)date('w', strtotime($newDate)) === 0) {
             respondErr('Hospital clinics are closed on Sundays. Please pick a Monday to Saturday date.', 422);
@@ -836,12 +1015,12 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
             $upd = $pdo->prepare(
                 "UPDATE patients
                  SET assigned_doctor = ?,
-                     assigned_date = CURDATE(),
+                     assigned_date = CURRENT_DATE,
                      appointment_date = ?,
                      preferred_time_slot = ?,
                      scheduled_time = ?,
                      status = 'approved'{$reschedSql},
-                     updated_at = NOW()
+                     updated_at = CURRENT_TIMESTAMP
                  WHERE patient_id = ?"
             );
             $params = [$canonicalDoc, $newDate, $slotLabel, $scheduledTime];
@@ -852,11 +1031,11 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
             $upd = $pdo->prepare(
                 "UPDATE patients
                  SET assigned_doctor = ?,
-                     assigned_date = CURDATE(),
+                     assigned_date = CURRENT_DATE,
                      appointment_date = ?,
                      preferred_time_slot = ?,
                      scheduled_time = ?{$reschedSql},
-                     updated_at = NOW()
+                     updated_at = CURRENT_TIMESTAMP
                  WHERE patient_id = ?"
             );
             $params = [$canonicalDoc, $newDate, $slotLabel, $scheduledTime];
@@ -866,6 +1045,10 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         }
 
         $refNo = trim((string)($patient['reference_no'] ?? ''));
+        if ($tc['provided']) {
+            $pdo->prepare("UPDATE patients SET teleconsult_platform = ?, teleconsult_link = ?, teleconsult_notes = ? WHERE patient_id = ?")
+                ->execute([$tc['platform'], $tc['link'], $tc['notes'], $patientId]);
+        }
         try {
             if ($refNo !== '') {
                 $apptUpd = $pdo->prepare(
@@ -891,10 +1074,11 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
         if ($willApprove) {
             $dateFormatted = date('M j, Y', strtotime($newDate));
             $timeFormatted = date('g:i A', strtotime($scheduledTime));
+            $consultMode = trim((string)($patient['consultation_mode'] ?? 'Face-to-Face')) ?: 'Face-to-Face';
             if (!empty($patient['email'])) {
                 try {
                     require_once __DIR__ . '/services/EmailService.php';
-                    EmailService::sendAppointmentEmail($patient['email'], $name, $dateFormatted, $timeFormatted, $patientId, 'confirmed');
+                    EmailService::sendAppointmentEmail($patient['email'], $name, $dateFormatted, $timeFormatted, $patientId, 'confirmed', $consultMode);
                 } catch (\Throwable $e) {
                     error_log("[patients.php reschedule_assign] Email error: " . $e->getMessage());
                 }
@@ -902,7 +1086,7 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
             if (!empty($patient['contact_number'])) {
                 try {
                     require_once __DIR__ . '/services/SmsService.php';
-                    SmsService::sendConfirmationSms($patient['contact_number'], $dateFormatted, $timeFormatted, $patientId);
+                    SmsService::sendConfirmationSms($patient['contact_number'], $dateFormatted, $timeFormatted, $patientId, $consultMode);
                 } catch (\Throwable $e) {
                     error_log("[patients.php reschedule_assign] SMS error: " . $e->getMessage());
                 }
@@ -913,9 +1097,12 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
             'message' => $willApprove
                 ? "Schedule updated to $newDate ($slotLabel), assigned $canonicalDoc, and appointment approved."
                 : "Schedule updated to $newDate ($slotLabel) with $canonicalDoc.",
-            'assigned_doctor'     => $canonicalDoc,
-            'appointment_date'    => $newDate,
-            'preferred_time_slot' => $slotLabel
+            'assigned_doctor'      => $canonicalDoc,
+            'appointment_date'     => $newDate,
+            'preferred_time_slot'  => $slotLabel,
+            'teleconsult_platform' => $tc['provided'] ? $tc['platform'] : ($patient['teleconsult_platform'] ?? null),
+            'teleconsult_link'     => $tc['provided'] ? $tc['link'] : ($patient['teleconsult_link'] ?? null),
+            'teleconsult_notes'    => $tc['provided'] ? $tc['notes'] : ($patient['teleconsult_notes'] ?? null),
         ]);
     }
 
@@ -1027,7 +1214,22 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
             }
         }
 
-        if ($diag !== '' || $rx !== '' || $plan !== '' || $activeMedsJson !== null || $nextVisit !== '' || $vitalsJson !== null) {
+        $encodedAt = date('Y-m-d H:i:s');
+        $cleanNextVisit = null;
+        if ($nextVisit !== '') {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $nextVisit)) {
+                respondErr('Follow-up date must be a valid date (YYYY-MM-DD).', 422);
+            }
+            if ($nextVisit <= date('Y-m-d')) {
+                respondErr('Follow-up date must be a future date (starting tomorrow).', 422);
+            }
+            if ((int)date('w', strtotime($nextVisit)) === 0) {
+                respondErr('Hospital clinics are closed on Sundays. Please pick a Monday to Saturday follow-up date.', 422);
+            }
+            $cleanNextVisit = $nextVisit;
+        }
+
+        if ($diag !== '' || $rx !== '' || $plan !== '' || $activeMedsJson !== null || $cleanNextVisit !== null || $followUpNote !== '' || $vitalsJson !== null) {
             $upd = $pdo->prepare(
                 "UPDATE patients 
                  SET status = 'completed', 
@@ -1043,8 +1245,8 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                      follow_up_notes = COALESCE(?, follow_up_notes),
                      vitals_json = COALESCE(?, vitals_json),
                      medical_history_recorded_by = ?,
-                     medical_history_date = NOW(),
-                     updated_at = NOW() 
+                     medical_history_date = ?,
+                     updated_at = ? 
                  WHERE patient_id = ?"
             );
             $upd->execute([
@@ -1052,10 +1254,12 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                 $plan ?: null,
                 $rx ?: null,
                 $activeMedsJson,
-                ($nextVisit !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $nextVisit)) ? $nextVisit : null,
+                $cleanNextVisit,
                 $followUpNote ?: null,
                 $vitalsJson,
                 $actor,
+                $encodedAt,
+                $encodedAt,
                 $patientId
             ]);
         } else {
@@ -1066,10 +1270,12 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                          WHEN reminder_status = 'Sent' THEN 'Sent' 
                          ELSE 'Completed' 
                      END,
-                     updated_at = NOW() 
+                     medical_history_recorded_by = COALESCE(medical_history_recorded_by, ?),
+                     medical_history_date = COALESCE(medical_history_date, ?),
+                     updated_at = ? 
                  WHERE patient_id = ?"
             );
-            $upd->execute([$patientId]);
+            $upd->execute([$actor, $encodedAt, $encodedAt, $patientId]);
         }
 
         if ($isInquiry) {
@@ -1082,13 +1288,30 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                $isInquiry 
                    ? "Inquiry $patientId ($name) was resolved and marked completed."
                    : "Patient $patientId ($name) medical consultation was fully executed, officially signed off, and completed.");
-        respondOk(['message' => $isInquiry ? "Inquiry for $name has been resolved and marked completed." : "Medical service for $name has been completed and signed off."]);
+        respondOk([
+            'message' => $isInquiry ? "Inquiry for $name has been resolved and marked completed." : "Medical service for $name has been completed and signed off.",
+            'data'    => [
+                'patient_id'                  => $patientId,
+                'medical_history_date'        => $encodedAt,
+                'medical_history_recorded_by' => $actor,
+                'next_visit_date'             => $cleanNextVisit,
+                'follow_up_notes'             => $followUpNote ?: null,
+            ],
+        ]);
     }
 
     // ── Reschedule ───────────────────────────────────────────────────────
     if ($action === 'reschedule') {
         $newDate = trim($body['date'] ?? '');
-        if ($newDate === '') respondErr('date is required.');
+        if ($newDate === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $newDate)) {
+            respondErr('A valid appointment date (YYYY-MM-DD) is required.', 422);
+        }
+        if ($newDate < date('Y-m-d')) {
+            respondErr('Cannot reschedule an appointment to a past date.', 422);
+        }
+        if ((int)date('w', strtotime($newDate)) === 0) {
+            respondErr('Hospital clinics are closed on Sundays. Please pick a Monday to Saturday date.', 422);
+        }
         $oldDate = trim((string)($patient['appointment_date'] ?? ''));
         $fromDateVal = ($oldDate !== '' && $oldDate !== $newDate) ? $oldDate : ($patient['rescheduled_from_date'] ?? null);
         $upd = $pdo->prepare(
@@ -1157,7 +1380,7 @@ if (!in_array($action, $unrestrictedStaffActions, true)) {
                 with_companion, relationship_to_patient, appointment_recipient,
                 chief_complaints, consultation_nature, illness_description,
                 existing_medical_conditions, current_medications,
-                patient_type, appointment_type, consultation_mode, COALESCE(appointment_date, CURDATE()),
+                patient_type, appointment_type, consultation_mode, COALESCE(appointment_date, CURRENT_DATE),
                 ?, 'for_approval', NULL, unscheduled_walkin, hrn, specialty, scheduled_time, preferred_time_slot,
                 active_medications, next_visit_date, medical_history_diagnosis, medical_history_treatment, medical_history_prescription
             FROM patients WHERE patient_id = ?"

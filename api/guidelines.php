@@ -6,25 +6,36 @@
  * GET /api/guidelines.php?query={searchQuery}&department={dept}
  */
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
 
-function ensureAndSeedGuidelines(PDO $pdo): void {
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `clinical_guidelines` (
-            `id` INT AUTO_INCREMENT PRIMARY KEY,
-            `department` VARCHAR(80) NOT NULL,
-            `diagnosis` VARCHAR(200) NOT NULL,
-            `treatment_plan` TEXT NOT NULL,
-            `medicine_name` VARCHAR(255) DEFAULT NULL,
-            `dosage_instructions` VARCHAR(255) DEFAULT NULL,
-            `default_quantity` VARCHAR(80) DEFAULT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
+requireAuth();
+$authRole = strtolower(trim((string)($_SESSION['role'] ?? '')));
+if (!in_array($authRole, ['admin', 'superadmin', 'staff'], true)) {
+    respondErr('Forbidden. Clinical staff or administrator access required.', 403);
+}
 
-    $count = (int)$pdo->query("SELECT COUNT(*) FROM `clinical_guidelines`")->fetchColumn();
+function ensureAndSeedGuidelines(PDO $pdo): void {
+    if (!dbIsPgsql()) {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `clinical_guidelines` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `department` VARCHAR(80) NOT NULL,
+                `diagnosis` VARCHAR(200) NOT NULL,
+                `treatment_plan` TEXT NOT NULL,
+                `medicine_name` VARCHAR(255) DEFAULT NULL,
+                `dosage_instructions` VARCHAR(255) DEFAULT NULL,
+                `default_quantity` VARCHAR(80) DEFAULT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    $count = (int)$pdo->query("SELECT COUNT(*) FROM clinical_guidelines")->fetchColumn();
     if ($count > 0) return;
 
     $seed = [
@@ -64,7 +75,7 @@ function ensureAndSeedGuidelines(PDO $pdo): void {
     ];
 
     $ins = $pdo->prepare("
-        INSERT INTO `clinical_guidelines`
+        INSERT INTO clinical_guidelines
             (department, diagnosis, treatment_plan, medicine_name, dosage_instructions, default_quantity)
         VALUES (?, ?, ?, ?, ?, ?)
     ");
@@ -151,12 +162,36 @@ try {
         $seenDiag[strtolower(trim((string)$r['diagnosis']))] = true;
     }
 
+    // Scope patient diagnosis history to the staff user's own department (prevent cross-department clinical leakage)
+    $historyDeptClause = $deptClause;
+    if ($authRole === 'staff') {
+        $staffDept = trim((string)($_SESSION['department'] ?? ''));
+        $staffUser = sessionUser();
+        if ($staffUser !== '' && $staffUser !== 'System') {
+            $uStmt = $pdo->prepare("SELECT department FROM users WHERE username = ? LIMIT 1");
+            $uStmt->execute([$staffUser]);
+            $dbDept = trim((string)($uStmt->fetchColumn() ?: ''));
+            if ($dbDept !== '') $staffDept = $dbDept;
+        }
+        $staffKey = normalizeDeptKey($staffDept);
+        if ($staffKey === 'neurology') {
+            $historyDeptClause = "AND LOWER(department) LIKE '%neuro%'";
+        } elseif ($staffKey === 'psychiatry') {
+            $historyDeptClause = "AND (LOWER(department) LIKE '%psych%' OR LOWER(department) LIKE '%opu%')";
+        } elseif ($staffKey === 'general') {
+            $historyDeptClause = "AND LOWER(department) LIKE '%general%'";
+        } else {
+            $historyDeptClause = "AND 1=0";
+        }
+    }
+
     try {
         if ($rawQuery === '') {
             $pStmt = $pdo->query("
                 SELECT department, medical_history_diagnosis, medical_history_treatment, medical_history_prescription, active_medications
                 FROM patients
                 WHERE medical_history_diagnosis IS NOT NULL AND TRIM(medical_history_diagnosis) <> ''
+                  $historyDeptClause
                 ORDER BY updated_at DESC
                 LIMIT 30
             ");
@@ -167,6 +202,7 @@ try {
                 WHERE medical_history_diagnosis IS NOT NULL
                   AND TRIM(medical_history_diagnosis) <> ''
                   AND medical_history_diagnosis LIKE ?
+                  $historyDeptClause
                 ORDER BY updated_at DESC
                 LIMIT 20
             ");

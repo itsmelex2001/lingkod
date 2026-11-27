@@ -53,8 +53,6 @@ body {
   line-height: 1.6;
   font-size: 15px;
   overflow-x: hidden;
-  user-select: none;
-  -webkit-user-select: none;
   caret-color: transparent;
 }
 
@@ -494,11 +492,11 @@ h3 {
   transition: width 0.3s ease;
 }
 
-/* ── Hide Global Scrollbar (Removes right-side white line, keeps smooth scroll active) ── */
+/* ── Hide Global Scrollbar (keeps scrolling active) ── */
 html,
 body {
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* IE / Edge */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 html::-webkit-scrollbar,
@@ -510,11 +508,7 @@ body::-webkit-scrollbar,
   background: transparent !important;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent !important;
-  display: none !important;
-}
-
+::-webkit-scrollbar-track,
 ::-webkit-scrollbar-thumb {
   background: transparent !important;
   display: none !important;

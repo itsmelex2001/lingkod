@@ -326,14 +326,13 @@
       .mmwgh-slip-logo {
         width: 48px;
         height: 48px;
-        border-radius: 50%;
-        border: 1px solid #9ca3af;
+        border: none;
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
         flex-shrink: 0;
-        background: #ffffff;
+        background: transparent;
       }
       .mmwgh-slip-logo img {
         width: 100%;
@@ -476,16 +475,31 @@
     const specialty = d.specialty || '';
     const followUps = Array.isArray(d.followUps) && d.followUps.length
       ? d.followUps.map((f) => ({
-          date: [formatDateDisplay(f.date), f.time].filter(Boolean).join(' '),
+          date: [formatDateDisplay(f.date), f.time].filter(Boolean).join(' ') || 'As advised by physician',
           specialty: f.specialty || ''
         }))
       : [{
-          date: [formatDateDisplay(d.nextVisitDate || d.next_visit_date || ''), d.nextVisitTime || ''].filter(Boolean).join(' '),
+          date: [formatDateDisplay(d.nextVisitDate || d.next_visit_date || ''), d.nextVisitTime || ''].filter(Boolean).join(' ') || 'As advised by physician',
           specialty
         }];
+    const consultationMode = String(d.consultationMode || d.consultation_mode || '').trim();
+    const isTeleconsult = /^teleconsultation$/i.test(consultationMode) || /^teleconsultation$/i.test(String(d.consultType || '').trim());
+    const effectiveMeta = isTeleconsult && slipType !== 'followUp'
+      ? {
+          title: slipType === 'rescheduled' ? 'RESCHEDULED TELECONSULTATION SLIP' : 'TELECONSULTATION SLIP',
+          docCode: meta.docCode
+        }
+      : meta;
+    const rawEncodedDate = d.encodedDate || d.encoded_date || d.medical_history_date || d.attendedDate || d.attended_date || '';
+    const rawAttendedDate = d.attendedDate || d.attended_date || d.encodedDate || d.encoded_date || d.medical_history_date || '';
     return {
       slipType,
-      meta,
+      meta: effectiveMeta,
+      isTeleconsult,
+      consultationMode: consultationMode || (isTeleconsult ? 'Teleconsultation' : 'Face-to-Face'),
+      teleconsultPlatform: String(d.teleconsultPlatform || d.teleconsult_platform || '').trim(),
+      teleconsultLink: String(d.teleconsultLink || d.teleconsult_link || '').trim(),
+      teleconsultNotes: String(d.teleconsultNotes || d.teleconsult_notes || '').trim(),
       dohLogoUrl: d.dohLogoUrl !== undefined ? d.dohLogoUrl : '/sdn/public/assets/logos/doh%20logo.png',
       mmwghLogoUrl: d.mmwghLogoUrl !== undefined ? d.mmwghLogoUrl : '/sdn/public/assets/mmwgh_logo.png',
       qrCodeUrl: d.qrCodeUrl || '',
@@ -497,7 +511,9 @@
       consultType: d.consultType || '',
       remarks: d.remarks || '',
       encodedBy: d.encodedBy || '',
-      attendedDate: formatDateDisplay(d.attendedDate),
+      encodedDate: formatDateDisplay(rawEncodedDate),
+      attendedDate: formatDateDisplay(rawAttendedDate),
+      followUpNotes: String(d.followUpNotes || d.follow_up_notes || '').trim(),
       followUps
     };
   }
@@ -535,16 +551,21 @@
         <p><strong>Follow-Up/s:</strong></p>
         <p class="mmwgh-slip-attended"><strong>Attended Date:</strong> ${esc(n.attendedDate)}</p>
         ${n.followUps.map((f) => `<div class="mmwgh-slip-fu-item">
-            <p><strong>Date:</strong> ${esc(f.date)}</p>
+            <p><strong>Follow-Up Date:</strong> ${esc(f.date)}</p>
             <p><strong>Specialty:</strong> ${esc(f.specialty)}</p>
           </div>`).join('')}
+        ${n.followUpNotes ? `<p><strong>Instructions:</strong> ${esc(n.followUpNotes)}</p>` : ''}
         <p><strong>Encoded By:</strong> ${esc(n.encodedBy)}</p>
+        ${n.encodedDate ? `<p><strong>Date Encoded:</strong> ${esc(n.encodedDate)}</p>` : ''}
       `;
     } else if (slipType === 'rescheduled') {
       bodyFields += `
         <p><strong>Appointment:</strong> ${esc(n.apptDateTime)}</p>
         <p><strong>Specialty:</strong> ${esc(n.specialty)}</p>
         <p><strong>Type of Consult:</strong> ${esc(n.consultType)}</p>
+        ${n.isTeleconsult ? `<p><strong>Mode:</strong> Teleconsultation${n.teleconsultPlatform ? ' (' + esc(n.teleconsultPlatform) + ')' : ''}</p>` : ''}
+        ${n.isTeleconsult && n.teleconsultLink ? `<p style="word-break:break-all;"><strong>Session Link:</strong> ${esc(n.teleconsultLink)}</p>` : ''}
+        ${n.isTeleconsult && n.teleconsultNotes ? `<p><strong>Instructions:</strong> ${esc(n.teleconsultNotes)}</p>` : ''}
         <p><strong>Encoded by:</strong> ${esc(n.encodedBy)}</p>
       `;
     } else {
@@ -552,14 +573,20 @@
         <p><strong>Appointment:</strong> ${esc(n.apptDateTime)}</p>
         <p><strong>Specialty:</strong> ${esc(n.specialty)}</p>
         <p><strong>Type of Consult:</strong> ${esc(n.consultType)}</p>
+        ${n.isTeleconsult ? `<p><strong>Mode:</strong> Teleconsultation${n.teleconsultPlatform ? ' (' + esc(n.teleconsultPlatform) + ')' : ''}</p>` : ''}
+        ${n.isTeleconsult && n.teleconsultLink ? `<p style="word-break:break-all;"><strong>Session Link:</strong> ${esc(n.teleconsultLink)}</p>` : ''}
+        ${n.isTeleconsult && n.teleconsultNotes ? `<p><strong>Instructions:</strong> ${esc(n.teleconsultNotes)}</p>` : ''}
         <p><strong>Remarks:</strong> ${esc(n.remarks)}</p>
         <p><strong>Encoded By:</strong> ${esc(n.encodedBy)}</p>
       `;
     }
 
-    const himuBlock = slipType === 'appointment'
+    const himuBlock = slipType === 'appointment' && !n.isTeleconsult
       ? `<p class="mmwgh-slip-himu">To HIMU for creation of chart. Please bring valid ID / Birth Certificate.</p>`
       : '';
+    const remindText = n.isTeleconsult
+      ? 'REMOTE TELECONSULTATION — CHECK PATIENT PORTAL FOR SESSION ACCESS'
+      : 'DALHIN SA ARAW NG KONSULTA';
 
     const qrHours = resolveQrExpiryHours(n.specialty);
     const qrMatrix = n.qrCodeUrl ? null : buildQrMatrix(n.patientId);
@@ -593,7 +620,7 @@
           </div>
           <footer class="mmwgh-slip-footer">
             ${himuBlock}
-            <p class="mmwgh-slip-remind">DALHIN SA ARAW NG KONSULTA<br/>OPU-MEDICAL CONTACT NUMBER:</p>
+            <p class="mmwgh-slip-remind">${esc(remindText)}<br/>OPU-MEDICAL CONTACT NUMBER:</p>
             <p class="mmwgh-slip-phone">${esc(liveSlipConfig.contactPhone)}</p>
             <div class="mmwgh-slip-code-row">
               <span class="mmwgh-slip-code">${esc(meta.docCode)}</span>
@@ -618,7 +645,7 @@
             ${getSlipStyles()}
             .mmwgh-slip-card { border-color: #000000; break-inside: avoid; page-break-inside: avoid; }
             .mmwgh-slip-header { border-bottom-color: #000000; }
-            .mmwgh-slip-logo, .mmwgh-slip-qr-box { border-color: #000000; }
+            .mmwgh-slip-qr-box { border-color: #000000; }
           </style>
         </head>
         <body>${renderHtml(data)}</body>
@@ -686,11 +713,13 @@
       ctx.fillText(line2, cx, cy + 6);
     }
     ctx.restore();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = '#9ca3af';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    if (!img) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = '#9ca3af';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
   }
 
   async function download(data) {
@@ -738,19 +767,31 @@
       rows.push({ label: 'Follow-Up/s:', value: '' });
       rows.push({ label: 'Attended Date:', value: n.attendedDate, small: true, gapAfter: 8 });
       n.followUps.forEach((f, idx) => {
-        rows.push({ label: 'Date:', value: f.date });
+        rows.push({ label: 'Follow-Up Date:', value: f.date });
         rows.push({ label: 'Specialty:', value: f.specialty, gapAfter: idx === n.followUps.length - 1 ? 6 : 10 });
       });
+      if (n.followUpNotes) rows.push({ label: 'Instructions:', value: n.followUpNotes });
       rows.push({ label: 'Encoded By:', value: n.encodedBy });
+      if (n.encodedDate) rows.push({ label: 'Date Encoded:', value: n.encodedDate });
     } else if (slipType === 'rescheduled') {
       rows.push({ label: 'Appointment:', value: n.apptDateTime });
       rows.push({ label: 'Specialty:', value: n.specialty });
       rows.push({ label: 'Type of Consult:', value: n.consultType });
+      if (n.isTeleconsult) {
+        rows.push({ label: 'Mode:', value: 'Teleconsultation' + (n.teleconsultPlatform ? ` (${n.teleconsultPlatform})` : '') });
+        if (n.teleconsultLink) rows.push({ label: 'Session Link:', value: n.teleconsultLink });
+        if (n.teleconsultNotes) rows.push({ label: 'Instructions:', value: n.teleconsultNotes });
+      }
       rows.push({ label: 'Encoded by:', value: n.encodedBy });
     } else {
       rows.push({ label: 'Appointment:', value: n.apptDateTime });
       rows.push({ label: 'Specialty:', value: n.specialty });
       rows.push({ label: 'Type of Consult:', value: n.consultType });
+      if (n.isTeleconsult) {
+        rows.push({ label: 'Mode:', value: 'Teleconsultation' + (n.teleconsultPlatform ? ` (${n.teleconsultPlatform})` : '') });
+        if (n.teleconsultLink) rows.push({ label: 'Session Link:', value: n.teleconsultLink });
+        if (n.teleconsultNotes) rows.push({ label: 'Instructions:', value: n.teleconsultNotes });
+      }
       rows.push({ label: 'Remarks:', value: n.remarks });
       rows.push({ label: 'Encoded By:', value: n.encodedBy });
     }
@@ -794,7 +835,7 @@
     const rawFieldsH = laidOutRows.reduce((acc, r) => acc + r.lines.length * r.lh + r.gapAfter, 0);
     const fieldsH = Math.max(rawFieldsH, qrBlockH);
     let himuLines = [];
-    if (slipType === 'appointment') {
+    if (slipType === 'appointment' && !n.isTeleconsult) {
       mctx.font = `700 10.5px ${FONT}`;
       himuLines = wrapLines(mctx, 'To HIMU for creation of chart. Please bring valid ID / Birth Certificate.', contentW);
     }
@@ -910,7 +951,7 @@
       y += 10;
     }
     ctx.font = `400 11px ${FONT}`;
-    ctx.fillText('DALHIN SA ARAW NG KONSULTA', W / 2, y);
+    ctx.fillText(n.isTeleconsult ? 'REMOTE TELECONSULTATION — CHECK PATIENT PORTAL' : 'DALHIN SA ARAW NG KONSULTA', W / 2, y);
     y += 17;
     ctx.fillText('OPU-MEDICAL CONTACT NUMBER:', W / 2, y);
     y += 17;

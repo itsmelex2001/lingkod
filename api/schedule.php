@@ -24,9 +24,11 @@ $role   = $_SESSION['role'] ?? 'public';
           $staffDept = $stmtDept->fetchColumn();
       }
 
+      $startFmt = dbIsPgsql() ? "TO_CHAR(schedule_start, 'HH12:MI AM')" : "TIME_FORMAT(schedule_start, '%h:%i %p')";
+      $endFmt   = dbIsPgsql() ? "TO_CHAR(schedule_end, 'HH12:MI AM')"   : "TIME_FORMAT(schedule_end, '%h:%i %p')";
       $cols = "id, name, department, specialization, status, total_slots, profile_image, schedule_date, schedule_start, schedule_end,
-               TIME_FORMAT(schedule_start, '%h:%i %p') AS schedule_start_fmt,
-               TIME_FORMAT(schedule_end, '%h:%i %p') AS schedule_end_fmt";
+               {$startFmt} AS schedule_start_fmt,
+               {$endFmt} AS schedule_end_fmt";
 
       if ($fetchAll || $role === 'admin' || $role === 'public' || empty($staffDept)) {
           $stmt = $pdo->query(

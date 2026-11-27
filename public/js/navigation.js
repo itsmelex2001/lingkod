@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const navbar = document.getElementById("navbar");
 
   // ── Active nav link tracking & Scroll Spy ─────────────────────────────
-  const allNavLinks = navLinks?.querySelectorAll("a") ?? [];
+  const allNavLinks = navLinks?.querySelectorAll("a:not(.btn-patient-portal)") ?? [];
 
   function setActiveLink(el) {
     allNavLinks.forEach((l) => l.classList.remove("active-nav"));
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const triggerY = (navbar?.offsetHeight ?? 76) + window.innerHeight * 0.28;
+      const triggerY = (navbar?.offsetHeight ?? 86) + window.innerHeight * 0.28;
       let activeId = "hero-new";
 
       for (const el of trackedElements) {
@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
         navLinks.querySelector(".nav-dropdown")?.classList.remove("open");
       }
     });
-    allNavLinks.forEach((link) => {
+    navLinks.querySelectorAll("a").forEach((link) => {
       link.addEventListener("click", (e) => {
         if (window.innerWidth > 768) return;
         if (link.classList.contains("nav-dropdown-toggle")) {

@@ -158,9 +158,47 @@ class ChatbotFaqController extends Controller
 
     private function sanitizeAnswer(string $html): string
     {
-        // Strip script/style blocks completely before keeping safe inline emphasis tags
         $noScripts = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $html) ?? $html;
-        return trim(strip_tags($noScripts, '<strong><b><em><br>'));
+        if (!class_exists(\DOMDocument::class)) {
+            return htmlspecialchars(strip_tags($noScripts), ENT_QUOTES, 'UTF-8');
+        }
+
+        $allowed = ['strong', 'b', 'em', 'br'];
+        $dom = new \DOMDocument();
+        $prev = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8" ?><div>' . $noScripts . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        libxml_use_internal_errors($prev);
+
+        $root = $dom->getElementsByTagName('div')->item(0);
+        if (!$root) {
+            return htmlspecialchars(strip_tags($noScripts), ENT_QUOTES, 'UTF-8');
+        }
+
+        $walk = static function (\DOMNode $node) use (&$walk, $allowed): void {
+            for ($i = $node->childNodes->length - 1; $i >= 0; $i--) {
+                $child = $node->childNodes->item($i);
+                if ($child instanceof \DOMElement) {
+                    $tag = strtolower($child->tagName);
+                    if (!in_array($tag, $allowed, true)) {
+                        $text = $child->ownerDocument->createTextNode($child->textContent);
+                        $node->replaceChild($text, $child);
+                    } else {
+                        while ($child->attributes->length > 0) {
+                            $child->removeAttributeNode($child->attributes->item(0));
+                        }
+                        $walk($child);
+                    }
+                }
+            }
+        };
+        $walk($root);
+
+        $inner = '';
+        foreach ($root->childNodes as $child) {
+            $inner .= $dom->saveHTML($child);
+        }
+        return trim($inner);
     }
 
     private function bustCacheAndAudit(Request $request, string $action, string $details): void

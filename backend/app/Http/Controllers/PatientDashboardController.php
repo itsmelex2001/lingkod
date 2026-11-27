@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use App\Models\Appointment;
 use App\Http\Resources\AppointmentResource;
 use Carbon\Carbon;
@@ -13,21 +15,49 @@ use Carbon\Carbon;
 class PatientDashboardController extends Controller
 {
     /**
-     * Resolves authenticated patient identifiers from request or session.
+     * Resolves verified patient identifiers strictly from an authenticated bearer token or active session.
+     * Never trusts client-supplied patient_id, email, or user_id request parameters.
      */
     protected function resolvePatientIdentifiers(Request $request): array
     {
-        $patientId = $request->input('patient_id') ?: session('patient_id');
-        $email     = $request->input('email') ?: session('patient_email');
-        $userId    = $request->input('user_id') ?: session('user_id');
-
-        if (empty($patientId) && empty($email) && empty($userId)) {
-            // Default demo fallback if unauthenticated demo access
-            $patientId = 'PT-2026-082';
-            $email     = 'maria.santos@gmail.com';
+        $bearer = $request->bearerToken();
+        if (!empty($bearer)) {
+            $tokenData = Cache::get("patient_api_token:{$bearer}");
+            if (is_array($tokenData) && (!empty($tokenData['patient_id']) || !empty($tokenData['email']))) {
+                return [
+                    $tokenData['patient_id'] ?? null,
+                    $tokenData['email'] ?? null,
+                    $tokenData['user_id'] ?? null,
+                ];
+            }
         }
 
-        return [$patientId, $email, $userId];
+        if ($request->hasSession() && $request->session()->get('patient_logged_in')) {
+            $patientId = $request->session()->get('patient_id');
+            $email     = $request->session()->get('patient_email');
+            $userId    = $request->session()->get('user_id');
+            if (!empty($patientId) || !empty($email)) {
+                return [$patientId, $email, $userId];
+            }
+        }
+
+        // Same-origin PHP session bridge for XAMPP patient-dashboard.php
+        if (!app()->runningUnitTests() && session_status() === PHP_SESSION_NONE && isset($_COOKIE[session_name()])) {
+            @session_start();
+        }
+        if (!empty($_SESSION['patient_logged_in'])) {
+            $patientId = $_SESSION['patient_id'] ?? null;
+            $email     = $_SESSION['patient_email'] ?? null;
+            $userId    = $_SESSION['user_id'] ?? ($_SESSION['patient_user_id'] ?? null);
+            if (!empty($patientId) || !empty($email)) {
+                return [$patientId, $email, $userId];
+            }
+        }
+
+        abort(response()->json([
+            'success' => false,
+            'message' => 'Unauthenticated. Please sign in to the patient portal.',
+        ], 401));
     }
 
     /**
@@ -102,9 +132,10 @@ class PatientDashboardController extends Controller
             ]);
 
         } catch (\Throwable $e) {
+            Log::error('Error retrieving dashboard data', ['exception' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error retrieving dashboard data: ' . $e->getMessage()
+                'message' => 'Error retrieving dashboard data.'
             ], 500);
         }
     }
@@ -186,9 +217,10 @@ class PatientDashboardController extends Controller
             ]);
 
         } catch (\Throwable $e) {
+            Log::error('Error retrieving appointments list', ['exception' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error retrieving appointments list: ' . $e->getMessage()
+                'message' => 'Error retrieving appointments list.'
             ], 500);
         }
     }
@@ -245,14 +277,17 @@ class PatientDashboardController extends Controller
     {
         [$patientId, $email, $userId] = $this->resolvePatientIdentifiers($request);
 
+        $confirmValue = $request->input('confirm_password', $request->input('new_password_confirmation'));
+        $request->merge(['confirm_password' => $confirmValue]);
+
         $request->validate([
             'current_password' => ['required', 'string'],
             'new_password'     => ['required', 'string', 'min:8'],
             'confirm_password' => ['required', 'same:new_password'],
         ]);
 
-        $currentPass = $request->input('current_password');
-        $newPass     = $request->input('new_password');
+        $currentPass = (string)$request->input('current_password');
+        $newPass     = (string)$request->input('new_password');
 
         try {
             $patient = DB::table('patients')
@@ -262,16 +297,15 @@ class PatientDashboardController extends Controller
                     if ($userId) $q->orWhere('user_id', $userId);
                 })
                 ->whereNotNull('password')
+                ->where('password', '<>', '')
                 ->orderBy('id', 'desc')
                 ->first();
 
-            if ($patient && !empty($patient->password)) {
-                if (!Hash::check($currentPass, $patient->password) && $currentPass !== $patient->password) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'The current password you entered is incorrect.'
-                    ], 422);
-                }
+            if (!$patient || empty($patient->password) || !Hash::check($currentPass, $patient->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The current password you entered is incorrect.'
+                ], 422);
             }
 
             $hashed = Hash::make($newPass);

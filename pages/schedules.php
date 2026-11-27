@@ -71,56 +71,53 @@
         min-height: 100dvh;
       }
 
-      /* ── Top Header (matches homepage navbar gradient) ── */
+      /* ── Top Header (Two-tier: Emerald brand strip + crisp light filter bar) ── */
       .sched-header {
-        background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
-        border-bottom: none;
-        box-shadow: 0 6px 20px rgba(4, 112, 35, 0.24);
         position: sticky;
         top: 0;
         z-index: 30;
+        box-shadow: 0 4px 18px rgba(15, 36, 23, 0.08);
       }
 
-      .sched-header-inner {
+      .sched-header-top {
+        background: linear-gradient(90deg, #0d7a31 0%, #15803d 50%, #04561e 100%);
+      }
+
+      .sched-header-top-inner {
         max-width: 1240px;
         margin: 0 auto;
-        padding: 14px 24px 0;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .sched-header-row {
+        padding: 15px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 20px;
+        gap: 16px;
       }
 
       .sched-header-left {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
+        min-width: 0;
       }
 
       .btn-home {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.42);
-        background: rgba(255, 255, 255, 0.16);
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.14);
         color: #ffffff;
         text-decoration: none;
-        transition: background-color 0.15s ease, border-color 0.15s ease;
+        transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
         flex-shrink: 0;
       }
 
       .btn-home:hover {
-        background-color: rgba(255, 255, 255, 0.28);
-        border-color: rgba(255, 255, 255, 0.65);
+        background-color: rgba(255, 255, 255, 0.24);
+        border-color: rgba(255, 255, 255, 0.5);
       }
 
       .btn-home:focus-visible {
@@ -130,20 +127,112 @@
 
       .sched-title {
         font-family: var(--font-heading);
-        font-size: 1.45rem;
-        font-weight: 700;
+        font-size: 1.4rem;
+        font-weight: 800;
         color: #ffffff;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+        line-height: 1.18;
+        letter-spacing: -0.025em;
       }
 
       .sched-subtitle {
-        font-size: 0.875rem;
-        color: rgba(255, 255, 255, 0.95);
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.88);
         margin-top: 2px;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+        line-height: 1.35;
       }
+
+      /* ── Filter Control Bar (Segmented Clinic Tabs + Search) ── */
+      .sched-filter-bar {
+        background: #ffffff;
+        border-bottom: 1px solid #d9e5dd;
+      }
+
+      .sched-filter-inner {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 10px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .dept-tabs-nav {
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      .dept-tabs-track {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 4px;
+        background: #f1f6f3;
+        border: 1px solid #dde8e0;
+        border-radius: 12px;
+      }
+
+      .dept-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 36px;
+        padding: 7px 14px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        background: transparent;
+        font-family: var(--font-sans);
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #42564b;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      }
+
+      .dept-tab:hover {
+        color: #0f2417;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .dept-tab:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+      }
+
+      .dept-tab.active {
+        color: #0f2417;
+        background: #ffffff;
+        border-color: #d6e4da;
+        font-weight: 700;
+        box-shadow: 0 1px 3px rgba(15, 36, 23, 0.08), 0 1px 2px rgba(15, 36, 23, 0.04);
+      }
+
+      .dept-tab.active[data-dept="General Medical"] {
+        color: var(--dept-general);
+      }
+
+      .dept-tab.active[data-dept="Neurology"] {
+        color: var(--dept-neuro);
+      }
+
+      .dept-tab.active[data-dept="Psychiatry"] {
+        color: var(--dept-psych);
+      }
+
+      .dept-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .dot-general { background-color: var(--dept-general); }
+      .dot-neuro { background-color: var(--dept-neuro); }
+      .dot-psych { background-color: var(--dept-psych); }
+      .dot-gray { background-color: #9ca3af; }
 
       .sched-search-wrap {
         position: relative;
@@ -157,7 +246,7 @@
         left: 12px;
         width: 16px;
         height: 16px;
-        color: var(--color-text-muted);
+        color: #64748b;
         pointer-events: none;
       }
 
@@ -166,85 +255,28 @@
         height: 44px;
         padding: 0 14px 0 38px;
         font-family: var(--font-sans);
-        font-size: 0.9375rem;
+        font-size: 0.875rem;
         color: var(--color-text);
-        background: rgba(255, 255, 255, 0.96);
-        border: 1px solid rgba(255, 255, 255, 0.7);
-        border-radius: 10px;
+        background: #f8fbf9;
+        border: 1px solid #d5e2d9;
+        border-radius: 11px;
         outline: none;
         transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
       }
 
+      .sched-search-input:hover {
+        border-color: #b7ccb9;
+      }
+
       .sched-search-input:focus {
-        border-color: #ffffff;
+        border-color: var(--color-accent);
         background: #ffffff;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.14);
       }
 
       .sched-search-input::placeholder {
-        color: var(--color-text-faint);
+        color: #6b7d72;
       }
-
-      /* ── Filter Tabs ── */
-      .dept-tabs-track {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding-bottom: 12px;
-      }
-
-      .dept-tab {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-height: 40px;
-        padding: 8px 14px;
-        border: 1px solid rgba(255, 255, 255, 0.32);
-        border-radius: 999px;
-        background: rgba(0, 0, 0, 0.14);
-        font-family: var(--font-sans);
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #ffffff;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-      }
-
-      .dept-tab:hover {
-        color: #ffffff;
-        background: rgba(0, 0, 0, 0.24);
-        border-color: rgba(255, 255, 255, 0.55);
-      }
-
-      .dept-tab:focus-visible {
-        outline: 2px solid #ffffff;
-        outline-offset: 2px;
-      }
-
-      .dept-tab.active {
-        color: #0b5324;
-        background: #ffffff;
-        border-color: #ffffff;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
-      }
-
-      .dept-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        flex-shrink: 0;
-      }
-
-      .dept-tab:not(.active) .dept-dot {
-        box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
-      }
-
-      .dot-general { background-color: var(--dept-general); }
-      .dot-neuro { background-color: var(--dept-neuro); }
-      .dot-psych { background-color: var(--dept-psych); }
-      .dot-gray { background-color: #9ca3af; }
 
       /* ── Centered Calendar Workspace ── */
       .sched-main {
@@ -608,9 +640,9 @@
       .modal-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.48);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        background: rgba(15, 23, 42, 0.52);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -618,85 +650,145 @@
         z-index: 60;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.16s ease;
+        transition: opacity 0.14s ease-in;
       }
 
       .modal-backdrop.is-open {
         opacity: 1;
         pointer-events: auto;
+        transition: opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       .modal-card {
         width: 100%;
-        max-width: 560px;
-        max-height: 85vh;
+        max-width: 580px;
+        max-height: min(86dvh, 720px);
         background: var(--color-surface);
-        border: 1px solid rgba(15, 36, 23, 0.08);
-        border-radius: 18px;
-        box-shadow: 0 24px 56px rgba(15, 23, 42, 0.22);
+        border: 1px solid #dce6df;
+        border-radius: 20px;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2), 0 4px 14px rgba(15, 36, 23, 0.06);
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        transform: translateY(8px) scale(0.99);
-        transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+        transform: translateY(10px) scale(0.985);
+        transition: transform 0.14s ease-in;
       }
 
       .modal-backdrop.is-open .modal-card {
         transform: translateY(0) scale(1);
+        transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       .modal-header {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
         gap: 16px;
-        padding: 20px 24px 16px;
-        background: #f8fbf9;
-        border-bottom: 1px solid var(--color-hairline);
+        padding: 20px 24px 18px;
+        background: #ffffff;
+        border-bottom: 1px solid #e6eee8;
+      }
+
+      .modal-header-main {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .modal-date-tile {
+        width: 50px;
+        height: 52px;
+        border-radius: 13px;
+        background: #eef7f1;
+        border: 1px solid #cfe4d6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        line-height: 1;
+      }
+
+      .modal-date-tile-dow {
+        font-family: var(--font-heading);
+        font-size: 0.64rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #15803d;
+      }
+
+      .modal-date-tile-day {
+        font-family: var(--font-heading);
+        font-size: 1.32rem;
+        font-weight: 800;
+        color: #0f2417;
+        margin-top: 2px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .modal-header-copy {
+        min-width: 0;
       }
 
       .modal-eyebrow {
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: var(--color-accent);
+        letter-spacing: 0.08em;
+        color: #15803d;
         margin-bottom: 2px;
       }
 
       .modal-title {
         font-family: var(--font-heading);
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--color-text);
-        line-height: 1.25;
+        font-size: 1.28rem;
+        font-weight: 800;
+        color: #0f2417;
+        line-height: 1.22;
         letter-spacing: -0.02em;
+        text-wrap: balance;
       }
 
       .modal-sub {
         font-size: 0.82rem;
-        color: var(--color-text-muted);
+        font-weight: 500;
+        color: #52645a;
         margin-top: 3px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .modal-sub-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #16a34a;
+        flex-shrink: 0;
       }
 
       .modal-close-btn {
         width: 40px;
         height: 40px;
-        border-radius: 10px;
-        border: 1px solid var(--color-hairline);
-        background: var(--color-surface);
-        color: var(--color-text-muted);
+        border-radius: 11px;
+        border: 1px solid #dfe8e2;
+        background: #ffffff;
+        color: #52645a;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         flex-shrink: 0;
-        transition: background-color 0.15s ease, color 0.15s ease;
+        touch-action: manipulation;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
       }
 
       .modal-close-btn:hover {
-        background: var(--color-hover);
-        color: var(--color-text);
+        background: #f2f7f4;
+        border-color: #c2d6c8;
+        color: #0f2417;
       }
 
       .modal-close-btn:focus-visible {
@@ -705,68 +797,146 @@
       }
 
       .modal-body {
-        padding: 16px 24px 20px;
+        padding: 20px 24px 22px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 20px;
+        background: #f7faf8;
       }
 
       .modal-session-group {
         display: flex;
         flex-direction: column;
+        gap: 10px;
+      }
+
+      .modal-session-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0 2px;
       }
 
       .modal-session-label {
-        font-size: 0.7rem;
-        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: var(--font-heading);
+        font-size: 0.72rem;
+        font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: var(--color-text-faint);
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--color-hairline);
+        color: #47584e;
       }
 
-      .modal-slot-item {
-        display: grid;
-        grid-template-columns: 118px minmax(0, 1fr);
-        gap: 14px;
-        padding: 14px 0;
-        border-bottom: 1px solid #eef3f0;
-        align-items: start;
+      .modal-session-icon {
+        width: 14px;
+        height: 14px;
+        color: #15803d;
+        flex-shrink: 0;
       }
 
-      .modal-slot-item:last-child {
-        border-bottom: none;
-        padding-bottom: 2px;
+      .modal-session-count {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #5c6f64;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: #eaf2ed;
       }
 
-      .modal-slot-item.is-general { --slot-color: var(--dept-general); --slot-soft: #ecfdf5; }
-      .modal-slot-item.is-neuro { --slot-color: var(--dept-neuro); --slot-soft: #eff6ff; }
-      .modal-slot-item.is-psych { --slot-color: var(--dept-psych); --slot-soft: #f5f3ff; }
-
-      .modal-slot-time-col {
+      .modal-slot-list {
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        padding-left: 10px;
-        border-left: 3px solid var(--slot-color);
+        gap: 10px;
+      }
+
+      /* Clean uniform card — no colored side stripe */
+      .modal-slot-item {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 16px 18px;
+        background: #ffffff;
+        border: 1px solid #e1eae4;
+        border-radius: 14px;
+        box-shadow: 0 1px 2px rgba(15, 36, 23, 0.03);
+        transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+      }
+
+      .modal-slot-item:hover {
+        border-color: #c1d6c8;
+        box-shadow: 0 6px 16px rgba(15, 36, 23, 0.06);
+      }
+
+      .modal-slot-item.is-general { --slot-color: var(--dept-general); --slot-soft: #ecfdf5; --slot-border: #bbf7d0; }
+      .modal-slot-item.is-neuro { --slot-color: var(--dept-neuro); --slot-soft: #eff6ff; --slot-border: #bfdbfe; }
+      .modal-slot-item.is-psych { --slot-color: var(--dept-psych); --slot-soft: #f5f3ff; --slot-border: #ddd6fe; }
+
+      .modal-slot-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f0f5f2;
+      }
+
+      .modal-slot-time-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         font-variant-numeric: tabular-nums;
       }
 
-      .modal-slot-start {
-        font-family: var(--font-heading);
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--color-text);
-        line-height: 1.2;
+      .modal-slot-clock-icon {
+        width: 14px;
+        height: 14px;
+        color: #64748b;
+        flex-shrink: 0;
       }
 
-      .modal-slot-end {
-        font-size: 0.78rem;
-        font-weight: 500;
-        color: var(--color-text-faint);
-        line-height: 1.25;
+      .modal-slot-range {
+        font-family: var(--font-heading);
+        font-size: 0.86rem;
+        font-weight: 700;
+        color: #0f2417;
+      }
+
+      .modal-slot-duration {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 0.7rem;
+        font-weight: 600;
+      }
+
+      .modal-slot-dept {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--slot-soft);
+        border: 1px solid var(--slot-border);
+        color: var(--slot-color);
+        font-size: 0.72rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .modal-slot-dept-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--slot-color);
+        flex-shrink: 0;
       }
 
       .modal-slot-content {
@@ -776,55 +946,45 @@
         gap: 4px;
       }
 
-      .modal-slot-head {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
       .modal-slot-service {
         font-family: var(--font-heading);
-        font-size: 0.96rem;
+        font-size: 0.98rem;
         font-weight: 700;
-        color: var(--color-text);
-        line-height: 1.3;
-      }
-
-      .modal-slot-dept {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: var(--slot-soft);
-        color: var(--slot-color);
-        font-size: 0.7rem;
-        font-weight: 700;
-        white-space: nowrap;
+        color: #0f2417;
+        line-height: 1.35;
+        text-wrap: balance;
       }
 
       .modal-slot-desc {
-        font-size: 0.82rem;
-        color: var(--color-text-muted);
-        line-height: 1.45;
+        font-size: 0.84rem;
+        color: #52645a;
+        line-height: 1.52;
       }
 
       .modal-footer {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        padding: 12px 24px;
-        background: #f8fbf9;
-        border-top: 1px solid var(--color-hairline);
+        gap: 14px;
+        padding: 15px 24px;
+        background: #ffffff;
+        border-top: 1px solid #e6eee8;
         flex-wrap: wrap;
       }
 
       .modal-footer-note {
-        font-size: 0.78rem;
-        color: var(--color-text-muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 0.8rem;
+        color: #52645a;
+      }
+
+      .modal-footer-note svg {
+        width: 15px;
+        height: 15px;
+        color: #15803d;
+        flex-shrink: 0;
       }
 
       .modal-footer-actions {
@@ -837,51 +997,82 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 40px;
-        padding: 0 16px;
-        border-radius: 10px;
-        background: var(--color-accent);
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 20px;
+        border-radius: 11px;
+        background: #15803d;
         color: #ffffff;
-        font-size: 0.84rem;
-        font-weight: 600;
+        font-family: var(--font-heading);
+        font-size: 0.88rem;
+        font-weight: 700;
         text-decoration: none;
-        transition: background-color 0.15s ease;
+        touch-action: manipulation;
+        box-shadow: 0 2px 8px rgba(4, 86, 30, 0.22);
+        transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
       }
 
       .modal-btn-primary:hover {
-        background: var(--color-accent-dark);
+        background: #0d6a2d;
+        box-shadow: 0 4px 12px rgba(4, 86, 30, 0.28);
+      }
+
+      .modal-btn-primary:active {
+        transform: scale(0.98);
       }
 
       .modal-btn-primary:focus-visible {
-        outline: 2px solid var(--color-accent);
+        outline: 2px solid #15803d;
         outline-offset: 2px;
       }
 
       @media (max-width: 560px) {
+        .modal-backdrop {
+          padding: 10px;
+          align-items: flex-end;
+        }
+        .modal-card {
+          max-height: 90dvh;
+          border-radius: 18px;
+        }
         .modal-header,
         .modal-body,
         .modal-footer {
           padding-left: 16px;
           padding-right: 16px;
         }
+        .modal-date-tile {
+          width: 46px;
+          height: 48px;
+        }
         .modal-slot-item {
-          grid-template-columns: 1fr;
+          padding: 14px;
           gap: 8px;
+        }
+        .modal-footer-actions,
+        .modal-btn-primary {
+          width: 100%;
         }
       }
 
       /* ── Responsive ── */
       @media (max-width: 900px) {
-        .sched-header-inner,
+        .sched-header-top-inner,
+        .sched-filter-inner,
         .sched-main {
           padding-left: 14px;
           padding-right: 14px;
         }
 
-        .sched-header-row {
+        .sched-filter-inner {
           flex-direction: column;
           align-items: stretch;
-          gap: 12px;
+          gap: 10px;
+        }
+
+        .dept-tabs-track {
+          width: 100%;
+          justify-content: flex-start;
         }
 
         .sched-search-wrap,
@@ -899,6 +1090,139 @@
         }
       }
 
+      @media (max-width: 640px) {
+        .sched-header {
+          position: static;
+        }
+        .sched-header-top-inner {
+          padding: 10px 12px;
+        }
+        .sched-header-left {
+          gap: 10px;
+        }
+        .btn-home {
+          width: 34px;
+          height: 34px;
+          border-radius: 9px;
+        }
+        .btn-home svg {
+          width: 17px;
+          height: 17px;
+        }
+        .sched-title {
+          font-size: 1.05rem;
+        }
+        .sched-subtitle {
+          font-size: 0.73rem;
+          line-height: 1.3;
+        }
+        .sched-filter-inner {
+          padding: 8px 12px;
+          gap: 8px;
+        }
+        .dept-tabs-track {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 4px;
+          padding: 3px;
+          border-radius: 10px;
+        }
+        .dept-tab {
+          min-height: 32px;
+          padding: 5px 8px;
+          font-size: 0.74rem;
+          justify-content: center;
+          gap: 5px;
+          border-radius: 7px;
+        }
+        .dept-dot {
+          width: 7px;
+          height: 7px;
+        }
+        .sched-search-input {
+          height: 36px;
+          font-size: 0.8rem;
+          padding: 0 10px 0 32px;
+          border-radius: 9px;
+        }
+        .sched-search-icon {
+          left: 10px;
+          width: 14px;
+          height: 14px;
+        }
+        .sched-main {
+          padding: 10px 10px 24px;
+        }
+        .calendar-board {
+          border-radius: 12px;
+        }
+        .cal-toolbar {
+          padding: 10px 12px;
+          gap: 8px;
+        }
+        .cal-month-title {
+          font-size: 0.95rem;
+        }
+        .cal-btn {
+          height: 32px;
+          min-width: 32px;
+          padding: 0 10px;
+          font-size: 0.75rem;
+          border-radius: 8px;
+        }
+        .cal-legend {
+          padding: 8px 12px;
+          gap: 6px 10px;
+          font-size: 0.7rem;
+        }
+        .cal-legend-items {
+          gap: 6px 10px;
+        }
+        .legend-swatch {
+          width: 9px;
+          height: 9px;
+        }
+        .cal-grid-frame {
+          min-width: 0;
+          width: 100%;
+        }
+        .cal-weekday {
+          font-size: 0.64rem;
+          padding: 7px 2px;
+          letter-spacing: 0.02em;
+        }
+        .cal-cell {
+          min-height: 62px;
+          padding: 5px 3px 6px;
+          gap: 3px;
+        }
+        .cell-head {
+          gap: 3px;
+          flex-wrap: wrap;
+        }
+        .cell-day-num {
+          font-size: 0.78rem;
+        }
+        .cell-today-pill {
+          font-size: 0.52rem;
+          padding: 1px 4px;
+        }
+        .cell-status-note {
+          font-size: 0.58rem;
+        }
+        .cell-bars {
+          gap: 3px;
+        }
+        .spec-bar {
+          padding: 3px 4px;
+          font-size: 0.58rem;
+          border-radius: 4px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
           transition: none !important;
@@ -909,8 +1233,8 @@
   </head>
   <body>
     <header class="sched-header">
-      <div class="sched-header-inner">
-        <div class="sched-header-row">
+      <div class="sched-header-top">
+        <div class="sched-header-top-inner">
           <div class="sched-header-left">
             <a href="/sdn/index.php" class="btn-home" aria-label="Back to Homepage" title="Home">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -923,6 +1247,25 @@
               <p class="sched-subtitle">Monthly calendar of available specializations per department. Select any open day to view full hours.</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="sched-filter-bar">
+        <div class="sched-filter-inner">
+          <nav class="dept-tabs-nav" aria-label="Clinic department">
+            <div class="dept-tabs-track" role="group">
+              <button type="button" class="dept-tab active" data-dept="ALL" aria-pressed="true">All clinics</button>
+              <button type="button" class="dept-tab" data-dept="General Medical" aria-pressed="false">
+                <span class="dept-dot dot-general" aria-hidden="true"></span>General Medical
+              </button>
+              <button type="button" class="dept-tab" data-dept="Neurology" aria-pressed="false">
+                <span class="dept-dot dot-neuro" aria-hidden="true"></span>Neurology
+              </button>
+              <button type="button" class="dept-tab" data-dept="Psychiatry" aria-pressed="false">
+                <span class="dept-dot dot-psych" aria-hidden="true"></span>Psychiatry
+              </button>
+            </div>
+          </nav>
 
           <div class="sched-search-wrap">
             <svg class="sched-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -938,21 +1281,6 @@
             />
           </div>
         </div>
-
-        <nav aria-label="Clinic department">
-          <div class="dept-tabs-track" role="group">
-            <button type="button" class="dept-tab active" data-dept="ALL" aria-pressed="true">All clinics</button>
-            <button type="button" class="dept-tab" data-dept="General Medical" aria-pressed="false">
-              <span class="dept-dot dot-general" aria-hidden="true"></span>General Medical
-            </button>
-            <button type="button" class="dept-tab" data-dept="Neurology" aria-pressed="false">
-              <span class="dept-dot dot-neuro" aria-hidden="true"></span>Neurology
-            </button>
-            <button type="button" class="dept-tab" data-dept="Psychiatry" aria-pressed="false">
-              <span class="dept-dot dot-psych" aria-hidden="true"></span>Psychiatry
-            </button>
-          </div>
-        </nav>
       </div>
     </header>
 
@@ -1012,13 +1340,19 @@
     </main>
 
     <!-- Day Details Modal -->
-    <div class="modal-backdrop" id="dayModal" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle" hidden>
+    <div class="modal-backdrop" id="dayModal" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle" aria-describedby="dayModalSub" hidden>
       <div class="modal-card">
         <div class="modal-header">
-          <div>
-            <div class="modal-eyebrow" id="dayModalEyebrow">Clinic Schedule</div>
-            <h3 class="modal-title" id="dayModalTitle">Date</h3>
-            <p class="modal-sub" id="dayModalSub">Available specializations</p>
+          <div class="modal-header-main">
+            <div class="modal-date-tile" aria-hidden="true">
+              <span class="modal-date-tile-dow" id="dayModalTileDow">SAT</span>
+              <span class="modal-date-tile-day" id="dayModalTileDay">28</span>
+            </div>
+            <div class="modal-header-copy">
+              <div class="modal-eyebrow" id="dayModalEyebrow">Clinic Schedule</div>
+              <h3 class="modal-title" id="dayModalTitle">Date</h3>
+              <p class="modal-sub" id="dayModalSub">Available specializations</p>
+            </div>
           </div>
           <button type="button" class="modal-close-btn" id="dayModalClose" aria-label="Close day schedule">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
@@ -1029,9 +1363,22 @@
         </div>
         <div class="modal-body" id="dayModalBody"></div>
         <div class="modal-footer">
-          <span class="modal-footer-note">Online schedules require staff approval.</span>
+          <span class="modal-footer-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Online schedules require staff approval.
+          </span>
           <div class="modal-footer-actions">
-            <a href="/sdn/pages/patient-login.php" class="modal-btn-primary">Book Appointment</a>
+            <a href="/sdn/pages/patient-login.php" class="modal-btn-primary">
+              Book Appointment
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </a>
           </div>
         </div>
       </div>
@@ -1238,34 +1585,59 @@
           return result;
         }
 
+        let lastFocusedEl = null;
+
+        function formatDuration(startTime, endTime) {
+          if (!startTime || !endTime) return '';
+          const [sh, sm] = startTime.split(':').map(Number);
+          const [eh, em] = endTime.split(':').map(Number);
+          const mins = (eh * 60 + em) - (sh * 60 + sm);
+          if (mins <= 0) return '';
+          const hrs = Math.floor(mins / 60);
+          const rem = mins % 60;
+          if (hrs && rem) return `${hrs}h ${rem}m`;
+          if (hrs) return `${hrs} ${hrs === 1 ? 'hr' : 'hrs'}`;
+          return `${rem} mins`;
+        }
+
         function openDayModal(dateObj, slots) {
+          lastFocusedEl = document.activeElement;
           const eyebrowEl = document.getElementById('dayModalEyebrow');
+          const tileDowEl = document.getElementById('dayModalTileDow');
+          const tileDayEl = document.getElementById('dayModalTileDay');
           const weekdayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+          const shortWeekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
           const dateLabel = dateObj.toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
             year: 'numeric'
           });
+          if (tileDowEl) tileDowEl.textContent = shortWeekday;
+          if (tileDayEl) tileDayEl.textContent = String(dateObj.getDate());
           if (eyebrowEl) {
             eyebrowEl.textContent = activeDept === 'ALL' ? weekdayLabel : `${weekdayLabel} · ${activeDept}`;
           }
           modalTitleEl.textContent = dateLabel;
-          modalSubEl.textContent = `${slots.length} open consultation ${slots.length === 1 ? 'block' : 'blocks'}`;
+          modalSubEl.innerHTML = `<span class="modal-sub-dot" aria-hidden="true"></span>${slots.length} open consultation ${slots.length === 1 ? 'block' : 'blocks'}`;
+
+          const clockIcon = '<svg class="modal-slot-clock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15.5 14"></polyline></svg>';
 
           const renderSlotRow = (slot) => {
             const tone = deptToneClass(slot.dept);
             const showDeptTag = activeDept === 'ALL';
+            const duration = formatDuration(slot.startTime, slot.endTime);
             return `
               <article class="modal-slot-item ${tone}">
-                <div class="modal-slot-time-col">
-                  <span class="modal-slot-start">${escapeHtml(formatTime12(slot.startTime))}</span>
-                  <span class="modal-slot-end">to ${escapeHtml(formatTime12(slot.endTime))}</span>
+                <div class="modal-slot-top">
+                  <div class="modal-slot-time-pill">
+                    ${clockIcon}
+                    <span class="modal-slot-range">${escapeHtml(formatTime12(slot.startTime))} &ndash; ${escapeHtml(formatTime12(slot.endTime))}</span>
+                    ${duration ? `<span class="modal-slot-duration">${escapeHtml(duration)}</span>` : ''}
+                  </div>
+                  ${showDeptTag ? `<span class="modal-slot-dept"><span class="modal-slot-dept-dot" aria-hidden="true"></span>${escapeHtml(slot.dept)}</span>` : ''}
                 </div>
                 <div class="modal-slot-content">
-                  <div class="modal-slot-head">
-                    <div class="modal-slot-service">${escapeHtml(slot.service)}</div>
-                    ${showDeptTag ? `<span class="modal-slot-dept">${escapeHtml(slot.dept)}</span>` : ''}
-                  </div>
+                  <div class="modal-slot-service">${escapeHtml(slot.service)}</div>
                   ${slot.desc ? `<p class="modal-slot-desc">${escapeHtml(slot.desc)}</p>` : ''}
                 </div>
               </article>
@@ -1274,16 +1646,36 @@
 
           const morningSlots = slots.filter(s => parseInt((s.startTime || '08').split(':')[0], 10) < 12);
           const afternoonSlots = slots.filter(s => parseInt((s.startTime || '08').split(':')[0], 10) >= 12);
+          const sunIcon = '<svg class="modal-session-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>';
+          const pmIcon = '<svg class="modal-session-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15.5 14"></polyline></svg>';
 
           let bodyHtml = '';
           if (morningSlots.length) {
-            bodyHtml += `<section class="modal-session-group"><div class="modal-session-label">Morning</div>${morningSlots.map(renderSlotRow).join('')}</section>`;
+            bodyHtml += `
+              <section class="modal-session-group">
+                <div class="modal-session-header">
+                  <div class="modal-session-label">${sunIcon}Morning</div>
+                  <span class="modal-session-count">${morningSlots.length} ${morningSlots.length === 1 ? 'block' : 'blocks'}</span>
+                </div>
+                <div class="modal-slot-list">${morningSlots.map(renderSlotRow).join('')}</div>
+              </section>
+            `;
           }
           if (afternoonSlots.length) {
-            bodyHtml += `<section class="modal-session-group"><div class="modal-session-label">Afternoon</div>${afternoonSlots.map(renderSlotRow).join('')}</section>`;
+            bodyHtml += `
+              <section class="modal-session-group">
+                <div class="modal-session-header">
+                  <div class="modal-session-label">${pmIcon}Afternoon</div>
+                  <span class="modal-session-count">${afternoonSlots.length} ${afternoonSlots.length === 1 ? 'block' : 'blocks'}</span>
+                </div>
+                <div class="modal-slot-list">${afternoonSlots.map(renderSlotRow).join('')}</div>
+              </section>
+            `;
           }
           modalBodyEl.innerHTML = bodyHtml;
+          modalBodyEl.scrollTop = 0;
 
+          document.body.style.overflow = 'hidden';
           modalEl.hidden = false;
           requestAnimationFrame(() => modalEl.classList.add('is-open'));
           modalCloseBtn.focus();
@@ -1291,9 +1683,14 @@
 
         function closeDayModal() {
           modalEl.classList.remove('is-open');
+          document.body.style.overflow = '';
           setTimeout(() => {
             if (!modalEl.classList.contains('is-open')) modalEl.hidden = true;
-          }, 160);
+          }, 150);
+          if (lastFocusedEl && typeof lastFocusedEl.focus === 'function') {
+            lastFocusedEl.focus();
+            lastFocusedEl = null;
+          }
         }
 
         function renderCalendar() {
@@ -1475,7 +1872,24 @@
           if (e.target === modalEl) closeDayModal();
         });
         document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && !modalEl.hidden) closeDayModal();
+          if (modalEl.hidden) return;
+          if (e.key === 'Escape') {
+            closeDayModal();
+            return;
+          }
+          if (e.key === 'Tab') {
+            const focusables = modalEl.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+            if (!focusables.length) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
         });
 
         fetchApiSchedule();

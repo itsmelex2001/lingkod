@@ -9,6 +9,7 @@ const LINGKOD_REMEMBER_EMAIL_COOKIE = 'lingkod_remember_email';
 const LINGKOD_REMEMBER_TTL = 2592000; // 30 days
 
 function ensurePatientRememberTable(PDO $pdo): void {
+    if (function_exists('dbIsPgsql') && dbIsPgsql()) return;
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS patient_remember_tokens (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -25,10 +26,11 @@ function ensurePatientRememberTable(PDO $pdo): void {
 }
 
 function setPatientRememberCookie(string $name, string $value, int $expires, bool $httpOnly): void {
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
     setcookie($name, $value, [
         'expires'  => $expires,
-        'path'     => '/sdn/',
+        'path'     => '/',
         'secure'   => $isHttps,
         'httponly' => $httpOnly,
         'samesite' => 'Lax',
@@ -36,17 +38,24 @@ function setPatientRememberCookie(string $name, string $value, int $expires, boo
 }
 
 function setPatientLoginSession(array $patient, ?int $userId = null): void {
+    $hasStaffOrAdmin = !empty($_SESSION['user'])
+        && in_array(strtolower(trim((string)($_SESSION['role'] ?? ''))), ['admin', 'superadmin', 'staff'], true);
+
     $_SESSION['patient_logged_in'] = true;
     $_SESSION['patient_id']        = $patient['patient_id'];
     $_SESSION['patient_db_id']     = $patient['id'];
     $_SESSION['patient_name']      = $patient['full_name'];
     $_SESSION['patient_email']     = $patient['email'];
     if ($userId !== null) {
-        $_SESSION['user_id']         = $userId;
         $_SESSION['patient_user_id'] = $userId;
+        if (!$hasStaffOrAdmin) {
+            $_SESSION['user_id'] = $userId;
+        }
     }
     $_SESSION['user_role']         = 'patient';
-    $_SESSION['role']              = 'patient';
+    if (!$hasStaffOrAdmin) {
+        $_SESSION['role']          = 'patient';
+    }
 }
 
 function issuePatientRememberCookies(PDO $pdo, array $patient): void {
@@ -148,7 +157,8 @@ function tryAutoLoginPatientFromCookie(PDO $pdo): bool {
         $userId = !empty($row['user_id']) ? (int)$row['user_id'] : null;
         if ($userId) {
             try {
-                $hasCol = (bool)$pdo->query("SHOW COLUMNS FROM users LIKE 'account_patient_id'")->fetch();
+                $uCols = function_exists('dbTableColumns') ? dbTableColumns($pdo, 'users') : [];
+                $hasCol = in_array('account_patient_id', $uCols, true);
                 if ($hasCol) {
                     $apStmt = $pdo->prepare("SELECT account_patient_id FROM users WHERE id = ? LIMIT 1");
                     $apStmt->execute([$userId]);

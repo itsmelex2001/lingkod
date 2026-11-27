@@ -56,10 +56,10 @@ body.portal-layout .sidebar {
 .staff-sidebar {
   width: 268px !important;
   min-width: 268px !important;
-  background: linear-gradient(180deg, #1b9e43 0%, #15803d 48%, #0b5324 100%) !important;
+  background: linear-gradient(180deg, #0d7a31 0%, #15803d 50%, #04561e 100%) !important;
   color: #ffffff !important;
   border-right: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 4px 0 24px rgba(6, 50, 22, 0.14) !important;
+  box-shadow: 4px 0 24px rgba(4, 38, 12, 0.22) !important;
   padding: 1.4rem 1.15rem !important;
   transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -280,22 +280,31 @@ body.portal-layout .sidebar-nav .nav-link {
   width: 100% !important;
   box-sizing: border-box !important;
   color: rgba(255, 255, 255, 0.92) !important;
-  font-size: 0.92rem !important;
+  font-size: 0.875rem !important;
   font-weight: 600 !important;
   min-height: 44px;
-  padding: 11px 14px !important;
+  padding: 11px 12px !important;
   margin: 0 !important;
   border-radius: 11px !important;
   border: 1px solid transparent !important;
-  gap: 12px !important;
+  gap: 10px !important;
+  white-space: nowrap;
   background: transparent !important;
   box-shadow: none !important;
   transform: none !important;
   transition: background-color 0.16s ease, color 0.16s ease !important;
 }
 
+.sidebar-nav-item > span:not(.nav-badge) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
 .nav-badge {
   margin-left: auto;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1604,16 +1613,47 @@ body.portal-layout .custom-table-header th {
 .staff-header .user-avatar-btn {
   display: inline-flex !important;
   align-items: center !important;
-  height: 36px !important;
-  border: 0 !important;
-  background: transparent !important;
-  border-radius: 10px !important;
-  padding: 0 4px !important;
-  gap: 10px !important;
+  height: 40px !important;
+  border: 1px solid #d7e2db !important;
+  background: #ffffff !important;
+  border-radius: 999px !important;
+  padding: 4px 12px 4px 5px !important;
+  gap: 9px !important;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease !important;
 }
 
 .staff-header .user-avatar-btn:hover {
-  background: transparent !important;
+  background: #f5fbf7 !important;
+  border-color: #a7d7b8 !important;
+  box-shadow: 0 2px 8px rgba(4, 86, 30, 0.09) !important;
+}
+
+.staff-header .user-avatar-btn[aria-expanded="true"] {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12) !important;
+}
+
+.staff-header .user-avatar-btn:focus-visible {
+  outline: 2px solid #15803d !important;
+  outline-offset: 2px !important;
+}
+
+.staff-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.staff-avatar-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-width: 0;
+  gap: 1px;
 }
 
 .user-info-stack {
@@ -1624,10 +1664,20 @@ body.portal-layout .custom-table-header th {
 }
 
 .staff-header .user-avatar-name {
-  font-size: 0.95rem !important;
+  font-size: 0.83rem !important;
   font-weight: 700 !important;
-  line-height: 1 !important;
-  color: #000000 !important;
+  line-height: 1.15 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.staff-avatar-sub {
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #475569;
+  white-space: nowrap;
 }
 
 .user-avatar-role {
@@ -1637,17 +1687,51 @@ body.portal-layout .custom-table-header th {
 }
 
 .staff-header .user-avatar-circle {
-  background: #276401 !important;
+  background: linear-gradient(135deg, #0d7a31 0%, #15803d 55%, #04561e 100%) !important;
+  color: #ffffff !important;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
-  font-weight: 600 !important;
-  font-size: 0.78rem !important;
-  width: 36px !important;
-  height: 36px !important;
+  font-weight: 800 !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.03em;
+  width: 30px !important;
+  height: 30px !important;
   border-radius: 50% !important;
   overflow: hidden;
-  display: flex;
-  align-items: flex-end;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 3px rgba(4, 86, 30, 0.25);
+}
+
+.staff-avatar-wrap .user-avatar-status {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid #ffffff;
+  box-sizing: border-box;
+}
+
+.staff-avatar-chevron {
+  color: #64748b;
+  flex-shrink: 0;
+  transition: transform 0.18s ease, color 0.16s ease;
+}
+
+.staff-header .user-avatar-btn[aria-expanded="true"] .staff-avatar-chevron {
+  transform: rotate(180deg);
+  color: #15803d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .staff-header .user-avatar-btn,
+  .staff-avatar-chevron {
+    transition: none !important;
+  }
 }
 
 .dashboard-canvas {
@@ -2540,9 +2624,19 @@ body.portal-layout .custom-table-header th {
     max-width: 240px;
   }
 
+  .staff-header .user-avatar-btn {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
   .user-info-stack,
+  .staff-avatar-meta,
+  .staff-avatar-chevron,
   .staff-header .user-avatar-name {
-    display: none;
+    display: none !important;
   }
 }
 
@@ -2576,10 +2670,10 @@ body.portal-layout.admin-portal-v2 .sidebar.admin-sidebar {
   width: 268px !important;
   min-width: 268px !important;
   max-width: 268px !important;
-  background: linear-gradient(180deg, #1b9e43 0%, #15803d 48%, #0b5324 100%) !important;
+  background: linear-gradient(180deg, #0d7a31 0%, #15803d 50%, #04561e 100%) !important;
   color: #ffffff !important;
   border-right: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 4px 0 24px rgba(6, 50, 22, 0.14) !important;
+  box-shadow: 4px 0 24px rgba(4, 38, 12, 0.22) !important;
   padding: 1.4rem 1.15rem !important;
   overflow-x: hidden !important;
   transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding 0.22s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3025,14 +3119,16 @@ body.portal-layout.admin-portal-v2 .admin-profile-dropdown {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #1b5e04;
+  background: linear-gradient(135deg, #0d7a31 0%, #15803d 55%, #04561e 100%);
   color: #ffffff;
   font-size: 0.84rem;
   font-weight: 800;
+  letter-spacing: 0.03em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 6px rgba(4, 86, 30, 0.22);
 }
 
 .admin-profile-dd-meta {
@@ -3123,35 +3219,110 @@ body.portal-layout.admin-portal-v2 .admin-profile-logout-btn {
 body.portal-layout.admin-portal-v2 .admin-avatar-btn {
   display: inline-flex !important;
   align-items: center !important;
-  height: 36px !important;
-  border: 0 !important;
-  background: transparent !important;
-  border-radius: 10px !important;
-  padding: 0 2px !important;
-  gap: 10px !important;
+  height: 40px !important;
+  border: 1px solid #d7e2db !important;
+  background: #ffffff !important;
+  border-radius: 999px !important;
+  padding: 4px 12px 4px 5px !important;
+  gap: 9px !important;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease !important;
 }
 
 body.portal-layout.admin-portal-v2 .admin-avatar-btn:hover {
-  background: transparent !important;
+  background: #f5fbf7 !important;
+  border-color: #a7d7b8 !important;
+  box-shadow: 0 2px 8px rgba(4, 86, 30, 0.09) !important;
+}
+
+body.portal-layout.admin-portal-v2 .admin-avatar-btn[aria-expanded="true"] {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12) !important;
+}
+
+body.portal-layout.admin-portal-v2 .admin-avatar-btn:focus-visible {
+  outline: 2px solid #15803d !important;
+  outline-offset: 2px !important;
+}
+
+body.portal-layout.admin-portal-v2 .admin-avatar-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-width: 0;
+  gap: 1px;
 }
 
 body.portal-layout.admin-portal-v2 .admin-avatar-btn .user-avatar-name {
-  font-size: 0.95rem !important;
+  font-size: 0.83rem !important;
   font-weight: 700 !important;
-  line-height: 1 !important;
-  color: #000000 !important;
+  line-height: 1.15 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+body.portal-layout.admin-portal-v2 .admin-avatar-sub {
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #475569;
+  white-space: nowrap;
 }
 
 body.portal-layout.admin-portal-v2 .admin-avatar-btn .user-avatar-circle {
-  background: #276401 !important;
-  width: 36px !important;
-  height: 36px !important;
+  position: relative;
+  background: linear-gradient(135deg, #0d7a31 0%, #15803d 55%, #04561e 100%) !important;
+  width: 30px !important;
+  height: 30px !important;
   border-radius: 50% !important;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
+  overflow: visible !important;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 3px rgba(4, 86, 30, 0.25);
+}
+
+body.portal-layout.admin-portal-v2 .user-avatar-initials {
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+body.portal-layout.admin-portal-v2 .user-avatar-status {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid #ffffff;
+  box-sizing: border-box;
+}
+
+body.portal-layout.admin-portal-v2 .admin-avatar-chevron {
+  color: #64748b;
+  flex-shrink: 0;
+  transition: transform 0.18s ease, color 0.16s ease;
+}
+
+body.portal-layout.admin-portal-v2 .admin-avatar-btn[aria-expanded="true"] .admin-avatar-chevron {
+  transform: rotate(180deg);
+  color: #15803d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.portal-layout.admin-portal-v2 .admin-avatar-btn,
+  body.portal-layout.admin-portal-v2 .admin-avatar-chevron {
+    transition: none !important;
+  }
 }
 
 /* Admin Overview Canvas */
@@ -5226,52 +5397,240 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
   }
 }
 
-@media (max-width: 767px) {
-  .consult-table thead {
-    display: none;
+@media (max-width: 768px) {
+  .clean-table.consult-table thead,
+  .clean-table.records-table thead {
+    display: none !important;
   }
 
-  .consult-table,
-  .consult-table tbody,
-  .consult-table tr,
-  .consult-table td {
-    display: block;
-    width: 100%;
+  .clean-table.consult-table,
+  .clean-table.consult-table tbody,
+  .clean-table.records-table,
+  .clean-table.records-table tbody {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: auto !important;
   }
 
-  .consult-table tbody {
-    display: flex;
+  .clean-table.consult-table tbody,
+  .clean-table.records-table tbody {
+    display: flex !important;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     padding: 8px;
     background: var(--ep-canvas);
   }
 
-  .consult-table tbody tr {
+  .clean-table.consult-table tbody tr,
+  .clean-table.records-table tbody tr {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    align-items: start;
+    width: 100% !important;
     background: var(--ep-white);
     border: 1px solid var(--ep-line);
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 11px 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
-  .consult-table tbody td {
-    border-bottom: none;
-    padding: 4px 0 !important;
+  .clean-table.consult-table tbody td,
+  .clean-table.consult-table tbody td:nth-child(n),
+  .clean-table.consult-table tbody td:last-child,
+  .clean-table.records-table tbody td,
+  .clean-table.records-table tbody td:nth-child(n),
+  .clean-table.records-table tbody td:last-child {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    border-bottom: none !important;
+    padding: 0 !important;
+    text-align: left !important;
   }
 
-  .consult-table tbody td:last-child {
-    margin-top: 8px;
-    padding-top: 10px !important;
-    border-top: 1px solid var(--ep-line);
+  /* Empty state row spans full width */
+  .clean-table.consult-table tbody td[colspan],
+  .clean-table.records-table tbody td[colspan] {
+    grid-column: 1 / -1 !important;
+    text-align: center !important;
+    padding: 20px 10px !important;
   }
 
-  .consult-table .row-actions {
+  /* Row 1: Patient identity (left) + Status pill (top-right) */
+  .clean-table.consult-table tbody td:nth-child(1),
+  .clean-table.records-table tbody td:nth-child(1) {
+    grid-column: 1 / 2;
+    grid-row: 1;
+  }
+
+  .clean-table.consult-table tbody td:nth-child(5),
+  .clean-table.records-table tbody td:nth-child(5) {
+    grid-column: 2 / 3;
+    grid-row: 1;
+    width: auto !important;
+    justify-self: end;
+    align-self: start;
+  }
+
+  .clean-table.consult-table .patient-cell-name,
+  .clean-table.records-table .patient-cell-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    font-size: 0.86rem;
+    line-height: 1.28;
+  }
+
+  .clean-table.consult-table .patient-cell-meta,
+  .clean-table.records-table .patient-cell-meta {
+    font-size: 0.72rem;
+    line-height: 1.35;
+    margin-top: 2px;
+    word-break: break-word;
+  }
+
+  .clean-table.consult-table .status-pill,
+  .clean-table.records-table .status-pill {
+    font-size: 0.68rem !important;
+    padding: 2px 8px !important;
+    white-space: nowrap;
+  }
+
+  /* Row 2: Visit Schedule (full width compact strip) */
+  .clean-table.consult-table tbody td:nth-child(2),
+  .clean-table.records-table tbody td:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding: 6px 8px !important;
+    background: #f8fafc;
+    border: 1px solid #eef2f6;
+    border-radius: 7px;
+  }
+
+  .clean-table.consult-table .date-stack,
+  .clean-table.records-table .date-stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 6px;
+  }
+
+  .clean-table.consult-table .date-stack-main,
+  .clean-table.records-table .date-stack-main {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ep-ink);
+  }
+
+  .clean-table.consult-table .date-stack-sub,
+  .clean-table.records-table .date-stack-sub {
+    font-size: 0.72rem;
+    color: var(--ep-meta);
+    line-height: 1.35;
+  }
+
+  /* Row 3: Department & Chief Complaint (full width, no 220px clip) */
+  .clean-table.consult-table tbody td:nth-child(3),
+  .clean-table.records-table tbody td:nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+  }
+
+  .clean-table.consult-table tbody td:nth-child(3) > div,
+  .clean-table.records-table tbody td:nth-child(3) > div {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: 0.76rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .clean-table.consult-table .table-dept-tag {
+    margin-bottom: 0 !important;
+    font-size: 0.68rem !important;
+    padding: 2px 7px !important;
+  }
+
+  /* Row 4: Attending Physician (full width by default for select pickers) */
+  .clean-table.consult-table tbody td:nth-child(4),
+  .clean-table.records-table tbody td:nth-child(4) {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    font-size: 0.78rem;
+  }
+
+  .clean-table.consult-table .table-doc-static {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: 0.78rem !important;
+    padding: 0 !important;
+  }
+
+  /* Row 5: Actions footer */
+  .clean-table.consult-table tbody td:nth-child(6),
+  .clean-table.records-table tbody td:nth-child(6) {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    margin-top: 2px;
+    padding-top: 8px !important;
+    border-top: 1px solid var(--ep-line) !important;
+  }
+
+  /* When physician is static text (no select picker), pair Doctor (left) + Actions (right) on one compact footer row */
+  .clean-table.consult-table tbody tr:has(.table-doc-static) td:nth-child(4),
+  .clean-table.records-table tbody tr td:nth-child(4) {
+    grid-column: 1 / 2;
+    grid-row: 4;
+    align-self: center;
+    padding-top: 8px !important;
+    margin-top: 2px;
+    border-top: 1px solid var(--ep-line) !important;
+  }
+
+  .clean-table.consult-table tbody tr:has(.table-doc-static) td:nth-child(6),
+  .clean-table.records-table tbody tr td:nth-child(6) {
+    grid-column: 2 / 3;
+    grid-row: 4;
+    width: auto !important;
+    justify-self: end;
+    align-self: center;
+    margin-top: 2px;
+    padding-top: 8px !important;
+    border-top: 1px solid var(--ep-line) !important;
+  }
+
+  .clean-table.consult-table .row-actions,
+  .clean-table.records-table .table-action-group {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .clean-table.consult-table tbody tr:not(:has(.table-doc-static)) .row-actions {
     justify-content: space-between;
-    gap: 8px;
   }
 
-  .consult-table .row-actions .btn-clean.primary {
+  .clean-table.consult-table tbody tr:not(:has(.table-doc-static)) .row-actions .btn-clean.primary {
     flex: 1;
+  }
+
+  .clean-table.consult-table .row-menu-btn {
+    min-width: 34px !important;
+    min-height: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
   }
 }
 
@@ -5336,6 +5695,21 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
   background: #f9fafb !important;
   border-color: #d1d5db !important;
   color: #111827 !important;
+}
+
+.other-patient-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: #f5f3ff;
+  color: #5b21b6;
+  border: 1px solid #ddd6fe;
 }
 
 /* ── Doctor Schedules High-Density Segmented Tabs, Ultra-Thin Bars & Soft IN/OUT Badges ── */
@@ -5555,25 +5929,25 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
 
   /* Compact Mobile Top Header */
   .staff-header {
-    height: 56px !important;
-    padding: 0 12px !important;
+    height: 50px !important;
+    padding: 0 10px !important;
     background: #ffffff !important;
     border-bottom: 1px solid var(--ep-line) !important;
-    gap: 10px !important;
+    gap: 8px !important;
   }
 
   .staff-mobile-header-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     flex: 1;
   }
 
   .staff-mobile-menu-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 9px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
     border: 1px solid var(--ep-line);
     background: #ffffff;
     color: var(--ep-ink);
@@ -5593,18 +5967,18 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    line-height: 1.18;
+    line-height: 1.15;
   }
 
   .staff-mobile-brand-name {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 800;
     letter-spacing: 0.03em;
     color: var(--ep-forest);
   }
 
   .staff-mobile-brand-dept {
-    font-size: 0.7rem;
+    font-size: 0.66rem;
     font-weight: 500;
     color: var(--ep-meta);
     white-space: nowrap;
@@ -5613,20 +5987,34 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
   }
 
   .staff-header .header-right-meta {
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
   }
 
   .staff-notif-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
     border-color: var(--ep-line);
   }
 
-  .staff-header .user-avatar-circle {
+  .staff-header .user-avatar-btn {
     width: 34px !important;
     height: 34px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  .staff-avatar-meta,
+  .staff-avatar-chevron,
+  .staff-header .user-avatar-name {
+    display: none !important;
+  }
+
+  .staff-header .user-avatar-circle {
+    width: 28px !important;
+    height: 28px !important;
   }
 
   .staff-notif-dropdown,
@@ -5638,64 +6026,131 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
 
   /* Compact Canvas & Proportional Typography */
   .dashboard-canvas {
-    padding: 14px 12px 24px !important;
-    gap: 12px !important;
+    padding: 10px 10px 20px !important;
+    gap: 10px !important;
   }
 
   .view-panel {
-    gap: 12px !important;
+    gap: 10px !important;
   }
 
   .view-header,
   #view-overview .view-header {
     flex-direction: column;
     align-items: stretch !important;
-    gap: 10px;
+    gap: 8px;
   }
 
   #view-overview .view-header h1 {
-    font-size: 1.28rem !important;
+    font-size: 1.15rem !important;
     line-height: 1.2 !important;
   }
 
   .view-header h1 {
-    font-size: 1.2rem !important;
+    font-size: 1.08rem !important;
     line-height: 1.2 !important;
   }
 
   #view-overview .view-header p,
   .view-header p {
-    font-size: 0.8rem !important;
-    line-height: 1.4 !important;
-    margin-top: 3px !important;
+    font-size: 0.74rem !important;
+    line-height: 1.35 !important;
+    margin-top: 2px !important;
     color: var(--ep-body) !important;
   }
 
   .view-header-actions {
     width: 100%;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
+  }
+
+  #view-consultation .view-header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #view-consultation .view-header-actions .btn-clean {
+    width: 100%;
+    min-height: 34px !important;
+    padding: 0.36rem 0.55rem !important;
+    font-size: 0.74rem !important;
   }
 
   .btn-clean {
-    min-height: 38px !important;
+    min-height: 34px !important;
     min-width: auto !important;
-    padding: 0.45rem 0.85rem !important;
-    font-size: 0.8rem !important;
+    padding: 0.38rem 0.72rem !important;
+    font-size: 0.76rem !important;
   }
 
   .btn-clean.sm {
-    min-height: 32px !important;
-    padding: 0.3rem 0.65rem !important;
-    font-size: 0.74rem !important;
+    min-height: 30px !important;
+    padding: 0.25rem 0.55rem !important;
+    font-size: 0.72rem !important;
   }
 
   .btn-new-walkin {
     width: 100%;
-    min-height: 40px !important;
-    padding: 0.5rem 0.95rem !important;
-    font-size: 0.78rem !important;
+    min-height: 36px !important;
+    padding: 0.42rem 0.85rem !important;
+    font-size: 0.76rem !important;
     border-radius: 8px !important;
+  }
+
+  /* Staff Queue Mini Calendar Compact Mobile Scaling */
+  #staffQueueCalendarCard {
+    padding: 10px 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  #staffQueueCalendarCard > div:first-child {
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+
+  #staffCalMonthTitle {
+    font-size: 0.86rem !important;
+  }
+
+  #staffQueueCalendarCard p {
+    font-size: 0.7rem !important;
+  }
+
+  #consultDateFilter {
+    width: 132px !important;
+    height: 30px !important;
+    font-size: 0.74rem !important;
+    padding: 0 6px !important;
+  }
+
+  #staffCalGrid {
+    gap: 4px !important;
+  }
+
+  #staffCalGrid > div {
+    font-size: 0.64rem !important;
+    padding: 2px 0 !important;
+  }
+
+  #staffCalGrid > button {
+    min-height: 34px !important;
+    padding: 3px 2px !important;
+    border-radius: 6px !important;
+  }
+
+  #staffCalGrid > button > span:first-child {
+    font-size: 0.72rem !important;
+    line-height: 1.15 !important;
+  }
+
+  #staffCalGrid > button > span:last-child {
+    font-size: 0.58rem !important;
+    padding: 0 4px !important;
+    margin-top: 1px !important;
+    height: auto !important;
+    line-height: 1.2 !important;
   }
 
   /* Overview 3-Card Compact KPI Strip */
@@ -5840,7 +6295,7 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
 
   /* Queue, Records, Calendar & Settings Mobile Polish */
   .card-toolbar {
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
     gap: 8px !important;
   }
 
@@ -5849,6 +6304,87 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
   .search-input-box {
     width: 100%;
     min-width: 0;
+  }
+
+  /* Keep search bar + refresh button inline on one row */
+  #view-consultation .card-toolbar .toolbar-right {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100%;
+  }
+
+  #view-consultation .card-toolbar .toolbar-right .search-input-box {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  #view-consultation #btnRefreshConsult {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .search-input-box input {
+    height: 34px !important;
+    font-size: 0.78rem !important;
+    padding: 0.38rem 0.7rem 0.38rem 1.95rem !important;
+  }
+
+  .search-input-box svg {
+    left: 9px !important;
+  }
+
+  .records-toolbar-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: 100%;
+    gap: 6px !important;
+  }
+
+  .records-search-box {
+    width: 100% !important;
+  }
+
+  .records-toolbar-actions .select-filter {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 34px !important;
+    padding: 0 1.8rem 0 0.7rem !important;
+    font-size: 0.76rem !important;
+  }
+
+  .records-toolbar-actions .records-export-btn {
+    flex-shrink: 0;
+    height: 34px !important;
+    font-size: 0.75rem !important;
+    padding: 0 10px !important;
+  }
+
+  #view-records .table-wrap,
+  #view-consultation .table-wrap {
+    overflow-x: hidden !important;
+  }
+
+  .clean-table.records-table tbody td:nth-child(3) > div:first-child {
+    margin-bottom: 0 !important;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: #f0f9ff;
+    border: 1px solid #e0f2fe;
+    font-size: 0.68rem !important;
+  }
+
+  .clean-table.records-table .btn-clean.outline.sm {
+    min-height: 30px !important;
+    padding: 4px 10px !important;
+    font-size: 0.74rem !important;
+    white-space: nowrap;
   }
 
   .filter-pills-group {
@@ -5865,15 +6401,15 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
   .filter-pill-btn {
     white-space: nowrap;
     flex-shrink: 0;
-    min-height: 36px !important;
+    min-height: 32px !important;
     min-width: auto !important;
-    padding: 7px 10px !important;
-    font-size: 0.76rem !important;
+    padding: 5px 9px !important;
+    font-size: 0.74rem !important;
   }
 
   .records-table {
     table-layout: auto;
-    min-width: 640px;
+    min-width: 0 !important;
   }
 
   #view-schedules .modern-search-box {
@@ -6547,13 +7083,23 @@ body.portal-layout.admin-portal-v2 .admin-sidebar .nav-link:focus-visible {
     border-radius: 9px !important;
   }
 
+  body.portal-layout.admin-portal-v2 .admin-avatar-btn {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  body.portal-layout.admin-portal-v2 .admin-avatar-meta,
+  body.portal-layout.admin-portal-v2 .admin-avatar-chevron,
   body.portal-layout.admin-portal-v2 .admin-avatar-btn .user-avatar-name {
     display: none !important;
   }
 
   body.portal-layout.admin-portal-v2 .admin-avatar-btn .user-avatar-circle {
-    width: 34px !important;
-    height: 34px !important;
+    width: 30px !important;
+    height: 30px !important;
   }
 
   body.portal-layout.admin-portal-v2 .admin-notif-dropdown,

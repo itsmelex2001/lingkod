@@ -87,19 +87,81 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 150);
     };
 
+    function closeOverviewLookupResults() {
+      const box = document.getElementById('overviewLookupResults');
+      if (box) box.style.display = 'none';
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.ov-quick-lookup-search')) {
+        closeOverviewLookupResults();
+      }
+    });
+
     window.runOverviewPatientLookup = function () {
       const inp = document.getElementById('overviewQuickLookup');
+      const box = document.getElementById('overviewLookupResults');
       const q = (inp ? inp.value : '').trim().toLowerCase();
-      if (!q) { showToast('Enter a patient name or ID to search.', 2200, 'info'); return; }
-      const match = (allPatients || []).find(p =>
+      if (!q) {
+        closeOverviewLookupResults();
+        showToast('Enter a patient name or ID to search.', 2200, 'info');
+        return;
+      }
+
+      const pool = (allPatients || []).filter(p => String(p.status || '').toLowerCase() !== 'registered');
+      const exactIdMatch = pool.find(p =>
         String(p.patient_id || '').toLowerCase() === q ||
+        String(p.reference_no || '').toLowerCase() === q
+      );
+      if (exactIdMatch) {
+        closeOverviewLookupResults();
+        openPatientDetailsModal(exactIdMatch.patient_id);
+        return;
+      }
+
+      const matches = pool.filter(p =>
+        String(p.patient_id || '').toLowerCase().includes(q) ||
+        String(p.reference_no || '').toLowerCase().includes(q) ||
+        String(p.hrn || '').toLowerCase().includes(q) ||
         String(p.full_name || '').toLowerCase().includes(q)
       );
-      if (match) {
-        openPatientDetailsModal(match.patient_id);
-      } else {
+
+      if (!matches.length) {
+        closeOverviewLookupResults();
         showToast('No matching patient found in this department.', 2600, 'warning');
+        return;
       }
+
+      if (matches.length === 1 || !box) {
+        closeOverviewLookupResults();
+        openPatientDetailsModal(matches[0].patient_id);
+        return;
+      }
+
+      box.innerHTML = `
+        <div style="padding:8px 12px; font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase; border-bottom:1px solid #f1f5f9;">
+          ${matches.length} Matching Records — Select one
+        </div>
+        ${matches.slice(0, 10).map(p => {
+          const dt = formatDateBadge(p.appointment_date || p.created_at);
+          const slot = p.preferred_time_slot || formatTime12(p.scheduled_time) || '8:00 AM';
+          const ref = p.reference_no || p.patient_id || '';
+          const modeTag = String(p.consultation_mode || '').trim().toLowerCase() === 'teleconsultation' ? ' · Teleconsult' : '';
+          return `
+            <button type="button" role="option"
+                    onclick="document.getElementById('overviewLookupResults').style.display='none'; openPatientDetailsModal('${escapeHtml(p.patient_id)}')"
+                    style="width:100%; text-align:left; background:#ffffff; border:0; border-bottom:1px solid #f1f5f9; padding:9px 12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px;"
+                    onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
+              <div style="min-width:0;">
+                <div style="font-size:0.84rem; font-weight:700; color:#0f172a;">${escapeHtml(p.full_name || 'Patient')} <span style="font-weight:600; color:#15803d; font-size:0.76rem;">(${escapeHtml(ref)})</span></div>
+                <div style="font-size:0.74rem; color:#64748b; margin-top:2px;">${escapeHtml(dt.monthDay)} &middot; ${escapeHtml(slot)}${escapeHtml(modeTag)}</div>
+              </div>
+              <div style="flex-shrink:0;">${renderOverviewStatusPill(p.status || 'pending')}</div>
+            </button>
+          `;
+        }).join('')}
+      `;
+      box.style.display = 'block';
     };
 
     // ── Staff Patient Count Calendar & Date Filter ──
@@ -437,16 +499,41 @@ document.addEventListener('DOMContentLoaded', () => {
     return Boolean(p && (p.inquiry_only == 1 || p.inquiry_only === true || p.inquiry_only === '1' || p.consultation_nature === 'General Inquiry'));
   }
 
+  function getManilaTodayStr() {
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+    } catch (e) {
+      return new Date().toISOString().split('T')[0];
+    }
+  }
+
   // ── 5. KPI, Notifications & Overview Renderer ──
   function updateKPIsAndPillCounts() {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getManilaTodayStr();
 
-    const todayVisits = allPatients.filter(p => (p.appointment_date === todayStr) || (p.created_at && p.created_at.startsWith(todayStr))).length;
+    const todayVisits = allPatients.filter(p => {
+      const st = (p.status || '').toLowerCase();
+      if (st === 'registered' || isCancelledStatus(st)) return false;
+      const apptDate = p.appointment_date ? String(p.appointment_date).split(' ')[0] : '';
+      if (apptDate) return apptDate === todayStr;
+      return Boolean(p.unscheduled_walkin && p.created_at && String(p.created_at).startsWith(todayStr));
+    }).length;
     const forApproval = allPatients.filter(p => inApprovalStatus(p.status)).length;
     const inquiries   = allPatients.filter(p => isInquiryRecord(p)).length;
     const confirmed   = allPatients.filter(p => isConfirmedStatus(p.status)).length;
     const inClinic    = allPatients.filter(p => isInClinicStatus(p.status)).length;
     const completed   = allPatients.filter(p => (p.status || '').toLowerCase() === 'completed').length;
+    const completedToday = allPatients.filter(p => {
+      if ((p.status || '').toLowerCase() !== 'completed') return false;
+      const doneDate = (p.medical_history_date || p.appointment_date || p.updated_at || '').toString().split(' ')[0];
+      return doneDate === todayStr;
+    }).length;
+    const todayQueue = allPatients.filter(p => {
+      if (isInClinicStatus(p.status)) return true;
+      if (!isConfirmedStatus(p.status)) return false;
+      const apptDate = p.appointment_date ? String(p.appointment_date).split(' ')[0] : '';
+      return apptDate === todayStr;
+    }).length;
     const transferred = allPatients.filter(p => (p.status || '').toLowerCase() === 'transferred').length;
     const cancelled   = allPatients.filter(p => isCancelledStatus(p.status)).length;
 
@@ -457,8 +544,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setElText('kpiTotal', todayVisits);
     setElText('kpiPending', forApproval);
-    setElText('kpiQueue', confirmed + inClinic);
-    setElText('kpiCompleted', completed);
+    setElText('kpiQueue', todayQueue);
+    setElText('kpiCompleted', completedToday);
 
     setElText('kpiTotalSub', forApproval > 0 ? `${forApproval} awaiting confirmation` : 'Scheduled for today');
     setElText('kpiCompletedSub', 'Diagnosed and recorded');
@@ -541,12 +628,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbody = document.getElementById('overviewRequestsTableBody');
     if (!tbody) return;
 
-    const pending = allPatients.filter(p => inApprovalStatus(p.status));
-    const active = allPatients.filter(p => isConfirmedStatus(p.status) || isInClinicStatus(p.status));
-    const rows = [...pending, ...active].slice(0, 8);
+    const rows = allPatients.filter(p => inApprovalStatus(p.status)).slice(0, 8);
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="modern-table-empty">No pending appointment requests or active queue items right now.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="modern-table-empty">No pending appointment requests awaiting confirmation right now.</td></tr>';
       return;
     }
 
@@ -1344,11 +1429,15 @@ document.addEventListener('DOMContentLoaded', () => {
     tbody.innerHTML = filtered.map(p => {
       const isInquiry = isInquiryRecord(p);
       const isOnline = !p.unscheduled_walkin;
+      const isTeleconsult = String(p.consultation_mode || '').trim().toLowerCase() === 'teleconsultation';
+      const teleBadge = isTeleconsult
+        ? ' <span class="patient-type-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">Teleconsult</span>'
+        : '';
       const typeTag = isInquiry
         ? '<span class="patient-type-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">Inquiry Only</span>'
         : (isOnline
-          ? '<span class="patient-type-badge online">Online</span>'
-          : '<span class="patient-type-badge walkin">Walk-in / Unscheduled</span>');
+          ? `<span class="patient-type-badge online">Online</span>${teleBadge}`
+          : `<span class="patient-type-badge walkin">Walk-in / Unscheduled</span>${teleBadge}`);
 
       const dateParts = formatDateBadge(p.appointment_date || p.created_at);
       const timeLabel = p.preferred_time_slot || formatTime12(p.scheduled_time) || '8:00 AM';
@@ -1377,8 +1466,8 @@ document.addEventListener('DOMContentLoaded', () => {
         menuItems = `<button type="button" class="row-menu-item danger" onclick="handleReject('${escapeHtml(p.patient_id)}')">Cancel</button>`;
       }
       if (!isLockedDoc) {
-        if (!isInquiry && isForApproval) {
-          menuItems += `<button type="button" class="row-menu-item" onclick="openScheduleAssistModal('${escapeHtml(p.patient_id)}')">Call &amp; Reschedule</button>`;
+        if (!isInquiry && (isForApproval || isTeleconsult)) {
+          menuItems += `<button type="button" class="row-menu-item" onclick="openScheduleAssistModal('${escapeHtml(p.patient_id)}')">${isTeleconsult && !isForApproval ? 'Edit Teleconsult Link' : 'Call &amp; Reschedule'}</button>`;
         }
         menuItems += `<button type="button" class="row-menu-item" onclick="openTransferModal('${escapeHtml(p.patient_id)}')">Transfer Department</button>`;
       }
@@ -1448,17 +1537,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const completedRows = allPatients.filter(p => (p.status || '').toLowerCase() === 'completed');
 
-    // Deduplicate by unique patient identity (email first, then user_id / hrn / name+birthdate)
+    // Deduplicate by person-scoped identity (never merge different people on shared email/user_id)
     const groupedMap = new Map();
+    const aliasMap = new Map();
     for (const row of completedRows) {
-      const emailKey = (row.email || '').trim().toLowerCase();
-      const identityKey = emailKey
-        ? `email:${emailKey}`
-        : (row.user_id
-          ? `user:${row.user_id}`
-          : (row.hrn
-            ? `hrn:${String(row.hrn).trim().toLowerCase()}`
-            : `name:${(row.full_name || '').trim().toLowerCase()}|${row.birthdate || ''}`));
+      const nameNorm = String(row.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const birthVal = String(row.birthdate || '').trim();
+      const emailNorm = String(row.email || '').trim().toLowerCase();
+      const genderNorm = String(row.gender || '').trim().toLowerCase();
+
+      const candidates = [];
+      if (nameNorm && birthVal && birthVal !== '0000-00-00') candidates.push(`nb:${nameNorm}|${birthVal}`);
+      if (nameNorm && emailNorm) candidates.push(`ne:${nameNorm}|${emailNorm}`);
+      if (!candidates.length) {
+        if (nameNorm && genderNorm) candidates.push(`ng:${nameNorm}|${genderNorm}`);
+        else if (nameNorm) candidates.push(`n:${nameNorm}`);
+        else if (row.hrn) candidates.push(`hrn:${String(row.hrn).trim().toLowerCase()}`);
+        else candidates.push(`id:${row.id || row.patient_id}`);
+      }
+
+      let identityKey = null;
+      for (const c of candidates) {
+        if (aliasMap.has(c)) { identityKey = aliasMap.get(c); break; }
+      }
+      if (!identityKey) identityKey = candidates[0];
+      for (const c of candidates) aliasMap.set(c, identityKey);
 
       const rowTs = new Date(row.appointment_date || row.created_at || 0).getTime() || 0;
       const existing = groupedMap.get(identityKey);
@@ -1512,7 +1615,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const mHrn = (p.hrn || '').toLowerCase().includes(q);
         const mDoc = (p.assigned_doctor || '').toLowerCase().includes(q);
         const mComplaint = (p.chief_complaints || '').toLowerCase().includes(q);
-        if (!mName && !mEmail && !mId && !mHrn && !mDoc && !mComplaint) return false;
+        const mRecipient = (p.appointment_recipient || '').toLowerCase().includes(q)
+          || (p.relationship_to_patient || '').toLowerCase().includes(q);
+        if (!mName && !mEmail && !mId && !mHrn && !mDoc && !mComplaint && !mRecipient) return false;
       }
 
       return true;
@@ -1560,10 +1665,18 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `<div class="date-stack-sub">Previous ${escapeHtml(p.previous_appointment_date)}${p.previous_appointment_time ? ' · ' + escapeHtml(p.previous_appointment_time) : ''}</div>`
         : '';
 
+      const isOtherPatient = ['other patient', 'someone else / dependent'].includes(
+        String(p.appointment_recipient || '').trim().toLowerCase()
+      );
+      const otherRel = p.relationship_to_patient ? ` · ${p.relationship_to_patient}` : '';
+      const otherBadge = isOtherPatient
+        ? `<span class="other-patient-pill">Other Patient${escapeHtml(otherRel)}</span>`
+        : '';
+
       return `
         <tr>
           <td>
-            <div class="patient-cell-name">${escapeHtml(p.full_name || 'Patient')}</div>
+            <div class="patient-cell-name"><span>${escapeHtml(p.full_name || 'Patient')}</span>${otherBadge}</div>
             <div class="patient-cell-meta">${escapeHtml(displayPid)} · ${escapeHtml(p.gender || '-')}${escapeHtml(visitMeta)}</div>
           </td>
           <td>
@@ -2077,13 +2190,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const rowTrigger = Array.from(document.querySelectorAll('#consultationsTableBody .doc-picker-trigger'))
           .find(el => el.dataset.patientId === patientId);
-        if (rowTrigger) {
+        if (rowTrigger && rowTrigger.offsetParent !== null) {
           rowTrigger.focus();
           rowTrigger.classList.add('is-required-highlight');
           setTimeout(() => rowTrigger.classList.remove('is-required-highlight'), 2200);
           toggleDocPicker(null, rowTrigger, true);
+          showToast('Please select an Attending Physician for this time slot before approving.', 3600, 'warning');
+          return;
         }
-        showToast('Please assign an Attending Physician based on available time slots before approving.', 3600, 'error');
+        openScheduleAssistModal(patientId);
+        showToast('Assign an available Attending Physician, then click Save & Approve.', 3600);
         return;
       }
 
@@ -2091,6 +2207,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (assignedEntry && !assignedEntry.eval.isAvailable) {
         showToast(`${assignedEntry.eval.reason}. Call the patient to confirm an available schedule.`, 4000, 'error');
         openScheduleAssistModal(patientId, assignedEntry.doc.name);
+        return;
+      }
+
+      const isTele = String(p.consultation_mode || '').trim().toLowerCase() === 'teleconsultation';
+      if (isTele && !p.teleconsult_platform && !p.teleconsult_link) {
+        showToast('Set the Teleconsultation channel or meeting link before approving.', 3400);
+        openScheduleAssistModal(patientId, p.assigned_doctor || '');
         return;
       }
     }
@@ -2344,8 +2467,31 @@ document.addEventListener('DOMContentLoaded', () => {
       saveOnlyBtn.className = canApproveNow ? 'btn-clean outline' : 'btn-clean primary';
     }
 
+    const isTele = String(p.consultation_mode || '').trim().toLowerCase() === 'teleconsultation';
+    const tcSection = document.getElementById('saTeleconsultSection');
+    const tcPlatform = document.getElementById('saTeleconsultPlatform');
+    const tcLink = document.getElementById('saTeleconsultLink');
+    const tcNotes = document.getElementById('saTeleconsultNotes');
+    if (tcSection) {
+      tcSection.style.display = isTele ? 'block' : 'none';
+      if (isTele) {
+        if (tcPlatform) tcPlatform.value = p.teleconsult_platform || 'Google Meet';
+        if (tcLink) tcLink.value = p.teleconsult_link || '';
+        if (tcNotes) tcNotes.value = p.teleconsult_notes || '';
+        toggleSaTeleconsultLinkField();
+      }
+    }
+
     refreshScheduleAssistOptions(preselectDoctorName || p.assigned_doctor || '');
     scheduleAssistModal.classList.add('open');
+  };
+
+  window.toggleSaTeleconsultLinkField = function () {
+    const platform = document.getElementById('saTeleconsultPlatform')?.value || '';
+    const linkWrap = document.getElementById('saTeleconsultLinkWrap');
+    if (!linkWrap) return;
+    const isPhoneOnly = platform === 'Phone / Viber Call';
+    linkWrap.style.display = isPhoneOnly ? 'none' : '';
   };
 
   window.closeScheduleAssistModal = function () {
@@ -2468,6 +2614,12 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Please select an appointment date.', 2800, 'error');
       return;
     }
+    const todayNow = new Date();
+    const todayStr = `${todayNow.getFullYear()}-${String(todayNow.getMonth() + 1).padStart(2, '0')}-${String(todayNow.getDate()).padStart(2, '0')}`;
+    if (newDate < todayStr) {
+      showToast('Appointment date cannot be in the past.', 3200, 'error');
+      return;
+    }
     const parsedDate = new Date(newDate + 'T00:00:00');
     if (!isNaN(parsedDate.getTime()) && parsedDate.getDay() === 0) {
       showToast('Clinics are closed on Sundays. Please pick a Monday to Saturday date.', 3200, 'error');
@@ -2478,23 +2630,40 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const tcSection = document.getElementById('saTeleconsultSection');
+    const isTeleVisible = tcSection && tcSection.style.display !== 'none';
+    const tcPlatform = isTeleVisible ? (document.getElementById('saTeleconsultPlatform')?.value || '').trim() : '';
+    const tcLinkRaw = isTeleVisible ? (document.getElementById('saTeleconsultLink')?.value || '').trim() : '';
+    const tcLink = tcPlatform === 'Phone / Viber Call' ? '' : tcLinkRaw;
+    const tcNotes = isTeleVisible ? (document.getElementById('saTeleconsultNotes')?.value || '').trim() : '';
+    if (isTeleVisible && tcLink && !/^https?:\/\/\S+$/i.test(tcLink)) {
+      showToast('Please enter a valid https:// teleconsultation meeting link.', 3200, 'error');
+      return;
+    }
+
     const btnSave = document.getElementById('btnSaSaveOnly');
     const btnApprove = document.getElementById('btnSaSaveApprove');
     if (btnSave) btnSave.disabled = true;
     if (btnApprove) btnApprove.disabled = true;
 
     try {
+      const reqPayload = {
+        action: 'reschedule_assign',
+        patient_id: patientId,
+        doctor: doctorName,
+        appointment_date: newDate,
+        preferred_time_slot: slotVal,
+        approve_now: Boolean(approveNow)
+      };
+      if (isTeleVisible) {
+        reqPayload.teleconsult_platform = tcPlatform;
+        reqPayload.teleconsult_link = tcLink;
+        reqPayload.teleconsult_notes = tcNotes;
+      }
       const res = await fetch('/sdn/api/patients.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reschedule_assign',
-          patient_id: patientId,
-          doctor: doctorName,
-          appointment_date: newDate,
-          preferred_time_slot: slotVal,
-          approve_now: Boolean(approveNow)
-        })
+        body: JSON.stringify(reqPayload)
       }).then(r => r.json());
 
       if (res && res.success) {
@@ -2504,7 +2673,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const updatedP = allPatients.find(x => x.patient_id === patientId);
         if (updatedP && window.PatientSlip && window.PatientSlip.canGenerateSlip(updatedP)) {
           window.PatientSlip.openModal({
-            slipType: 'rescheduled',
+            slipType: window.PatientSlip.resolveSlipType(updatedP),
             patientId: updatedP.patient_id || patientId || '',
             patientName: updatedP.full_name || '',
             patientType: updatedP.patient_type || 'Old',
@@ -2512,6 +2681,10 @@ document.addEventListener('DOMContentLoaded', () => {
             appointmentTime: res.preferred_time_slot || slotVal || '',
             specialty: updatedP.department || window.STAFF_DEPT || '',
             consultType: updatedP.consultation_nature || updatedP.consultation_mode || 'Face-to-Face',
+            consultationMode: updatedP.consultation_mode || 'Face-to-Face',
+            teleconsultPlatform: updatedP.teleconsult_platform || '',
+            teleconsultLink: updatedP.teleconsult_link || '',
+            teleconsultNotes: updatedP.teleconsult_notes || '',
             encodedBy: window.STAFF_FIRST_NAME || 'Medical Staff'
           });
         }
@@ -3553,7 +3726,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('notePrescription').value = '';
     if (document.getElementById('noteDosage')) document.getElementById('noteDosage').value = '';
     if (document.getElementById('noteQuantity')) document.getElementById('noteQuantity').value = '';
-    if (document.getElementById('noteFollowUpDate')) document.getElementById('noteFollowUpDate').value = patientObj?.next_visit_date || '';
+    if (document.getElementById('noteFollowUpDate')) {
+      const tomorrowLocal = new Date();
+      tomorrowLocal.setDate(tomorrowLocal.getDate() + 1);
+      const minFollowUp = `${tomorrowLocal.getFullYear()}-${String(tomorrowLocal.getMonth() + 1).padStart(2, '0')}-${String(tomorrowLocal.getDate()).padStart(2, '0')}`;
+      const fuEl = document.getElementById('noteFollowUpDate');
+      fuEl.min = minFollowUp;
+      const existingNext = String(patientObj?.next_visit_date || '').trim();
+      fuEl.value = (existingNext && existingNext >= minFollowUp) ? existingNext : '';
+    }
     if (document.getElementById('noteFollowUpNotes')) document.getElementById('noteFollowUpNotes').value = patientObj?.follow_up_notes || '';
 
     // Pre-fill recorded vitals if present
@@ -3616,6 +3797,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    if (nextVisitDate) {
+      const nowCheck = new Date();
+      const todayCheck = `${nowCheck.getFullYear()}-${String(nowCheck.getMonth() + 1).padStart(2, '0')}-${String(nowCheck.getDate()).padStart(2, '0')}`;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(nextVisitDate) || nextVisitDate <= todayCheck) {
+        showToast('Follow-up date must be a future date (starting tomorrow).', 3400, 'error');
+        document.getElementById('noteFollowUpDate')?.focus();
+        return;
+      }
+      const fuParsed = new Date(nextVisitDate + 'T00:00:00');
+      if (!isNaN(fuParsed.getTime()) && fuParsed.getDay() === 0) {
+        showToast('Clinics are closed on Sundays. Please pick a Monday to Saturday follow-up date.', 3400, 'error');
+        document.getElementById('noteFollowUpDate')?.focus();
+        return;
+      }
+    }
+
     try {
       await fetch('/sdn/api/staff.php', {
         method: 'POST',
@@ -3630,7 +3827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
       });
 
-      await fetch('/sdn/api/patients.php', {
+      const completeResp = await fetch('/sdn/api/patients.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3647,23 +3844,38 @@ document.addEventListener('DOMContentLoaded', () => {
           follow_up_notes: followUpNotes,
           vitals
         })
-      });
+      }).then(r => r.json()).catch(() => null);
 
-      showToast(nextVisitDate ? 'Consultation completed. Follow-Up Slip is ready to print.' : 'Consultation completed.');
+      if (!completeResp || !completeResp.success) {
+        showToast((completeResp && completeResp.message) || 'Could not save consultation.', 3400, 'error');
+        return;
+      }
+
+      const savedMeta = (completeResp && completeResp.data) ? completeResp.data : {};
+      const nowLocal = new Date();
+      const localTimestamp = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')} ${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}:${String(nowLocal.getSeconds()).padStart(2, '0')}`;
+
+      showToast((nextVisitDate || followUpNotes) ? 'Consultation completed. Follow-Up Slip is ready to print.' : 'Consultation completed.');
       closeClinicalNoteModal();
 
       await loadData();
       const completedP = allPatients.find(x => x.patient_id === patientId);
-      if (nextVisitDate && window.PatientSlip) {
+      const exactEncodedAt = savedMeta.medical_history_date || completedP?.medical_history_date || localTimestamp;
+      const exactFollowUpDate = savedMeta.next_visit_date || nextVisitDate || completedP?.next_visit_date || '';
+      const exactFollowUpNotes = savedMeta.follow_up_notes || followUpNotes || completedP?.follow_up_notes || '';
+      if ((exactFollowUpDate || exactFollowUpNotes) && window.PatientSlip) {
         window.PatientSlip.openModal({
           slipType: 'followUp',
           patientId: completedP?.patient_id || patientId || '',
           patientName: completedP?.full_name || '',
-          patientType: completedP?.patient_type || 'New',
+          patientType: completedP?.patient_type || 'Old',
           specialty: completedP?.department || window.STAFF_DEPT || '',
-          attendedDate: completedP?.medical_history_date || new Date().toISOString().slice(0, 16).replace('T', ' '),
-          nextVisitDate,
-          encodedBy: window.STAFF_FIRST_NAME || 'Medical Staff'
+          consultationMode: completedP?.consultation_mode || 'Face-to-Face',
+          attendedDate: exactEncodedAt,
+          encodedDate: exactEncodedAt,
+          nextVisitDate: exactFollowUpDate,
+          followUpNotes: exactFollowUpNotes,
+          encodedBy: savedMeta.medical_history_recorded_by || completedP?.medical_history_recorded_by || window.STAFF_FIRST_NAME || 'Medical Staff'
         });
       } else if (prescription) {
         printPrescriptionSlip(patientId, {
@@ -3704,52 +3916,117 @@ document.addEventListener('DOMContentLoaded', () => {
     w.document.write(html);
     w.document.close();
     w.focus();
-    setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+    let printed = false;
+    const triggerPrint = () => {
+      if (printed) return;
+      printed = true;
+      try { w.print(); } catch (e) {}
+    };
+    w.onload = () => setTimeout(triggerPrint, 180);
+    setTimeout(triggerPrint, 650);
+  }
+
+  function formatPrintDate(raw, fallback) {
+    if (!raw) return fallback || '';
+    const str = String(raw).trim();
+    const dt = new Date(/^\d{4}-\d{2}-\d{2}$/.test(str) ? str + 'T00:00:00' : str.replace(' ', 'T'));
+    if (isNaN(dt.getTime())) return str;
+    return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function buildOfficialLetterheadHtml(deptSubtitle) {
+    const origin = window.location.origin || '';
+    const dohLogo = `${origin}/sdn/public/assets/logos/doh%20logo.png`;
+    const mmwghLogo = `${origin}/sdn/public/assets/mmwgh_logo.png`;
+    return `
+      <header class="letterhead">
+        <div class="lh-logo"><img src="${escapeHtml(dohLogo)}" alt="DOH Logo" /></div>
+        <div class="lh-center">
+          <div class="lh-republic">Republic of the Philippines &middot; Department of Health</div>
+          <div class="lh-region">Central Luzon Center for Health Development</div>
+          <h2>Mariveles Mental Wellness and General Hospital</h2>
+          <div class="lh-addr">P. Monroe St., Poblacion, Mariveles, Bataan &middot; Tel. (047) 935-4645</div>
+          <div class="lh-dept">${escapeHtml(deptSubtitle)}</div>
+        </div>
+        <div class="lh-logo"><img src="${escapeHtml(mmwghLogo)}" alt="MMWGH Logo" /></div>
+      </header>`;
   }
 
   window.printMedicalCertificate = async function (patientId, overrideData = {}) {
     const p = await fetchFreshPatientForPrint(patientId);
     if (!p) { showToast('Patient record not found for printing.'); return; }
     const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const examDate = formatPrintDate(p.medical_history_date || p.appointment_date, todayDate);
     const diagnosis = overrideData.diagnosis || p.medical_history_diagnosis || 'Clinical Evaluation';
     const treatment = overrideData.treatment || p.medical_history_treatment || 'Advised appropriate rest and outpatient follow-up.';
-    const nextVisit = overrideData.next_visit_date || p.next_visit_date || '';
+    const nextVisitRaw = overrideData.next_visit_date || p.next_visit_date || '';
+    const nextVisit = nextVisitRaw ? formatPrintDate(nextVisitRaw, nextVisitRaw) : '';
+    const deptName = p.department || window.STAFF_DEPT || 'General Medical';
     const doc = resolveDoctorPrintBlock(p);
 
     openPrintWindow(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Medical Certificate - ${escapeHtml(p.patient_id)}</title>
       <style>
-        @page { size: letter portrait; margin: 16mm; }
-        body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; line-height: 1.6; }
-        .head { text-align: center; border-bottom: 2px solid #15803d; padding-bottom: 12px; margin-bottom: 22px; }
-        .head h2 { margin: 0; font-size: 16px; color: #14532d; text-transform: uppercase; }
-        .head p { margin: 2px 0; font-size: 12px; color: #475569; }
-        .doc-title { text-align: center; font-size: 18px; font-weight: 800; letter-spacing: 0.08em; margin: 18px 0 22px; text-transform: uppercase; }
-        .meta { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 18px; color: #334155; }
-        .body-text { font-size: 14px; margin-bottom: 16px; text-align: justify; }
-        .box { border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 14px; margin: 14px 0; background: #f8fafc; font-size: 13px; }
-        .sig { margin-top: 56px; float: right; text-align: center; min-width: 240px; }
-        .sig-line { border-top: 1px solid #0f172a; padding-top: 6px; font-weight: 700; font-size: 13px; }
-        .sig-sub { font-size: 12px; color: #475569; }
+        @page { size: letter portrait; margin: 14mm 16mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; line-height: 1.6; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .letterhead { display: grid; grid-template-columns: 68px 1fr 68px; align-items: center; gap: 12px; border-bottom: 2.5px solid #15803d; padding-bottom: 12px; margin-bottom: 20px; }
+        .lh-logo { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
+        .lh-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .lh-center { text-align: center; }
+        .lh-republic { font-size: 10.5px; color: #475569; font-weight: 500; }
+        .lh-region { font-size: 11px; color: #334155; font-weight: 700; }
+        .lh-center h2 { margin: 2px 0; font-size: 15.5px; color: #14532d; text-transform: uppercase; letter-spacing: 0.01em; }
+        .lh-addr { font-size: 10.5px; color: #475569; }
+        .lh-dept { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 999px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .doc-title { text-align: center; font-size: 19px; font-weight: 800; letter-spacing: 0.1em; margin: 16px 0 18px; text-transform: uppercase; color: #0f172a; }
+        .meta-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #334155; margin-bottom: 20px; }
+        .meta-bar strong { color: #0f172a; }
+        .body-text { font-size: 14px; margin: 0 0 14px; text-align: justify; color: #0f172a; }
+        .clinical-box { border: 1px solid #cbd5e1; border-left: 4px solid #15803d; border-radius: 6px; padding: 14px 16px; margin: 16px 0 18px; background: #ffffff; }
+        .clinical-row { margin-bottom: 12px; }
+        .clinical-row:last-child { margin-bottom: 0; }
+        .clinical-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 3px; }
+        .clinical-val { font-size: 14px; color: #0f172a; font-weight: 600; white-space: pre-wrap; }
+        .sig-wrap { display: flex; justify-content: flex-end; margin-top: 48px; }
+        .sig { text-align: center; min-width: 260px; }
+        .sig-line { border-top: 1.5px solid #0f172a; padding-top: 7px; font-weight: 700; font-size: 14px; color: #0f172a; }
+        .sig-sub { font-size: 12px; color: #475569; margin-top: 2px; }
+        .doc-footer { margin-top: 44px; padding-top: 10px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 10.5px; color: #64748b; }
       </style></head><body>
-      <div class="head">
-        <h2>Mariveles Mental Wellness and General Hospital</h2>
-        <p>Mariveles, Bataan, Philippines &middot; Outpatient Department (${escapeHtml(p.department || 'General Medical')})</p>
-      </div>
+      ${buildOfficialLetterheadHtml(`Outpatient Department — ${deptName}`)}
       <div class="doc-title">Medical Certificate</div>
-      <div class="meta"><span><strong>Patient ID:</strong> ${escapeHtml(p.patient_id)}</span><span><strong>Date Issued:</strong> ${escapeHtml(todayDate)}</span></div>
+      <div class="meta-bar">
+        <div><strong>Patient ID:</strong> ${escapeHtml(p.patient_id)}</div>
+        <div><strong>Date Issued:</strong> ${escapeHtml(todayDate)}</div>
+        <div><strong>Department:</strong> ${escapeHtml(deptName)}</div>
+        <div><strong>Date Examined:</strong> ${escapeHtml(examDate)}</div>
+      </div>
       <p class="body-text">To Whom It May Concern:</p>
-      <p class="body-text">This is to certify that <strong>${escapeHtml(p.full_name || 'Patient')}</strong>, ${escapeHtml(p.age ? p.age + ' years old' : '')}${p.gender ? ', ' + escapeHtml(p.gender) : ''}, residing at ${escapeHtml(p.address || 'Mariveles, Bataan')}, was examined and treated at this hospital on <strong>${escapeHtml(todayDate)}</strong>.</p>
-      <div class="box">
-        <div><strong>Clinical Diagnosis / Impression:</strong><br>${escapeHtml(diagnosis)}</div>
-        <div style="margin-top:10px;"><strong>Remarks / Recommendation:</strong><br>${escapeHtml(treatment)}</div>
-        ${nextVisit ? `<div style="margin-top:10px;"><strong>Recommended Follow-Up Date:</strong> ${escapeHtml(nextVisit)}</div>` : ''}
+      <p class="body-text">This is to certify that <strong>${escapeHtml(p.full_name || 'Patient')}</strong>, ${escapeHtml(p.age ? p.age + ' years old' : '—')}${p.gender ? ', ' + escapeHtml(p.gender) : ''}, residing at <strong>${escapeHtml(p.address || 'Mariveles, Bataan')}</strong>, was examined and managed at this hospital on <strong>${escapeHtml(examDate)}</strong>.</p>
+      <div class="clinical-box">
+        <div class="clinical-row">
+          <div class="clinical-lbl">Clinical Diagnosis / Impression</div>
+          <div class="clinical-val">${escapeHtml(diagnosis)}</div>
+        </div>
+        <div class="clinical-row">
+          <div class="clinical-lbl">Remarks / Recommendation</div>
+          <div class="clinical-val" style="font-weight:500;">${escapeHtml(treatment)}</div>
+        </div>
+        ${nextVisit ? `<div class="clinical-row"><div class="clinical-lbl">Recommended Follow-Up Date</div><div class="clinical-val">${escapeHtml(nextVisit)}${p.follow_up_notes ? ' — ' + escapeHtml(p.follow_up_notes) : ''}</div></div>` : ''}
       </div>
       <p class="body-text">This certification is issued upon the request of the patient for whatever legal or medical purpose it may serve.</p>
-      <div class="sig">
-        <div class="sig-line">${escapeHtml(doc.displayName)}</div>
-        <div class="sig-sub">Attending Physician</div>
-        <div class="sig-sub">PRC License No.: ${escapeHtml(doc.license)}</div>
+      <div class="sig-wrap">
+        <div class="sig">
+          <div class="sig-line">${escapeHtml(doc.displayName)}</div>
+          <div class="sig-sub">Attending Physician &middot; ${escapeHtml(deptName)}</div>
+          <div class="sig-sub">PRC License No.: ${escapeHtml(doc.license)}</div>
+          <div class="sig-sub">PTR No.: ________________</div>
+        </div>
       </div>
+      <footer class="doc-footer">
+        <span>Not valid without physician signature and official hospital seal.</span>
+        <span>MMWGH OPU-Medical &middot; (047) 935-4645</span>
+      </footer>
     </body></html>`);
   };
 
@@ -3758,41 +4035,59 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!p) { showToast('Patient record not found for printing.'); return; }
     const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const prescription = overrideData.prescription || p.medical_history_prescription || formatMedicationsReadable(p.active_medications) || 'None prescribed.';
-    const nextVisit = overrideData.next_visit_date || p.next_visit_date || '';
+    const nextVisitRaw = overrideData.next_visit_date || p.next_visit_date || '';
+    const nextVisit = nextVisitRaw ? formatPrintDate(nextVisitRaw, nextVisitRaw) : '';
+    const deptName = p.department || window.STAFF_DEPT || 'Outpatient Clinic';
     const doc = resolveDoctorPrintBlock(p);
 
     openPrintWindow(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Prescription (Rx) - ${escapeHtml(p.patient_id)}</title>
       <style>
-        @page { size: half-letter portrait; margin: 12mm; }
-        body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; line-height: 1.55; }
-        .head { text-align: center; border-bottom: 2px solid #15803d; padding-bottom: 10px; margin-bottom: 16px; }
-        .head h2 { margin: 0; font-size: 15px; color: #14532d; text-transform: uppercase; }
-        .head p { margin: 2px 0; font-size: 11px; color: #475569; }
-        .pt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 12px; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px; margin-bottom: 16px; }
-        .rx-symbol { font-size: 32px; font-weight: 800; font-family: Georgia, serif; color: #14532d; line-height: 1; margin-bottom: 10px; }
-        .rx-body { white-space: pre-wrap; font-size: 13.5px; min-height: 160px; padding: 8px 4px; }
-        .followup { margin-top: 12px; font-size: 12px; color: #1e293b; border-top: 1px dashed #cbd5e1; padding-top: 8px; }
-        .sig { margin-top: 38px; float: right; text-align: center; min-width: 220px; }
-        .sig-line { border-top: 1px solid #0f172a; padding-top: 5px; font-weight: 700; font-size: 13px; }
-        .sig-sub { font-size: 11.5px; color: #475569; }
+        @page { size: half-letter portrait; margin: 11mm 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .letterhead { display: grid; grid-template-columns: 54px 1fr 54px; align-items: center; gap: 10px; border-bottom: 2.5px solid #15803d; padding-bottom: 10px; margin-bottom: 14px; }
+        .lh-logo { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; }
+        .lh-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .lh-center { text-align: center; }
+        .lh-republic { font-size: 9.5px; color: #475569; }
+        .lh-region { font-size: 10px; color: #334155; font-weight: 700; }
+        .lh-center h2 { margin: 2px 0; font-size: 13.5px; color: #14532d; text-transform: uppercase; letter-spacing: 0.01em; }
+        .lh-addr { font-size: 9.5px; color: #475569; }
+        .lh-dept { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 999px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .pt-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 5px 14px; font-size: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; color: #334155; }
+        .pt-grid strong { color: #0f172a; }
+        .rx-symbol { font-size: 46px; font-weight: 800; font-family: Georgia, "Times New Roman", serif; color: #14532d; line-height: 1; margin: 2px 0 10px; }
+        .rx-body { white-space: pre-wrap; font-size: 23px; font-weight: 700; line-height: 1.75; min-height: 210px; padding: 10px 8px 18px; color: #0f172a; letter-spacing: -0.01em; }
+        .followup { margin-top: 10px; padding: 8px 12px; border-radius: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 12.5px; color: #14532d; }
+        .sig-wrap { display: flex; justify-content: flex-end; margin-top: 34px; }
+        .sig { text-align: center; min-width: 240px; }
+        .sig-line { border-top: 1.5px solid #0f172a; padding-top: 6px; font-weight: 700; font-size: 13.5px; color: #0f172a; }
+        .sig-sub { font-size: 11.5px; color: #475569; margin-top: 2px; }
+        .doc-footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; }
       </style></head><body>
-      <div class="head">
-        <h2>Mariveles Mental Wellness and General Hospital</h2>
-        <p>Mariveles, Bataan &middot; ${escapeHtml(p.department || 'Outpatient Clinic')} Prescription</p>
-      </div>
+      ${buildOfficialLetterheadHtml(`${deptName} — Outpatient Prescription`)}
       <div class="pt-grid">
         <div><strong>Patient:</strong> ${escapeHtml(p.full_name || 'Patient')}</div>
         <div><strong>Date:</strong> ${escapeHtml(todayDate)}</div>
         <div><strong>Age / Sex:</strong> ${escapeHtml(p.age ? p.age + ' y/o' : '—')} / ${escapeHtml(p.gender || '—')}</div>
         <div><strong>Patient ID:</strong> ${escapeHtml(p.patient_id)}</div>
+        <div style="grid-column: 1 / -1;"><strong>Address:</strong> ${escapeHtml(p.address || 'Mariveles, Bataan')}</div>
       </div>
       <div class="rx-symbol">&#8478;</div>
       <div class="rx-body">${escapeHtml(prescription)}</div>
       ${nextVisit ? `<div class="followup"><strong>Follow-Up Visit:</strong> ${escapeHtml(nextVisit)}${p.follow_up_notes ? ' — ' + escapeHtml(p.follow_up_notes) : ''}</div>` : ''}
-      <div class="sig">
-        <div class="sig-line">${escapeHtml(doc.displayName)}</div>
-        <div class="sig-sub">Lic. No.: ${escapeHtml(doc.license)}</div>
+      <div class="sig-wrap">
+        <div class="sig">
+          <div class="sig-line">${escapeHtml(doc.displayName)}</div>
+          <div class="sig-sub">Attending Physician &middot; ${escapeHtml(deptName)}</div>
+          <div class="sig-sub">PRC Lic. No.: ${escapeHtml(doc.license)}</div>
+          <div class="sig-sub">PTR No.: ________________ &nbsp;&middot;&nbsp; S2 No.: ____________</div>
+        </div>
       </div>
+      <footer class="doc-footer">
+        <span>Please present this prescription at the pharmacy.</span>
+        <span>MMWGH OPU-Medical &middot; (047) 935-4645</span>
+      </footer>
     </body></html>`);
   };
 
@@ -3821,10 +4116,16 @@ document.addEventListener('DOMContentLoaded', () => {
       appointmentTime: p.preferred_time_slot || p.scheduled_time || '',
       specialty: p.department || window.STAFF_DEPT || '',
       consultType: p.consultation_nature || p.consultation_mode || 'Face-to-Face',
+      consultationMode: p.consultation_mode || 'Face-to-Face',
+      teleconsultPlatform: p.teleconsult_platform || '',
+      teleconsultLink: p.teleconsult_link || '',
+      teleconsultNotes: p.teleconsult_notes || '',
       remarks: p.chief_complaints || '',
       encodedBy: p.medical_history_recorded_by || p.receiver || window.STAFF_FIRST_NAME || 'Medical Staff',
+      encodedDate: p.medical_history_date || p.updated_at || '',
       attendedDate: p.medical_history_date || p.appointment_date || '',
-      nextVisitDate: p.next_visit_date || ''
+      nextVisitDate: p.next_visit_date || '',
+      followUpNotes: p.follow_up_notes || ''
     });
   };
 
@@ -4241,8 +4542,16 @@ document.addEventListener('DOMContentLoaded', () => {
   window.openPatientDetailsModal = async function (patientId) {
     currentDetailsPatientId = patientId;
     window.currentDetailsPatientId = patientId;
+    const prePrimaryBtn = document.getElementById('staffDetailsPrimaryBtn');
     const preSlipBtn = document.getElementById('staffDetailsSlipBtn');
+    const preMedCertBtn = document.getElementById('staffDetailsMedCertBtn');
+    const preRxBtn = document.getElementById('staffDetailsRxBtn');
+    const statusBadgeEl = document.getElementById('staffDetailsStatusBadge');
+    if (prePrimaryBtn) { prePrimaryBtn.style.display = 'none'; prePrimaryBtn.onclick = null; }
     if (preSlipBtn) preSlipBtn.style.display = 'none';
+    if (preMedCertBtn) preMedCertBtn.style.display = 'none';
+    if (preRxBtn) preRxBtn.style.display = 'none';
+    if (statusBadgeEl) statusBadgeEl.innerHTML = '';
     const bodyEl = document.getElementById('patientDetailsContent');
     bodyEl.innerHTML = '<div style="text-align:center; padding:2rem; color:#64748b;">Loading patient record...</div>';
     detailsModal.classList.add('open');
@@ -4251,22 +4560,62 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(`/sdn/api/patients.php?id=${encodeURIComponent(patientId)}&_=${Date.now()}`).then(r => r.json());
       if (res && res.success && res.data) {
         const p = res.data;
-        const slipBtnEl = document.getElementById('staffDetailsSlipBtn');
-        const slipLabelEl = document.getElementById('staffDetailsSlipBtnLabel');
-        const allowSlip = Boolean(window.PatientSlip && window.PatientSlip.canGenerateSlip(p));
-        if (slipBtnEl) slipBtnEl.style.display = allowSlip ? '' : 'none';
-        if (allowSlip && slipLabelEl) {
-          const st = window.PatientSlip.resolveSlipType(p);
-          slipLabelEl.textContent = st === 'followUp'
-            ? 'Print Follow-Up Slip'
-            : (st === 'rescheduled' ? 'Print Rescheduled Slip' : 'Print Appointment Slip');
-        }
         const statusNorm = (p.status || '').toLowerCase();
         const isInquiry = isInquiryRecord(p);
         const isCompleted = statusNorm === 'completed';
         const isCancelled = isCancelledStatus(statusNorm);
         const isTransferred = statusNorm === 'transferred';
         const isLocked = isCompleted || isCancelled || isTransferred;
+        const isTele = !isInquiry && String(p.consultation_mode || '').trim().toLowerCase() === 'teleconsultation';
+
+        if (statusBadgeEl) {
+          statusBadgeEl.innerHTML = renderOverviewStatusPill(statusNorm);
+        }
+
+        const slipBtnEl = document.getElementById('staffDetailsSlipBtn');
+        const slipLabelEl = document.getElementById('staffDetailsSlipBtnLabel');
+        const allowSlip = Boolean(window.PatientSlip && window.PatientSlip.canGenerateSlip(p));
+        if (slipBtnEl) slipBtnEl.style.display = allowSlip ? '' : 'none';
+        if (allowSlip && slipLabelEl) {
+          const st = window.PatientSlip.resolveSlipType(p);
+          if (st === 'followUp') {
+            slipLabelEl.textContent = 'Print Follow-Up Slip';
+          } else if (st === 'rescheduled') {
+            slipLabelEl.textContent = isTele ? 'Print Rescheduled Teleconsult Slip' : 'Print Rescheduled Slip';
+          } else {
+            slipLabelEl.textContent = isTele ? 'Print Teleconsultation Slip' : 'Print Appointment Slip';
+          }
+        }
+
+        const hasDiagnosis = Boolean((p.medical_history_diagnosis || '').trim());
+        const hasPrescription = Boolean((p.medical_history_prescription || '').trim() || formatMedicationsReadable(p.active_medications));
+        if (preMedCertBtn) preMedCertBtn.style.display = (isCompleted || hasDiagnosis) ? '' : 'none';
+        if (preRxBtn) preRxBtn.style.display = hasPrescription ? '' : 'none';
+
+        if (prePrimaryBtn && !isLocked) {
+          if (isInquiry) {
+            prePrimaryBtn.textContent = 'Resolve Inquiry';
+            prePrimaryBtn.style.display = '';
+            prePrimaryBtn.onclick = () => { closePatientDetailsModal(); openResolveInquiryModal(p.patient_id, p.full_name || ''); };
+          } else if (inApprovalStatus(statusNorm)) {
+            prePrimaryBtn.textContent = 'Approve';
+            prePrimaryBtn.style.display = '';
+            prePrimaryBtn.onclick = () => { closePatientDetailsModal(); handleApprove(p.patient_id); };
+          } else if (isConfirmedStatus(statusNorm)) {
+            prePrimaryBtn.textContent = 'Check In';
+            prePrimaryBtn.style.display = '';
+            prePrimaryBtn.onclick = () => { closePatientDetailsModal(); handleCheckIn(p.patient_id); };
+          } else if (statusNorm === 'arrived') {
+            prePrimaryBtn.textContent = 'Start Consult';
+            prePrimaryBtn.style.display = '';
+            prePrimaryBtn.onclick = () => { closePatientDetailsModal(); handleStartConsult(p.patient_id); };
+          } else if (statusNorm === 'ongoing') {
+            prePrimaryBtn.textContent = 'Complete Consult';
+            prePrimaryBtn.style.display = '';
+            prePrimaryBtn.onclick = () => { closePatientDetailsModal(); openClinicalNoteModal(p.patient_id, p.full_name || ''); };
+          }
+        }
+
         const dateParts = formatDateBadge(p.appointment_date || p.created_at);
         const timeLabel = p.preferred_time_slot || formatTime12(p.scheduled_time) || '8:00 AM';
         const deptDisplay = formatDeptLabel(p.department);
@@ -4274,10 +4623,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const companionLabel = (p.with_companion == 1 || p.with_companion === true || p.with_companion === '1') ? 'Yes' : 'No';
         const scheduleDisplay = isInquiry
           ? 'No clinic slot reserved (Inquiry Only)'
-          : `${dateParts.full} (${timeLabel})`;
+          : `${dateParts.full} · ${timeLabel}`;
         const completedHistory = Array.isArray(p.previous_appointments)
           ? p.previous_appointments.filter(prev => String(prev.status || '').toLowerCase().trim() === 'completed')
           : [];
+        const rawTeleLink = String(p.teleconsult_link || '').trim();
+        const safeTeleLink = /^https?:\/\/\S+$/i.test(rawTeleLink) ? rawTeleLink : '';
+        const telePlatform = String(p.teleconsult_platform || '').trim();
+        const teleNotes = String(p.teleconsult_notes || '').trim();
 
         bodyEl.innerHTML = `
           ${isInquiry ? `
@@ -4325,15 +4678,31 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-size:0.72rem; color:#64748b; font-weight:600; text-transform:uppercase;">Preferred Date &amp; Time Slot</div>
               <div style="font-size:0.86rem; font-weight:600; color:#334155; margin-top:2px;">${escapeHtml(scheduleDisplay)}</div>
             </div>
+            ${isTele ? '' : `
             <div>
               <div style="font-size:0.72rem; color:#64748b; font-weight:600; text-transform:uppercase;">Accompanying Companion</div>
               <div style="font-size:0.86rem; font-weight:600; color:#334155; margin-top:2px;">${companionLabel}</div>
             </div>
+            `}
             <div>
               <div style="font-size:0.72rem; color:#64748b; font-weight:600; text-transform:uppercase;">Attending Physician</div>
               <div style="font-size:0.86rem; font-weight:600; color:#334155; margin-top:2px;">${escapeHtml(isInquiry ? 'General Inquiry' : (p.assigned_doctor || 'Unassigned'))}</div>
             </div>
           </div>
+
+          ${isTele ? `
+          <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+              <span style="font-size:0.74rem; font-weight:700; color:#1e40af; text-transform:uppercase;">Teleconsultation Session</span>
+              ${isLocked ? '' : `<button type="button" class="btn-clean outline sm" onclick="closePatientDetailsModal(); openScheduleAssistModal('${escapeHtml(p.patient_id)}')">${(telePlatform || safeTeleLink) ? 'Edit Teleconsult Link' : 'Set Teleconsult Link'}</button>`}
+            </div>
+            <div style="font-size:0.84rem; color:#0f172a;">
+              <strong>Channel:</strong> ${escapeHtml(telePlatform || 'Not configured yet')}
+            </div>
+            ${safeTeleLink ? `<div style="font-size:0.82rem; word-break:break-all;"><strong>Link:</strong> <a href="${escapeHtml(safeTeleLink)}" target="_blank" rel="noopener noreferrer" style="color:#15803d; font-weight:600; text-decoration:underline;">${escapeHtml(safeTeleLink)}</a></div>` : ''}
+            ${teleNotes ? `<div style="font-size:0.82rem; color:#334155;"><strong>Instructions:</strong> ${escapeHtml(teleNotes)}</div>` : ''}
+          </div>
+          ` : ''}
 
           <div>
             <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Home Address</div>
@@ -4397,14 +4766,24 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-size:0.86rem; color:#0f172a;">${escapeHtml(p.referral_source || 'None')}</div>
           </div>
 
-          ${(p.latest_progress_note && p.latest_progress_note.note) ? `
+          ${(() => {
+            const rawNote = String(p.latest_progress_note?.note || '').trim();
+            if (!rawNote) return '';
+            const isInitialBookingLog = /^Online Appointment Booked\b/i.test(rawNote);
+            const cleanedNote = (isInitialBookingLog && !inApprovalStatus(statusNorm))
+              ? rawNote.replace(/\s*Status:\s*For Approval\.?\s*$/i, '')
+              : rawNote;
+            const noteHeading = isInitialBookingLog
+              ? 'Initial Booking Note'
+              : `Latest Progress / Resolution Note (${p.latest_progress_note.noted_by || 'Staff'})`;
+            return `
           <div>
-            <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Latest Progress / Resolution Note (${escapeHtml(p.latest_progress_note.noted_by || 'Staff')})</div>
+            <div style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; margin-bottom:4px;">${escapeHtml(noteHeading)}</div>
             <div style="font-size:0.85rem; color:#0f172a; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:0.7rem;">
-              ${escapeHtml(p.latest_progress_note.note)}
+              ${escapeHtml(cleanedNote)}
             </div>
-          </div>
-          ` : ''}
+          </div>`;
+          })()}
 
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.9rem 1rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">

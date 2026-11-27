@@ -25,11 +25,34 @@ foreach (array_slice($adminParts, 0, 2) as $part) {
     if ($part !== '') $adminInitials .= strtoupper(substr($part, 0, 1));
 }
 if ($adminInitials === '') $adminInitials = 'AD';
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+    <script>
+      (function () {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const origFetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+          const opts = init ? Object.assign({}, init) : {};
+          const method = String(opts.method || 'GET').toUpperCase();
+          const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+          const isSameOrigin = !/^https?:\/\//i.test(url) || url.startsWith(window.location.origin);
+          if (token && isSameOrigin && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+            const headers = new Headers(opts.headers || {});
+            if (!headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+            opts.headers = headers;
+          }
+          return origFetch(input, opts);
+        };
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Portal | LINGKOD</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -185,14 +208,18 @@ if ($adminInitials === '') $adminInitials = 'AD';
                     </div>
                 </div>
                 <div class="admin-profile-wrap" id="adminProfileWrap">
-                    <button type="button" class="user-avatar-btn admin-avatar-btn" id="adminProfileBtn" onclick="toggleAdminProfileMenu(event)" title="<?= htmlspecialchars($adminDisplayName) ?>" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
-                        <span class="user-avatar-name"><?= htmlspecialchars($adminDisplayName) ?></span>
-                        <div class="user-avatar-circle" aria-hidden="true">
-                            <svg width="36" height="36" viewBox="0 0 44 44" fill="none">
-                                <circle cx="22" cy="14.5" r="7" fill="#ffffff"></circle>
-                                <path d="M6.5 38.5C8.8 29.5 14.5 25 22 25C29.5 25 35.2 29.5 37.5 38.5C33.5 41.9 28 44 22 44C16 44 10.5 41.9 6.5 38.5Z" fill="#ffffff"></path>
-                            </svg>
-                        </div>
+                    <button type="button" class="user-avatar-btn admin-avatar-btn" id="adminProfileBtn" onclick="toggleAdminProfileMenu(event)" title="<?= htmlspecialchars($adminDisplayName) ?>" aria-label="Account menu for <?= htmlspecialchars($adminDisplayName) ?>" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileDropdown">
+                        <span class="user-avatar-circle" aria-hidden="true">
+                            <span class="user-avatar-initials"><?= htmlspecialchars($adminInitials) ?></span>
+                            <span class="user-avatar-status"></span>
+                        </span>
+                        <span class="admin-avatar-meta">
+                            <span class="user-avatar-name"><?= htmlspecialchars($adminDisplayName) ?></span>
+                            <span class="admin-avatar-sub">@<?= htmlspecialchars($adminUsername) ?></span>
+                        </span>
+                        <svg class="admin-avatar-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                     </button>
                     <div class="admin-profile-dropdown" id="adminProfileDropdown">
                         <div class="admin-profile-dd-head">

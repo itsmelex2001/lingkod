@@ -3447,36 +3447,16 @@ select.form-control {
     }
 }
 
-/* ── Pinned Overview Header Shell ── */
+/* ── Overview Flow (scrolls naturally inside .admin-canvas below the fixed topbar) ── */
 #view-dashboard.view-section.active {
-    display: flex !important;
-    flex-direction: column;
-    height: calc(100dvh - 132px);
-    min-height: 460px;
-    overflow: hidden;
-}
-
-#view-dashboard .admin-ov-header {
-    flex-shrink: 0;
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
 }
 
 #view-dashboard .adm-ov-scroll-body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 4px;
+    overflow: visible;
+    padding-right: 0;
     padding-bottom: 12px;
-}
-
-@media (max-width: 960px) {
-    #view-dashboard.view-section.active {
-        height: auto;
-        min-height: 0;
-        overflow: visible;
-    }
-
-    #view-dashboard .adm-ov-scroll-body {
-        overflow-y: visible;
-        padding-right: 0;
-    }
 }

@@ -84,7 +84,11 @@
           >
             <div class="tile-overlay"></div>
             <div class="tile-content">
-              <h4 class="tile-title">{@html dept.name}</h4>
+              <h4 class="tile-title">
+                {#each dept.name.split(/<br\s*\/?>/i) as line, li}
+                  {#if li > 0}<br />{/if}{line}
+                {/each}
+              </h4>
               {#if dept.subname}
                 <p class="tile-subtitle">{dept.subname}</p>
               {/if}
@@ -100,7 +104,7 @@
         
         <div class="detail-header">
           <div class="header-image" style="background-image: url('{selectedDept.image}')"></div>
-          <h4>{@html selectedDept.name.replace('<br>', ' ')} Department</h4>
+          <h4>{selectedDept.name.replace(/<br\s*\/?>/gi, ' ')} Department</h4>
         </div>
         
         <div class="services-list">

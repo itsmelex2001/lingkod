@@ -45,13 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     try {
+        $tokenHash = hash('sha256', $token);
         $stmt = $pdo->prepare("
             SELECT id, patient_id, full_name, email, reset_token_expires_at
             FROM patients
-            WHERE reset_token = :token
+            WHERE reset_token = :token_hash
             LIMIT 1
         ");
-        $stmt->execute([':token' => $token]);
+        $stmt->execute([':token_hash' => $tokenHash]);
         $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$patient) {
@@ -112,14 +113,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        // Find patient by token
+        // Find patient by hashed token
+        $tokenHash = hash('sha256', $token);
         $stmt = $pdo->prepare("
             SELECT id, patient_id, full_name, email, reset_token_expires_at
             FROM patients
-            WHERE reset_token = :token
+            WHERE reset_token = :token_hash
             LIMIT 1
         ");
-        $stmt->execute([':token' => $token]);
+        $stmt->execute([':token_hash' => $tokenHash]);
         $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$patient) {
@@ -151,10 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':id'       => $patient['id']
         ]);
 
-        // Send basic text confirmation email
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $loginUrl = "{$protocol}://{$host}/sdn/pages/patient-login.php";
+        // Send basic text confirmation email using trusted APP_URL
+        $baseUrl  = rtrim((string) envValue('APP_URL', 'http://localhost/sdn'), '/');
+        $loginUrl = "{$baseUrl}/pages/patient-login.php";
 
         $patientName = !empty($patient['full_name']) ? $patient['full_name'] : 'Patient';
         $subject = 'MMWGH Patient Portal - Password Changed Successfully';
@@ -167,22 +168,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   . "Mariveles Mental Wellness and General Hospital\r\n"
                   . "LINGKOD Patient Portal";
 
-        $smtpUser = trim($_ENV['SMTP_USER'] ?? '');
-        $smtpPass = trim($_ENV['SMTP_PASS'] ?? '');
+        $smtpUser = trim((string) envValue('SMTP_USER', ''));
+        $smtpPass = trim((string) envValue('SMTP_PASS', ''));
         if (!empty($smtpUser) && !empty($smtpPass) && class_exists(PHPMailer::class)) {
             try {
                 $mail = new PHPMailer(true);
                 $mail->isSMTP();
-                $mail->Host       = !empty($_ENV['SMTP_HOST']) ? $_ENV['SMTP_HOST'] : 'smtp.gmail.com';
+                $mail->Host       = (string) envValue('SMTP_HOST', 'smtp.gmail.com');
                 $mail->SMTPAuth   = true;
                 $mail->Username   = $smtpUser;
                 $mail->Password   = $smtpPass;
-                $mail->SMTPSecure = !empty($_ENV['SMTP_SECURE']) ? $_ENV['SMTP_SECURE'] : PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port       = !empty($_ENV['SMTP_PORT']) ? (int)$_ENV['SMTP_PORT'] : 587;
+                $mail->SMTPSecure = (string) envValue('SMTP_SECURE', PHPMailer::ENCRYPTION_STARTTLS);
+                $mail->Port       = (int) envValue('SMTP_PORT', '587');
                 $mail->CharSet    = 'UTF-8';
 
-                $fromEmail = !empty($_ENV['SMTP_FROM_EMAIL']) ? $_ENV['SMTP_FROM_EMAIL'] : $smtpUser;
-                $fromName  = !empty($_ENV['SMTP_FROM_NAME']) ? trim($_ENV['SMTP_FROM_NAME'], '"') : 'MMWGH LINGKOD Portal';
+                $fromEmail = (string) envValue('SMTP_FROM_EMAIL', $smtpUser);
+                $fromName  = trim((string) envValue('SMTP_FROM_NAME', 'MMWGH LINGKOD Portal'), "\"'");
                 $mail->setFrom($fromEmail, $fromName);
                 $mail->addAddress($patient['email'], $patientName);
 

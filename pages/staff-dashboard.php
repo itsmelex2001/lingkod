@@ -46,6 +46,10 @@ try {
 }
 
 $_SESSION['last_activity'] = time();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
 
 $nameParts = preg_split('/\s+/', trim($userFullName)) ?: [];
 $staffInitials = '';
@@ -63,6 +67,25 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+    <script>
+      (function () {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const origFetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+          const opts = init ? Object.assign({}, init) : {};
+          const method = String(opts.method || 'GET').toUpperCase();
+          const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+          const isSameOrigin = !/^https?:\/\//i.test(url) || url.startsWith(window.location.origin);
+          if (token && isSameOrigin && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+            const headers = new Headers(opts.headers || {});
+            if (!headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+            opts.headers = headers;
+          }
+          return origFetch(input, opts);
+        };
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Portal | LINGKOD</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -236,18 +259,24 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                     </div>
 
                     <div class="profile-container" id="staffProfileContainer">
-                        <button type="button" class="user-avatar-btn" id="staffProfileBtn" aria-haspopup="true" aria-expanded="false">
-                            <span class="user-avatar-name" id="headerStaffName"><?= htmlspecialchars($userFullName) ?></span>
-                            <div class="user-avatar-circle" id="staffHeaderAvatarCircle" aria-hidden="true">
-                                <?php if (!empty($staffProfileImg)): ?>
-                                <img src="<?= htmlspecialchars($staffProfileImg) ?>" alt="<?= htmlspecialchars($userFullName) ?>" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">
-                                <?php else: ?>
-                                <svg width="36" height="36" viewBox="0 0 44 44" fill="none">
-                                    <circle cx="22" cy="14.5" r="7" fill="#ffffff"></circle>
-                                    <path d="M6.5 38.5C8.8 29.5 14.5 25 22 25C29.5 25 35.2 29.5 37.5 38.5C33.5 41.9 28 44 22 44C16 44 10.5 41.9 6.5 38.5Z" fill="#ffffff"></path>
-                                </svg>
-                                <?php endif; ?>
-                            </div>
+                        <button type="button" class="user-avatar-btn staff-avatar-btn" id="staffProfileBtn" title="<?= htmlspecialchars($userFullName) ?>" aria-label="Account menu for <?= htmlspecialchars($userFullName) ?>" aria-haspopup="true" aria-expanded="false" aria-controls="staffProfileDropdown">
+                            <span class="staff-avatar-wrap" aria-hidden="true">
+                                <span class="user-avatar-circle" id="staffHeaderAvatarCircle">
+                                    <?php if (!empty($staffProfileImg)): ?>
+                                    <img src="<?= htmlspecialchars($staffProfileImg) ?>" alt="<?= htmlspecialchars($userFullName) ?>" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">
+                                    <?php else: ?>
+                                    <?= htmlspecialchars($staffInitials) ?>
+                                    <?php endif; ?>
+                                </span>
+                                <span class="user-avatar-status"></span>
+                            </span>
+                            <span class="staff-avatar-meta">
+                                <span class="user-avatar-name" id="headerStaffName"><?= htmlspecialchars($userFullName) ?></span>
+                                <span class="staff-avatar-sub"><?= htmlspecialchars(ucwords(strtolower($deptLabel))) ?></span>
+                            </span>
+                            <svg class="staff-avatar-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
                         </button>
                         <div class="profile-dropdown" id="staffProfileDropdown">
                             <div class="profile-dd-head">
@@ -316,9 +345,10 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                                 <div style="font-size:0.76rem; color:#64748b; line-height:1.3;">Scan a Digital ID QR code or search by patient name or ID.</div>
                             </div>
                         </div>
-                        <div class="ov-quick-lookup-search" style="display:flex; align-items:center; gap:8px; flex:0 1 360px; min-width:240px;">
-                            <input type="search" id="overviewQuickLookup" name="ov_quick_lookup" class="form-control-clean" placeholder="Enter patient name or ID..." autocomplete="new-password" data-lpignore="true" style="flex:1; min-width:0; height:38px;">
+                        <div class="ov-quick-lookup-search" style="position:relative; display:flex; align-items:center; gap:8px; flex:0 1 360px; min-width:240px;">
+                            <input type="search" id="overviewQuickLookup" name="ov_quick_lookup" class="form-control-clean" placeholder="Enter patient name or ID..." autocomplete="new-password" data-lpignore="true" onkeydown="if(event.key==='Enter'){event.preventDefault();runOverviewPatientLookup();}" style="flex:1; min-width:0; height:38px;">
                             <button type="button" class="btn-clean outline" onclick="runOverviewPatientLookup()" style="height:38px; white-space:nowrap;">Find Patient</button>
+                            <div id="overviewLookupResults" role="listbox" aria-label="Matching patient records" style="display:none; position:absolute; top:calc(100% + 6px); left:0; right:0; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 12px 28px rgba(15,23,42,0.14); z-index:40; max-height:280px; overflow-y:auto;"></div>
                         </div>
                     </div>
 
@@ -691,23 +721,29 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
     <div id="patientDetailsModal" class="clean-modal-backdrop">
         <div class="clean-modal-box">
             <div class="clean-modal-header">
-                <h3>Patient Consultation Record</h3>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <h3 style="margin:0;">Patient Consultation Record</h3>
+                    <span id="staffDetailsStatusBadge"></span>
+                </div>
                 <button type="button" class="clean-modal-close" onclick="closePatientDetailsModal()">&times;</button>
             </div>
             <div class="clean-modal-body" id="patientDetailsContent"></div>
-            <div class="clean-modal-footer" style="flex-wrap:wrap; gap:8px;">
-                <button type="button" id="staffDetailsSlipBtn" class="btn-clean outline" onclick="openPatientSlipFromDetails()" style="display:none;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    <span id="staffDetailsSlipBtnLabel">Print Patient Slip</span>
-                </button>
-                <button type="button" class="btn-clean outline" onclick="printMedicalCertificateFromDetails()">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                    <span>Print Medical Certificate</span>
-                </button>
-                <button type="button" class="btn-clean outline" onclick="printPrescriptionFromDetails()">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                    <span>Print Prescription (Rx)</span>
-                </button>
+            <div class="clean-modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <button type="button" id="staffDetailsPrimaryBtn" class="btn-clean primary" style="display:none;"></button>
+                    <button type="button" id="staffDetailsSlipBtn" class="btn-clean outline" onclick="openPatientSlipFromDetails()" style="display:none;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span id="staffDetailsSlipBtnLabel">Print Patient Slip</span>
+                    </button>
+                    <button type="button" id="staffDetailsMedCertBtn" class="btn-clean outline" onclick="printMedicalCertificateFromDetails()" style="display:none;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        <span>Print Medical Certificate</span>
+                    </button>
+                    <button type="button" id="staffDetailsRxBtn" class="btn-clean outline" onclick="printPrescriptionFromDetails()" style="display:none;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        <span>Print Prescription (Rx)</span>
+                    </button>
+                </div>
                 <button type="button" class="btn-clean outline" onclick="closePatientDetailsModal()">Close</button>
             </div>
         </div>
@@ -819,7 +855,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                     <div class="settings-grid-2col">
                         <div class="form-group-clean" style="margin:0;">
                             <label for="noteFollowUpDate">Next Follow-Up Date</label>
-                            <input type="date" id="noteFollowUpDate" class="form-control-clean">
+                            <input type="date" id="noteFollowUpDate" class="form-control-clean" min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
                         </div>
                         <div class="form-group-clean" style="margin:0;">
                             <label for="noteFollowUpNotes">Follow-Up Instructions</label>
@@ -863,7 +899,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                         </div>
                         <div class="form-group-clean">
                             <label for="walkinBirthdate">Birthdate</label>
-                            <input type="date" id="walkinBirthdate" class="form-control-clean">
+                            <input type="date" id="walkinBirthdate" class="form-control-clean" max="<?= date('Y-m-d') ?>">
                         </div>
                     </div>
                     <div class="settings-grid-2col">
@@ -1002,7 +1038,7 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                 <div class="sa-form-grid">
                     <div class="form-group-clean">
                         <label for="saApptDate">Appointment Date <span style="color:#e11d48;">*</span></label>
-                        <input type="date" id="saApptDate" class="form-control-clean" onchange="refreshScheduleAssistOptions()">
+                        <input type="date" id="saApptDate" class="form-control-clean" min="<?= date('Y-m-d') ?>" onchange="refreshScheduleAssistOptions()">
                     </div>
                     <div class="form-group-clean">
                         <label for="saTimeSlot">Time Block <span style="color:#e11d48;">*</span></label>
@@ -1019,6 +1055,30 @@ $firstName = explode(' ', trim($userFullName))[0] ?: 'Staff';
                         <option value="">Select available physician...</option>
                     </select>
                     <p id="saDoctorSlotHint" style="font-size:0.75rem; color:#64748b; margin-top:4px;"></p>
+                </div>
+
+                <!-- Teleconsultation Session Details (shown only for Teleconsultation patients) -->
+                <div id="saTeleconsultSection" style="display:none; background:#f8fafc; border:1px solid #dbeafe; border-radius:10px; padding:12px 14px;">
+                    <div style="font-size:0.8rem; font-weight:700; color:#1e3a8a; margin-bottom:10px;">Teleconsultation Session Details</div>
+                    <div class="sa-form-grid">
+                        <div class="form-group-clean">
+                            <label for="saTeleconsultPlatform">Consultation Channel <span style="color:#e11d48;">*</span></label>
+                            <select id="saTeleconsultPlatform" class="form-control-clean" onchange="toggleSaTeleconsultLinkField()">
+                                <option value="Google Meet">Google Meet</option>
+                                <option value="Zoom">Zoom</option>
+                                <option value="Phone / Viber Call">Phone / Viber Call</option>
+                                <option value="Facebook Messenger">Facebook Messenger</option>
+                            </select>
+                        </div>
+                        <div class="form-group-clean" id="saTeleconsultLinkWrap">
+                            <label for="saTeleconsultLink">Meeting Link <span style="color:#64748b; font-weight:400;">(https://...)</span></label>
+                            <input type="url" id="saTeleconsultLink" class="form-control-clean" placeholder="https://meet.google.com/xxx-xxxx-xxx" maxlength="500">
+                        </div>
+                    </div>
+                    <div class="form-group-clean" style="margin-top:8px;">
+                        <label for="saTeleconsultNotes">Patient Instructions <span style="color:#64748b; font-weight:400;">(Optional)</span></label>
+                        <input type="text" id="saTeleconsultNotes" class="form-control-clean" placeholder="e.g., Join 5 mins early and keep your previous prescription ready" maxlength="255">
+                    </div>
                 </div>
             </div>
             <div class="clean-modal-footer">

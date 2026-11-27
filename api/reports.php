@@ -101,14 +101,15 @@ if ($category !== '') {
 
     $pCols = [];
     try {
-        $pCols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+        $pCols = dbTableColumns($pdo, 'patients');
     } catch (Throwable $ignore) {}
     $hasCol = static fn(string $c): bool => in_array($c, $pCols, true);
 
-    $medDateExpr  = "NULLIF(DATE(medical_history_date), '0000-00-00')";
-    $apptDateExpr = "NULLIF(CAST(appointment_date AS DATE), '0000-00-00')";
-    $dateExpr     = "COALESCE($medDateExpr, $apptDateExpr, DATE(created_at))";
-    $refSel       = $hasCol('reference_no') ? 'COALESCE(NULLIF(reference_no, ""), patient_id)' : 'patient_id';
+    $medDateExpr  = dbIsPgsql() ? "CAST(medical_history_date AS DATE)" : "NULLIF(DATE(medical_history_date), '0000-00-00')";
+    $apptDateExpr = dbIsPgsql() ? "CAST(appointment_date AS DATE)"     : "NULLIF(CAST(appointment_date AS DATE), '0000-00-00')";
+    $createdDate  = dbIsPgsql() ? "CAST(created_at AS DATE)"           : "DATE(created_at)";
+    $dateExpr     = "COALESCE($medDateExpr, $apptDateExpr, $createdDate)";
+    $refSel       = $hasCol('reference_no') ? "COALESCE(NULLIF(reference_no, ''), patient_id)" : 'patient_id';
     $inqCondSql   = $hasCol('inquiry_only') ? ' AND COALESCE(inquiry_only, 0) = 0' : '';
     $genderSel    = $hasCol('gender') ? 'gender' : 'NULL';
     $ageSel       = $hasCol('age') ? 'age' : 'NULL';
@@ -154,11 +155,18 @@ if ($category !== '') {
             ['key' => 'department', 'label' => 'Department'],
             ['key' => 'status', 'label' => 'Status'],
         ];
-        $apptOnlyDate = "COALESCE($apptDateExpr, DATE(created_at))";
+        $apptOnlyDate = "COALESCE($apptDateExpr, $createdDate)";
+        $bookedOnlySql = " AND LOWER(COALESCE(status, '')) <> 'registered'
+                           AND ($apptDateExpr IS NOT NULL
+                             OR TRIM(COALESCE(department, '')) <> ''
+                             OR TRIM(COALESCE(chief_complaints, '')) <> ''
+                             OR TRIM(COALESCE(consultation_nature, '')) <> ''
+                             OR COALESCE(unscheduled_walkin, 0) = 1)";
         [$dateWhere, $dateParams] = $buildDateClause($apptOnlyDate);
         $sql = "SELECT id, $apptOnlyDate AS appt_date, $refSel AS ref_no, full_name, department, status
                 FROM patients
                 WHERE $dateWhere
+                  $bookedOnlySql
                   $inqCondSql
                   $deptCondSql
                 ORDER BY appt_date DESC, id DESC
@@ -185,9 +193,9 @@ if ($category !== '') {
         ];
         $emailSel = $hasCol('email') ? 'email' : 'NULL';
         $userSel  = $hasCol('user_id') ? 'user_id' : 'NULL';
-        [$dateWhere, $dateParams] = $buildDateClause('DATE(created_at)');
+        [$dateWhere, $dateParams] = $buildDateClause($createdDate);
         $sql = "SELECT id, patient_id, full_name, $genderSel AS gender, $ageSel AS age, $birthSel AS birthdate,
-                       $emailSel AS email, $userSel AS user_id, DATE(created_at) AS reg_date
+                       $emailSel AS email, $userSel AS user_id, $createdDate AS reg_date
                 FROM patients
                 WHERE $dateWhere
                   $deptCondSql
@@ -196,22 +204,41 @@ if ($category !== '') {
         $st = $pdo->prepare($sql);
         $st->execute($dateParams);
 
-        // Deduplicate returning patients (each appointment inserts a row in `patients`)
+        // Deduplicate returning patients across birthdate and email keys without splitting
+        // signup stubs (no birthdate) from later bookings (with birthdate).
         $uniquePatients = [];
+        $keyAliases = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $nameNorm = strtolower(preg_replace('/\s+/', ' ', trim((string)($r['full_name'] ?? ''))));
             $birthVal = trim((string)($r['birthdate'] ?? ''));
             $emailVal = strtolower(trim((string)($r['email'] ?? '')));
             $genderVal = trim((string)($r['gender'] ?? ''));
 
+            $candidates = [];
             if ($nameNorm !== '' && $birthVal !== '' && $birthVal !== '0000-00-00') {
-                $dedupKey = $nameNorm . '|b:' . $birthVal;
-            } elseif ($nameNorm !== '' && $emailVal !== '') {
-                $dedupKey = $nameNorm . '|e:' . $emailVal;
-            } elseif ($nameNorm !== '') {
-                $dedupKey = $nameNorm . '|g:' . strtolower($genderVal);
-            } else {
-                $dedupKey = 'id:' . $r['id'];
+                $candidates[] = 'nb:' . $nameNorm . '|' . $birthVal;
+            }
+            if ($nameNorm !== '' && $emailVal !== '') {
+                $candidates[] = 'ne:' . $nameNorm . '|' . $emailVal;
+            }
+            if (empty($candidates)) {
+                $candidates[] = $nameNorm !== ''
+                    ? ('ng:' . $nameNorm . '|' . strtolower($genderVal))
+                    : ('id:' . $r['id']);
+            }
+
+            $dedupKey = null;
+            foreach ($candidates as $cand) {
+                if (isset($keyAliases[$cand])) {
+                    $dedupKey = $keyAliases[$cand];
+                    break;
+                }
+            }
+            if ($dedupKey === null) {
+                $dedupKey = $candidates[0];
+            }
+            foreach ($candidates as $cand) {
+                $keyAliases[$cand] = $dedupKey;
             }
 
             $ageVal = $r['age'];
@@ -400,9 +427,20 @@ $startDate  = trim($_GET['start_date'] ?? '');
 $endDate    = trim($_GET['end_date'] ?? '');
 $exportCsv  = !empty($_GET['export_csv']);
 
-$dateExpr = "COALESCE(DATE(medical_history_date), appointment_date, DATE(created_at))";
+$medDateCast     = dbIsPgsql() ? 'CAST(medical_history_date AS DATE)' : 'DATE(medical_history_date)';
+$createdDateCast = dbIsPgsql() ? 'CAST(created_at AS DATE)' : 'DATE(created_at)';
+$dateExpr = "COALESCE($medDateCast, appointment_date, $createdDateCast)";
 $whereParts = ["1=1"];
 $params = [];
+
+$todayStr     = date('Y-m-d');
+$past7Str     = date('Y-m-d', strtotime('-6 days'));
+$past30Str    = date('Y-m-d', strtotime('-29 days'));
+$pastMonthStr = date('Y-m-d', strtotime('-1 month'));
+$next7Str     = date('Y-m-d', strtotime('+6 days'));
+$next30Str    = date('Y-m-d', strtotime('+29 days'));
+$monthStart   = date('Y-m-01');
+$monthEnd     = date('Y-m-t');
 
 if ($startDate !== '' || $endDate !== '') {
     if ($startDate !== '') {
@@ -414,19 +452,33 @@ if ($startDate !== '' || $endDate !== '') {
         $params[] = $endDate;
     }
 } elseif ($range === 'today' || $range === 'daily') {
-    $whereParts[] = "($dateExpr = CURDATE() OR appointment_date = CURDATE())";
+    $whereParts[] = "($dateExpr = ? OR appointment_date = ?)";
+    $params[] = $todayStr;
+    $params[] = $todayStr;
 } elseif ($range === 'past_7') {
-    $whereParts[] = "$dateExpr BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()";
+    $whereParts[] = "$dateExpr BETWEEN ? AND ?";
+    $params[] = $past7Str;
+    $params[] = $todayStr;
 } elseif ($range === 'past_30') {
-    $whereParts[] = "$dateExpr BETWEEN DATE_SUB(CURDATE(), INTERVAL 29 DAY) AND CURDATE()";
+    $whereParts[] = "$dateExpr BETWEEN ? AND ?";
+    $params[] = $past30Str;
+    $params[] = $todayStr;
 } elseif ($range === 'past_month') {
-    $whereParts[] = "$dateExpr BETWEEN DATE_SUB(CURDATE(), INTERVAL 1 MONTH) AND CURDATE()";
+    $whereParts[] = "$dateExpr BETWEEN ? AND ?";
+    $params[] = $pastMonthStr;
+    $params[] = $todayStr;
 } elseif ($range === 'next_7') {
-    $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 6 DAY)";
+    $whereParts[] = "COALESCE(appointment_date, $createdDateCast) BETWEEN ? AND ?";
+    $params[] = $todayStr;
+    $params[] = $next7Str;
 } elseif ($range === 'next_30') {
-    $whereParts[] = "COALESCE(appointment_date, DATE(created_at)) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 29 DAY)";
+    $whereParts[] = "COALESCE(appointment_date, $createdDateCast) BETWEEN ? AND ?";
+    $params[] = $todayStr;
+    $params[] = $next30Str;
 } elseif ($range === 'monthly') {
-    $whereParts[] = "DATE_FORMAT($dateExpr, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')";
+    $whereParts[] = "$dateExpr BETWEEN ? AND ?";
+    $params[] = $monthStart;
+    $params[] = $monthEnd;
 }
 
 if ($deptFilter !== '' && $deptFilter !== 'all') {
@@ -448,7 +500,7 @@ $slotColExpr = 'NULL AS preferred_time_slot';
 $inqColExpr = '0 AS inquiry_only';
 $modeInqColExpr = 'NULL AS mode_of_inquiry';
 try {
-    $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+    $cols = dbTableColumns($pdo, 'patients');
     if (in_array('reference_no', $cols, true)) $refColExpr = 'reference_no';
     if (in_array('preferred_time_slot', $cols, true)) $slotColExpr = 'preferred_time_slot';
     if (in_array('inquiry_only', $cols, true)) $inqColExpr = 'inquiry_only';
@@ -461,7 +513,7 @@ $patientSql = "SELECT id, patient_id, $refColExpr, full_name, contact_number, de
                       assigned_doctor, specialty, chief_complaints,
                       medical_history_diagnosis, medical_history_treatment, medical_history_prescription, active_medications,
                       medical_history_date, reminder_status, reminder_sent_at, created_at,
-                      COALESCE(DATE(medical_history_date), appointment_date, DATE(created_at)) AS record_date
+                      COALESCE($medDateCast, appointment_date, $createdDateCast) AS record_date
                FROM patients
                WHERE $whereClause
                ORDER BY record_date DESC, COALESCE(scheduled_time, '08:00:00') ASC, id DESC";

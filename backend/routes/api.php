@@ -14,8 +14,8 @@ Route::get('/test', function () {
 Route::post('/patient/login', [\App\Http\Controllers\PatientAuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/patient/verify-otp', [\App\Http\Controllers\PatientAuthController::class, 'verifyOtp'])->middleware('throttle:5,1');
 Route::post('/patient/resend-otp', [\App\Http\Controllers\PatientAuthController::class, 'resendOtp'])->middleware('throttle:3,1');
-Route::post('/appointments/book', [\App\Http\Controllers\AppointmentBookingController::class, 'store']);
-Route::get('/patient-records', [\App\Http\Controllers\AppointmentBookingController::class, 'patientRecords']);
+Route::post('/appointments/book', [\App\Http\Controllers\AppointmentBookingController::class, 'store'])->middleware('throttle:10,1');
+Route::get('/patient-records', [\App\Http\Controllers\AppointmentBookingController::class, 'patientRecords'])->middleware('admin');
 Route::get('/patient/dashboard', [\App\Http\Controllers\PatientDashboardController::class, 'getDashboardData']);
 Route::post('/patient/dashboard', [\App\Http\Controllers\PatientDashboardController::class, 'getDashboardData']);
 Route::get('/patient/appointments', [\App\Http\Controllers\PatientDashboardController::class, 'getAppointmentsList']);

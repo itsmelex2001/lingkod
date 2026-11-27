@@ -16,7 +16,6 @@ $pbcTelDigits = preg_replace('/[^0-9+]/', '', $pbcHotline) ?: '0479354138';
   <div class="pbc-modal-backdrop" onclick="closeBookingConfirmModal()"></div>
   <div class="pbc-modal-container" role="dialog" aria-modal="true" aria-labelledby="pbcModalTitle" aria-describedby="pbcModalSubtitle" tabindex="-1">
     <div class="pbc-sheet-handle" aria-hidden="true"></div>
-    <div class="pbc-top-accent" aria-hidden="true"></div>
 
     <!-- Top Close Button -->
     <button type="button" class="pbc-btn-close" onclick="closeBookingConfirmModal()" aria-label="Close dialog" title="Close">
@@ -179,12 +178,6 @@ $pbcTelDigits = preg_replace('/[^0-9+]/', '', $pbcHotline) ?: '0479354138';
 
 .pbc-modal-overlay.active .pbc-modal-container {
   transform: translateY(0) scale(1);
-}
-
-.pbc-top-accent {
-  height: 4px;
-  width: 100%;
-  background: linear-gradient(90deg, #14532d 0%, #16a34a 55%, #4ade80 100%);
 }
 
 .pbc-sheet-handle {
@@ -506,10 +499,6 @@ body.pbc-modal-open .chibi-ask-me-bubble {
 
 .pbc-modal-overlay.active .pbc-modal-container {
     transform: translateY(0);
-  }
-
-  .pbc-top-accent {
-    display: none;
   }
 
   .pbc-sheet-handle {

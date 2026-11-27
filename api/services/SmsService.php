@@ -77,16 +77,20 @@ class SmsService
             || str_starts_with($apiKey, 'PLACEHOLDER');
 
         if ($isSimulation) {
-            $logDir = __DIR__ . '/../../logs';
-            if (!is_dir($logDir)) @mkdir($logDir, 0777, true);
             $logEntry = sprintf(
-                "[%s] [SIMULATED SMS] To: %s | Len: %d | Msg: %s\n",
+                "[%s] [SIMULATED SMS] To: %s | Len: %d | Msg: %s",
                 date('Y-m-d H:i:s'),
                 $cleanNumber,
                 strlen($message),
                 $message
             );
-            @file_put_contents($logDir . '/sms_simulated.log', $logEntry, FILE_APPEND);
+            if (getenv('VERCEL') === '1') {
+                error_log($logEntry);
+            } else {
+                $logDir = __DIR__ . '/../../logs';
+                if (!is_dir($logDir)) @mkdir($logDir, 0777, true);
+                @file_put_contents($logDir . '/sms_simulated.log', $logEntry . "\n", FILE_APPEND);
+            }
             return true;
         }
 
@@ -133,27 +137,39 @@ class SmsService
     /**
      * Standard Template: Appointment Confirmed (~135 chars)
      */
-    public static function sendConfirmationSms(string $mobileNumber, string $date, string $time, string $refId): bool
+    public static function sendConfirmationSms(string $mobileNumber, string $date, string $time, string $refId, string $consultationMode = 'Face-to-Face'): bool
     {
-        $msg = "LINGKOD MMWGH: Your appointment for {$date} at {$time} is confirmed. Present Ref ID: {$refId} at the Outpatient Triage. Do not reply.";
+        if (strcasecmp(trim($consultationMode), 'Teleconsultation') === 0) {
+            $msg = "LINGKOD MMWGH: Your TELECONSULTATION for {$date} at {$time} is confirmed (Ref: {$refId}). Check your Patient Portal for session details. Do not reply.";
+        } else {
+            $msg = "LINGKOD MMWGH: Your appointment for {$date} at {$time} is confirmed. Present Ref ID: {$refId} at the Outpatient Triage. Do not reply.";
+        }
         return self::sendSms($mobileNumber, $msg);
     }
 
     /**
      * Standard Template: 1-Day Reminder (~136 chars)
      */
-    public static function sendOneDayReminderSms(string $mobileNumber, string $date, string $time, string $refId): bool
+    public static function sendOneDayReminderSms(string $mobileNumber, string $date, string $time, string $refId, string $consultationMode = 'Face-to-Face'): bool
     {
-        $msg = "LINGKOD MMWGH: Reminder for your appointment TOMORROW ({$date}) at {$time}. Present Ref ID: {$refId} at Outpatient Triage. Do not reply.";
+        if (strcasecmp(trim($consultationMode), 'Teleconsultation') === 0) {
+            $msg = "LINGKOD MMWGH: Reminder for your TELECONSULTATION TOMORROW ({$date}) at {$time} (Ref: {$refId}). Check your Patient Portal for link/call details. Do not reply.";
+        } else {
+            $msg = "LINGKOD MMWGH: Reminder for your appointment TOMORROW ({$date}) at {$time}. Present Ref ID: {$refId} at Outpatient Triage. Do not reply.";
+        }
         return self::sendSms($mobileNumber, $msg);
     }
 
     /**
      * Standard Template: Day-Of / 2-Hour Reminder (~133 chars)
      */
-    public static function sendDayOfReminderSms(string $mobileNumber, string $time, string $refId): bool
+    public static function sendDayOfReminderSms(string $mobileNumber, string $time, string $refId, string $consultationMode = 'Face-to-Face'): bool
     {
-        $msg = "LINGKOD MMWGH: Notice for your appointment TODAY at {$time}. Please arrive at Outpatient Triage with Ref ID: {$refId}. Do not reply.";
+        if (strcasecmp(trim($consultationMode), 'Teleconsultation') === 0) {
+            $msg = "LINGKOD MMWGH: Notice for your TELECONSULTATION TODAY at {$time} (Ref: {$refId}). Open your Patient Portal for session details. Do not reply.";
+        } else {
+            $msg = "LINGKOD MMWGH: Notice for your appointment TODAY at {$time}. Please arrive at Outpatient Triage with Ref ID: {$refId}. Do not reply.";
+        }
         return self::sendSms($mobileNumber, $msg);
     }
 }

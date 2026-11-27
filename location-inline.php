@@ -1,5 +1,5 @@
 <!-- Inline Location Section -->
-<section id="location-new" class="sitemap-section-inline" style="scroll-margin-top: 76px;" data-aos="fade-up" data-aos-duration="1200">
+<section id="location-new" class="sitemap-section-inline" style="scroll-margin-top: 86px;" data-aos="fade-up" data-aos-duration="1200">
 
   <!-- Load Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />

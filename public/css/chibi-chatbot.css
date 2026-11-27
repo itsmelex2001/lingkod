@@ -232,33 +232,21 @@ body.splash-active .chibi-widget-container,
 }
 
 /* ==========================================================================
-   CHAT CONVERSATION WINDOW (EXACT RECREATION OF MOCKUP)
+   CHAT CONVERSATION WINDOW — Minimalist Flat Healthcare UI (No Image, No Gradients)
    ========================================================================== */
 .chibi-chat-window {
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  width: 360px;
+  width: 380px;
   max-width: calc(100vw - 2rem);
-  height: 555px;
-  max-height: calc(100vh - 3rem);
+  height: 560px;
+  max-height: calc(100dvh - 3rem);
   background-color: #ffffff;
-  background-image:
-    linear-gradient(
-      to bottom,
-      #ffffff 0%,
-      #ffffff 63%,
-      rgba(255, 255, 255, 0.92) 70%,
-      rgba(255, 255, 255, 0.25) 82%,
-      rgba(255, 255, 255, 0) 100%
-    ),
-    url('/sdn/public/assets/bg_login.jpg');
-  background-repeat: no-repeat;
-  background-position: center top, center bottom;
-  background-size: 100% 100%, 100% 190px;
-  border-radius: 18px;
-  border: none;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  background-image: none;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
   display: flex;
   flex-direction: column;
   z-index: 100000;
@@ -266,8 +254,8 @@ body.splash-active .chibi-widget-container,
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(12px);
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  transform: translateY(10px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
 }
 
 .chibi-chat-window.is-open {
@@ -276,20 +264,23 @@ body.splash-active .chibi-widget-container,
   transform: translateY(0);
 }
 
-/* One solid LINGKOD green for Nurse Mika and Dr. Leo */
+/* Flat solid clinical palette (zero gradients) */
 .chibi-chat-window[data-assistant="girl"],
 .chibi-chat-window[data-assistant="boy"] {
   --chibi-header: #15803d;
-  --chibi-bubble: #c5dfb8;
-  --chibi-user: #0a8d19;
-  --chibi-chip: #c4c4c4;
+  --chibi-surface: #f8fafc;
+  --chibi-bubble: #ffffff;
+  --chibi-user: #15803d;
+  --chibi-border-soft: #e2e8f0;
+  --chibi-text: #0f172a;
+  --chibi-muted: #64748b;
 }
 
 .chibi-chat-header {
   background-color: var(--chibi-header, #15803d);
   background-image: none;
   color: #ffffff;
-  padding: 12px 8px 12px 14px;
+  padding: 14px 12px 14px 16px;
   position: relative;
   display: flex;
   flex-direction: row;
@@ -297,6 +288,7 @@ body.splash-active .chibi-widget-container,
   justify-content: space-between;
   gap: 12px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .chibi-header-identity {
@@ -310,10 +302,10 @@ body.splash-active .chibi-widget-container,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   margin: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.16);
   flex-shrink: 0;
 }
@@ -321,8 +313,8 @@ body.splash-active .chibi-widget-container,
 .chibi-header-icon-wrap svg,
 .chibi-icon-steth,
 .chibi-icon-cap {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 
 .chibi-header-copy {
@@ -332,20 +324,20 @@ body.splash-active .chibi-widget-container,
 .chibi-header-copy h3,
 .chibi-header-top h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   color: #ffffff;
   line-height: 1.2;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
 }
 
 .chibi-header-copy p,
 .chibi-header-bottom p {
   margin: 2px 0 0;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
-  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.86);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1.2;
   white-space: nowrap;
@@ -356,35 +348,45 @@ body.splash-active .chibi-widget-container,
 .chibi-header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .chibi-close-btn,
 .chibi-lang-trigger {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #ffffff;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 36px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border-radius: 10px;
-  transition: background-color 0.15s ease;
+  border-radius: 9px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .chibi-close-btn {
   position: static;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 0;
+}
+
+.chibi-lang-trigger {
+  font-size: 12px;
+  font-weight: 700;
+  gap: 4px;
+  padding: 0 10px;
+  line-height: 1;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .chibi-close-btn:hover,
 .chibi-lang-trigger:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .chibi-close-btn:focus-visible,
@@ -402,61 +404,61 @@ body.splash-active .chibi-widget-container,
   transform: none;
 }
 
-.chibi-lang-trigger {
-  font-size: 12px;
-  font-weight: 700;
-  gap: 2px;
-  padding: 0 10px;
-  line-height: 1;
-}
-
 .chibi-lang-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
   overflow: hidden;
   z-index: 100;
-  min-width: 112px;
+  min-width: 126px;
+  padding: 4px;
 }
 
 .chibi-lang-option {
   width: 100%;
   background: #ffffff;
   border: none;
-  outline: none !important;
-  padding: 7px 11px;
+  border-radius: 7px;
+  padding: 8px 10px;
   text-align: left;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
-  color: #1f2937;
+  color: #334155;
   cursor: pointer;
   display: block;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .chibi-lang-option:hover {
   background: #f0fdf4;
-  color: #0a8d19;
+  color: #15803d;
 }
 
 .chibi-lang-option.active {
-  background: #e8f5e9;
-  color: #0a8d19;
+  background: #f0fdf4;
+  color: #15803d;
   font-weight: 700;
 }
 
-/* --- Chat Body --- */
+.chibi-lang-option:focus-visible {
+  outline: 2px solid #15803d;
+  outline-offset: -2px;
+}
+
+/* --- Chat Body (Flat Calm Clinical Surface) --- */
 .chibi-chat-body {
   flex: 1;
-  padding: 22px 18px 18px 18px;
+  padding: 18px 16px 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: transparent;
+  gap: 14px;
+  background-color: var(--chibi-surface, #f8fafc);
+  background-image: none;
   scroll-behavior: smooth;
 }
 
@@ -472,13 +474,14 @@ body.splash-active .chibi-widget-container,
   justify-content: flex-end;
 }
 
-/* Circular Gray Avatar in Bot Message Row */
+/* Crisp Minimal Avatar */
 .chibi-msg-avatar {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: #8fa0ad;
-  padding: 4px 0 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 3px 0 0;
   box-sizing: border-box;
   overflow: hidden;
   flex-shrink: 0;
@@ -488,7 +491,7 @@ body.splash-active .chibi-widget-container,
 }
 
 .chibi-msg-avatar img {
-  width: 82%;
+  width: 84%;
   height: auto;
   max-width: none;
   display: block;
@@ -498,65 +501,63 @@ body.splash-active .chibi-widget-container,
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  max-width: 245px;
+  max-width: calc(100% - 44px);
 }
 
 .chibi-msg-row.user .chibi-msg-box {
   align-items: flex-end;
-  max-width: 240px;
+  max-width: 82%;
 }
 
 .chibi-msg-bubble {
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 13.5px;
+  line-height: 1.55;
   word-wrap: break-word;
 }
 
 .chibi-msg-bubble.bot {
-  background: var(--chibi-bubble, #c5dfb8);
-  color: #111827;
-  border: none;
-  border-radius: 8px;
-  padding: 11px 14px;
+  background: var(--chibi-bubble, #ffffff);
+  color: var(--chibi-text, #0f172a);
+  border: 1px solid var(--chibi-border-soft, #e2e8f0);
+  border-radius: 4px 14px 14px 14px;
+  padding: 12px 14px;
+}
+
+.chibi-msg-bubble.bot strong {
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .chibi-msg-bubble.user {
-  background: var(--chibi-user, #0a8d19);
+  background: var(--chibi-user, #15803d);
   color: #ffffff;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 14px 14px 4px 14px;
   font-weight: 500;
 }
 
 .chibi-msg-time {
-  font-size: 10.5px;
-  color: #334155;
-  margin-top: 4px;
+  font-size: 11px;
+  color: var(--chibi-muted, #64748b);
+  margin-top: 5px;
+  align-self: flex-start;
+  font-variant-numeric: tabular-nums;
+}
+
+.chibi-msg-row.user .chibi-msg-time {
   align-self: flex-end;
 }
 
-/* --- Initial Topics (Right-Aligned) & Follow-Up Questions (Directly Below Response Area) --- */
-.chibi-faq-container {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 255px;
-  margin-left: auto;
-  margin-right: 4px;
-  margin-top: 6px;
-  background: transparent;
-  border: none;
-  flex-shrink: 0;
-}
-
+/* --- Minimalist Topic & Follow-Up Lists --- */
+.chibi-faq-container,
 .chibi-followup-chips {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  width: 245px;
-  margin-left: 54px;
-  margin-right: auto;
-  margin-top: 4px;
+  align-items: stretch;
+  width: 100%;
+  margin: 2px 0 0;
+  padding-left: 44px;
+  box-sizing: border-box;
   background: transparent;
   border: none;
   flex-shrink: 0;
@@ -565,14 +566,15 @@ body.splash-active .chibi-widget-container,
 .chibi-faq-label {
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #111827;
-  background: var(--chibi-chip, #c4c4c4);
-  padding: 7px 12px;
-  border-radius: 6px;
-  margin: 0 0 8px 0;
-  display: inline-block;
-  line-height: 1.15;
+  color: #64748b;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  margin: 0 0 8px;
+  display: block;
+  line-height: 1.2;
 }
 
 .chibi-faq-list {
@@ -585,22 +587,22 @@ body.splash-active .chibi-widget-container,
 .chibi-faq-item,
 .chibi-chip-btn {
   width: 100%;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #9ca3af;
-  border-radius: 8px;
-  outline: none !important;
-  color: #111827;
+  min-height: 44px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #0f172a;
   padding: 10px 12px;
   text-align: left;
-  font-size: 12.5px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  line-height: 1.38;
-  transition: background-color 0.14s ease, border-color 0.14s ease;
+  line-height: 1.4;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chibi-faq-text {
@@ -608,52 +610,62 @@ body.splash-active .chibi-widget-container,
 }
 
 .chibi-faq-arrow {
-  width: 14px;
-  height: 14px;
-  stroke: #6b7280;
-  stroke-width: 1.8;
+  width: 15px;
+  height: 15px;
+  stroke: #94a3b8;
+  stroke-width: 2;
   flex-shrink: 0;
   transition: stroke 0.14s ease, transform 0.14s ease;
 }
 
 .chibi-faq-item:hover,
 .chibi-chip-btn:hover {
-  background: #ffffff;
-  border-color: #0a8d19;
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #14532d;
 }
 
 .chibi-faq-item:hover .chibi-faq-arrow,
 .chibi-chip-btn:hover .chibi-faq-arrow {
-  stroke: #0a8d19;
-  transform: translateX(1px);
+  stroke: #15803d;
+  transform: translateX(2px);
 }
 
-/* --- Back to Main Topics Option Below Follow-Up Questions --- */
+.chibi-faq-item:focus-visible,
+.chibi-chip-btn:focus-visible,
+.chibi-back-topics-btn:focus-visible {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+}
+
+/* --- Back to Main Topics Action --- */
 .chibi-back-topics-btn {
   width: 100%;
-  margin-top: 7px;
-  background: rgba(232, 245, 233, 0.96);
-  border: 1px solid #0a8d19;
-  border-radius: 6px;
-  outline: none !important;
-  color: #0a8d19;
-  padding: 6px 10px;
+  min-height: 38px;
+  margin-top: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #334155;
+  padding: 8px 12px;
   text-align: center;
-  font-size: 9.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   line-height: 1.25;
-  transition: background-color 0.14s ease, color 0.14s ease;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
 .chibi-back-topics-btn:hover {
-  background: #0a8d19;
-  color: #ffffff;
+  background: #f0fdf4;
+  border-color: #15803d;
+  color: #15803d;
 }
 
 /* --- Highlight Pulse When Scrolling to Earlier Response --- */
 .chibi-bubble-highlight {
-  outline: 2px solid #0a8d19;
+  outline: 2px solid #15803d;
+  outline-offset: 1px;
   transition: outline 0.2s ease;
 }
 
@@ -661,22 +673,23 @@ body.splash-active .chibi-widget-container,
 .chibi-typing-row {
   display: flex;
   align-items: center;
-  padding-left: 46px;
+  padding-left: 44px;
 }
 
 .chibi-typing-bubble {
-  background: var(--chibi-bubble, #c5dfb8);
-  border-radius: 6px;
-  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .chibi-dot {
-  width: 4px;
-  height: 4px;
-  background-color: #111827;
+  width: 5px;
+  height: 5px;
+  background-color: #64748b;
   border-radius: 50%;
   animation: typingBlink 1.4s infinite ease-in-out both;
 }
@@ -685,13 +698,13 @@ body.splash-active .chibi-widget-container,
 .chibi-dot:nth-child(2) { animation-delay: -0.16s; }
 
 @keyframes typingBlink {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  0%, 80%, 100% { transform: scale(0.65); opacity: 0.35; }
   40% { transform: scale(1.1); opacity: 1; }
 }
 
-/* Custom Scrollbar */
+/* Subtle Scrollbar */
 .chibi-chat-body::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 
 .chibi-chat-body::-webkit-scrollbar-track {
@@ -699,7 +712,7 @@ body.splash-active .chibi-widget-container,
 }
 
 .chibi-chat-body::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 
@@ -716,12 +729,19 @@ body.splash-active .chibi-widget-container,
   }
 
   .chibi-chat-window {
-    width: calc(100vw - 1.5rem);
-    max-width: 350px;
+    left: 0.75rem;
     right: 0.75rem;
     bottom: 0.75rem;
-    height: 520px;
+    width: auto;
+    max-width: none;
+    height: min(82dvh, 600px);
+    max-height: calc(100dvh - 1.5rem);
     border-radius: 16px;
+  }
+
+  .chibi-faq-container,
+  .chibi-followup-chips {
+    padding-left: 0;
   }
 }
 
@@ -729,6 +749,17 @@ body.splash-active .chibi-widget-container,
   .chibi-stage {
     transform: scale(0.78);
     transform-origin: bottom right;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chibi-chat-window,
+  .chibi-faq-item,
+  .chibi-chip-btn,
+  .chibi-faq-arrow,
+  .chibi-dot {
+    transition: none !important;
+    animation: none !important;
   }
 }
 

@@ -69,7 +69,7 @@ if ($method === 'GET' && $route === '/public/chatbot-faqs') {
             'persona'   => $row['persona'],
             'question'  => $row['question'],
             'keywords'  => json_decode((string)$row['keywords_json'], true) ?: [],
-            'answer'    => $row['answer_html'],
+            'answer'    => sanitizeFaqAnswerHtml((string)($row['answer_html'] ?? '')),
             'followUps' => json_decode((string)$row['follow_ups_json'], true) ?: [],
         ];
     }
@@ -394,6 +394,50 @@ function formatFaqRow(array $row): array {
     ];
 }
 
+function sanitizeFaqAnswerHtml(string $html): string {
+    $noScripts = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $html) ?? $html;
+    if (!class_exists('DOMDocument')) {
+        return htmlspecialchars(strip_tags($noScripts), ENT_QUOTES, 'UTF-8');
+    }
+
+    $allowed = ['strong', 'b', 'em', 'br'];
+    $dom = new DOMDocument();
+    $prev = libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="utf-8" ?><div>' . $noScripts . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+    libxml_use_internal_errors($prev);
+
+    $root = $dom->getElementsByTagName('div')->item(0);
+    if (!$root) {
+        return htmlspecialchars(strip_tags($noScripts), ENT_QUOTES, 'UTF-8');
+    }
+
+    $walk = static function (DOMNode $node) use (&$walk, $allowed): void {
+        for ($i = $node->childNodes->length - 1; $i >= 0; $i--) {
+            $child = $node->childNodes->item($i);
+            if ($child instanceof DOMElement) {
+                $tag = strtolower($child->tagName);
+                if (!in_array($tag, $allowed, true)) {
+                    $text = $child->ownerDocument->createTextNode($child->textContent);
+                    $node->replaceChild($text, $child);
+                } else {
+                    while ($child->attributes->length > 0) {
+                        $child->removeAttributeNode($child->attributes->item(0));
+                    }
+                    $walk($child);
+                }
+            }
+        }
+    };
+    $walk($root);
+
+    $inner = '';
+    foreach ($root->childNodes as $child) {
+        $inner .= $dom->saveHTML($child);
+    }
+    return trim($inner);
+}
+
 function validateFaqPayload(PDO $pdo, array $b, ?int $ignoreId): array {
     $errors = [];
     $slug   = trim((string)($b['slug'] ?? ''));
@@ -428,8 +472,7 @@ function validateFaqPayload(PDO $pdo, array $b, ?int $ignoreId): array {
         }
     }
 
-    $noScripts = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $answer) ?? $answer;
-    $safeHtml  = trim(strip_tags($noScripts, '<strong><b><em><br>'));
+    $safeHtml  = sanitizeFaqAnswerHtml($answer);
 
     return [[
         'slug'        => strtolower($slug),
@@ -445,15 +488,22 @@ function validateFaqPayload(PDO $pdo, array $b, ?int $ignoreId): array {
 }
 
 function upsertSettingsGroup(PDO $pdo, string $group, array $entries, ?int $actorId, string $actorName): void {
-    $stmt = $pdo->prepare(
-        "INSERT INTO system_settings (group_key, setting_key, setting_value, value_type, updated_by)
-         VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-            group_key = VALUES(group_key),
-            setting_value = VALUES(setting_value),
-            value_type = VALUES(value_type),
-            updated_by = VALUES(updated_by)"
-    );
+    $upsertSql = dbIsPgsql()
+        ? "INSERT INTO system_settings (group_key, setting_key, setting_value, value_type, updated_by)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT (setting_key) DO UPDATE SET
+              group_key = EXCLUDED.group_key,
+              setting_value = EXCLUDED.setting_value,
+              value_type = EXCLUDED.value_type,
+              updated_by = EXCLUDED.updated_by"
+        : "INSERT INTO system_settings (group_key, setting_key, setting_value, value_type, updated_by)
+           VALUES (?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+              group_key = VALUES(group_key),
+              setting_value = VALUES(setting_value),
+              value_type = VALUES(value_type),
+              updated_by = VALUES(updated_by)";
+    $stmt = $pdo->prepare($upsertSql);
     foreach ($entries as $key => [$val, $type]) {
         $stmt->execute([$group, $key, $val, $type, $actorId]);
     }
@@ -532,74 +582,76 @@ function defaultClinicHours(): array {
 }
 
 function ensureAdminSettingsSchema(PDO $pdo): void {
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `system_settings` (
-            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `group_key` VARCHAR(32) NOT NULL DEFAULT 'general',
-            `setting_key` VARCHAR(64) NOT NULL,
-            `setting_value` TEXT NULL,
-            `value_type` VARCHAR(20) NOT NULL DEFAULT 'string',
-            `description` VARCHAR(255) NULL,
-            `updated_by` BIGINT UNSIGNED NULL,
-            `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `system_settings_setting_key_unique` (`setting_key`),
-            KEY `system_settings_group_key_index` (`group_key`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
+    if (!dbIsPgsql()) {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `system_settings` (
+                `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `group_key` VARCHAR(32) NOT NULL DEFAULT 'general',
+                `setting_key` VARCHAR(64) NOT NULL,
+                `setting_value` TEXT NULL,
+                `value_type` VARCHAR(20) NOT NULL DEFAULT 'string',
+                `description` VARCHAR(255) NULL,
+                `updated_by` BIGINT UNSIGNED NULL,
+                `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `system_settings_setting_key_unique` (`setting_key`),
+                KEY `system_settings_group_key_index` (`group_key`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
 
-    $cols = $pdo->query('SHOW COLUMNS FROM `system_settings`')->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('group_key', $cols, true)) {
-        @$pdo->exec("ALTER TABLE `system_settings` ADD COLUMN `group_key` VARCHAR(32) NOT NULL DEFAULT 'general' AFTER `id`");
-    }
-    if (!in_array('value_type', $cols, true)) {
-        @$pdo->exec("ALTER TABLE `system_settings` ADD COLUMN `value_type` VARCHAR(20) NOT NULL DEFAULT 'string' AFTER `setting_value`");
-    }
-    if (!in_array('updated_by', $cols, true)) {
-        @$pdo->exec("ALTER TABLE `system_settings` ADD COLUMN `updated_by` BIGINT UNSIGNED NULL AFTER `description`");
-    }
+        $cols = $pdo->query('SHOW COLUMNS FROM `system_settings`')->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('group_key', $cols, true)) {
+            @$pdo->exec("ALTER TABLE `system_settings` ADD COLUMN `group_key` VARCHAR(32) NOT NULL DEFAULT 'general' AFTER `id`");
+        }
+        if (!in_array('value_type', $cols, true)) {
+            @$pdo->exec("ALTER TABLE `system_settings` ADD COLUMN `value_type` VARCHAR(20) NOT NULL DEFAULT 'string' AFTER `setting_value`");
+        }
+        if (!in_array('updated_by', $cols, true)) {
+            @$pdo->exec("ALTER TABLE `system_settings` ADD COLUMN `updated_by` BIGINT UNSIGNED NULL AFTER `description`");
+        }
 
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `department_scheduling_rules` (
-            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `department_code` VARCHAR(32) NOT NULL,
-            `display_name` VARCHAR(80) NOT NULL,
-            `daily_capacity_limit` SMALLINT UNSIGNED NOT NULL DEFAULT 50,
-            `am_slot_limit` SMALLINT UNSIGNED NULL,
-            `pm_slot_limit` SMALLINT UNSIGNED NULL,
-            `booking_cutoff_time` VARCHAR(8) NOT NULL DEFAULT '16:00',
-            `qr_expiry_hours_override` SMALLINT UNSIGNED NULL,
-            `allow_same_day_booking` TINYINT(1) NOT NULL DEFAULT 1,
-            `is_active` TINYINT(1) NOT NULL DEFAULT 1,
-            `updated_by` BIGINT UNSIGNED NULL,
-            `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `department_scheduling_rules_department_code_unique` (`department_code`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `department_scheduling_rules` (
+                `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `department_code` VARCHAR(32) NOT NULL,
+                `display_name` VARCHAR(80) NOT NULL,
+                `daily_capacity_limit` SMALLINT UNSIGNED NOT NULL DEFAULT 50,
+                `am_slot_limit` SMALLINT UNSIGNED NULL,
+                `pm_slot_limit` SMALLINT UNSIGNED NULL,
+                `booking_cutoff_time` VARCHAR(8) NOT NULL DEFAULT '16:00',
+                `qr_expiry_hours_override` SMALLINT UNSIGNED NULL,
+                `allow_same_day_booking` TINYINT(1) NOT NULL DEFAULT 1,
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `updated_by` BIGINT UNSIGNED NULL,
+                `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `department_scheduling_rules_department_code_unique` (`department_code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
 
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS `chatbot_faqs` (
-            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `slug` VARCHAR(80) NOT NULL,
-            `locale` VARCHAR(5) NOT NULL DEFAULT 'en',
-            `persona` VARCHAR(20) NOT NULL DEFAULT 'both',
-            `question` VARCHAR(255) NOT NULL,
-            `answer_html` TEXT NOT NULL,
-            `keywords_json` JSON NULL,
-            `follow_ups_json` JSON NULL,
-            `sort_order` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-            `is_active` TINYINT(1) NOT NULL DEFAULT 1,
-            `updated_by` BIGINT UNSIGNED NULL,
-            `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `chatbot_faqs_slug_locale_unique` (`slug`, `locale`),
-            KEY `chatbot_faqs_locale_persona_is_active_index` (`locale`, `persona`, `is_active`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `chatbot_faqs` (
+                `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `slug` VARCHAR(80) NOT NULL,
+                `locale` VARCHAR(5) NOT NULL DEFAULT 'en',
+                `persona` VARCHAR(20) NOT NULL DEFAULT 'both',
+                `question` VARCHAR(255) NOT NULL,
+                `answer_html` TEXT NOT NULL,
+                `keywords_json` JSON NULL,
+                `follow_ups_json` JSON NULL,
+                `sort_order` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `updated_by` BIGINT UNSIGNED NULL,
+                `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `chatbot_faqs_slug_locale_unique` (`slug`, `locale`),
+                KEY `chatbot_faqs_locale_persona_is_active_index` (`locale`, `persona`, `is_active`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
 
     $defaults = [
         ['general', 'hospital_name', 'Mariveles Mental Wellness and General Hospital', 'string'],
@@ -612,81 +664,267 @@ function ensureAdminSettingsSchema(PDO $pdo): void {
         ['scheduling', 'qr_code_expiry_hours', '48', 'integer'],
     ];
 
-    $insSetting = $pdo->prepare(
-        "INSERT IGNORE INTO system_settings (group_key, setting_key, setting_value, value_type) VALUES (?, ?, ?, ?)"
-    );
+    $insSettingSql = dbIsPgsql()
+        ? "INSERT INTO system_settings (group_key, setting_key, setting_value, value_type) VALUES (?, ?, ?, ?) ON CONFLICT (setting_key) DO NOTHING"
+        : "INSERT IGNORE INTO system_settings (group_key, setting_key, setting_value, value_type) VALUES (?, ?, ?, ?)";
+    $insSetting = $pdo->prepare($insSettingSql);
     foreach ($defaults as $row) {
         $insSetting->execute($row);
     }
 
     if ((int)$pdo->query('SELECT COUNT(*) FROM department_scheduling_rules')->fetchColumn() === 0) {
-        $insDept = $pdo->prepare(
-            "INSERT IGNORE INTO department_scheduling_rules
-             (department_code, display_name, daily_capacity_limit, am_slot_limit, pm_slot_limit, booking_cutoff_time, allow_same_day_booking, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, 1, 1)"
-        );
+        $insDeptSql = dbIsPgsql()
+            ? "INSERT INTO department_scheduling_rules
+               (department_code, display_name, daily_capacity_limit, am_slot_limit, pm_slot_limit, booking_cutoff_time, allow_same_day_booking, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, 1, 1) ON CONFLICT (department_code) DO NOTHING"
+            : "INSERT IGNORE INTO department_scheduling_rules
+               (department_code, display_name, daily_capacity_limit, am_slot_limit, pm_slot_limit, booking_cutoff_time, allow_same_day_booking, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, 1, 1)";
+        $insDept = $pdo->prepare($insDeptSql);
         $insDept->execute(['general', 'General Medical', 60, 35, 25, '15:00']);
         $insDept->execute(['neurology', 'Neurology', 30, 15, 15, '14:00']);
         $insDept->execute(['psychiatry', 'Psychiatry', 40, 20, 20, '15:00']);
     }
 
-    if ((int)$pdo->query('SELECT COUNT(*) FROM chatbot_faqs')->fetchColumn() === 0) {
-        $insFaq = $pdo->prepare(
-            "INSERT IGNORE INTO chatbot_faqs (slug, locale, persona, question, answer_html, keywords_json, follow_ups_json, sort_order, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"
+    $faqSyncLock = sys_get_temp_dir() . '/sdn_chatbot_faqs_v2.lock';
+    $faqCount = (int)$pdo->query('SELECT COUNT(*) FROM chatbot_faqs')->fetchColumn();
+    if ($faqCount === 0 || !file_exists($faqSyncLock)) {
+        $insFaqSql = dbIsPgsql()
+            ? "INSERT INTO chatbot_faqs (slug, locale, persona, question, answer_html, keywords_json, follow_ups_json, sort_order, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1) ON CONFLICT (slug, locale) DO NOTHING"
+            : "INSERT IGNORE INTO chatbot_faqs (slug, locale, persona, question, answer_html, keywords_json, follow_ups_json, sort_order, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)";
+        $insFaq = $pdo->prepare($insFaqSql);
+        // Update unedited legacy default seeds (updated_by IS NULL) without touching admin-authored entries
+        $updFaq = $pdo->prepare(
+            "UPDATE chatbot_faqs
+             SET persona = ?, question = ?, answer_html = ?, keywords_json = ?, follow_ups_json = ?, sort_order = ?
+             WHERE slug = ? AND locale = ? AND updated_by IS NULL"
         );
         $seedFaqs = [
             [
                 'request-appointment', 'en', 'both',
-                'How do I request an appointment/schedule?',
-                "Click <strong>'Book Appointment'</strong> on the homepage, select your desired clinical department, and complete the registration. Our clinic staff will verify your request before confirming your queue slot.",
-                ['request', 'appointment', 'schedule', 'book', 'reserve', 'slot'],
-                ["What are the hospital's operating hours & doctor schedules?", 'What should I bring for my consultation & EMR triage?'],
+                'How do I book an appointment?',
+                'Click <strong>Book Appointment</strong>, review and accept the Data Privacy notice, then complete the 4-step form (Personal Info, Medical Info, Appointment Details, and Confirmation). Online appointments can be booked <strong>Monday to Saturday</strong> at least 1 day ahead for Morning or Afternoon sessions. Your request starts as <strong>For Approval</strong> while clinic staff verifies physician availability.',
+                ['book', 'request', 'appointment', 'schedule', 'reserve', 'slot', 'register'],
+                [
+                    'How does Teleconsultation work for returning patients?',
+                    'Can I book for a family member or just ask an inquiry?',
+                    'How do I track or reschedule my appointment?',
+                ],
                 1,
             ],
             [
-                'hospital-hours', 'en', 'dr_leo',
-                "What are the hospital's operating hours & doctor schedules?",
-                'The <strong>Emergency Triage</strong> operates 24/7. <strong>Outpatient (OPD) specialty clinics</strong> run Monday through Friday from <strong>8:00 AM to 5:00 PM</strong>.',
-                ['hours', 'operating', 'doctor', 'schedules', 'time', 'open', 'opd'],
-                ['How do I request an appointment/schedule?', 'What should I bring for my consultation & EMR triage?'],
+                'teleconsultation-flow', 'en', 'both',
+                'How does Teleconsultation work for returning patients?',
+                'First-time patients are required to complete an initial <strong>Face-to-Face</strong> visit. Once you have at least one <strong>completed</strong> hospital consultation, <strong>Teleconsultation</strong> unlocks in Step 3 of booking. After staff approves your visit, your session link (e.g., Google Meet/Zoom) or clinic call instructions appear directly on your appointment card in the <strong>Patient Portal</strong>.',
+                ['teleconsult', 'teleconsultation', 'online', 'video', 'returning', 'remote', 'google meet', 'zoom'],
+                [
+                    'How do I book an appointment?',
+                    'What should I prepare for my consultation?',
+                    'How do I track or reschedule my appointment?',
+                ],
                 2,
             ],
             [
-                'consultation-requirements', 'en', 'nurse_mika',
-                'What should I bring for my consultation & EMR triage?',
-                'Please present a valid government, company, or student ID, your active phone number, and any prior medical records, lab results, or prescription lists.',
-                ['bring', 'consultation', 'triage', 'emr', 'requirements', 'id'],
-                ['How do I request an appointment/schedule?', "What are the hospital's operating hours & doctor schedules?"],
+                'hospital-hours', 'en', 'both',
+                'What departments and clinic hours are available?',
+                'MMWGH Outpatient Clinics serve <strong>General Medical</strong>, <strong>Neurology</strong>, and <strong>Psychiatry</strong> from <strong>Monday to Saturday, 8:00 AM – 5:00 PM</strong> (Morning: 8:00 AM – 12:00 PM; Afternoon: 1:00 PM – 5:00 PM; closed Sundays). For urgent emergencies, our <strong>Emergency Triage</strong> is open 24/7.',
+                ['department', 'hours', 'operating', 'open', 'opd', 'general medical', 'neurology', 'psychiatry', 'emergency'],
+                [
+                    'How do I check doctor schedules and open slots?',
+                    'Can I book for a family member or just ask an inquiry?',
+                    'Where is MMWGH and how can I contact the clinic?',
+                ],
                 3,
+            ],
+            [
+                'portal-status', 'en', 'both',
+                'How do I track or reschedule my appointment?',
+                'Sign in to the <strong>Patient Portal</strong> using your username or email and password. You can check real-time status (<strong>For Approval</strong>, <strong>Confirmed</strong>, <strong>Checked In</strong>, <strong>Completed</strong>), download your <strong>Appointment/Teleconsultation Slip</strong> and <strong>Digital Patient ID</strong>, and reschedule directly while your visit is still <strong>For Approval</strong>.',
+                ['portal', 'track', 'status', 'reschedule', 'slip', 'qr', 'login', 'account'],
+                [
+                    'What should I prepare for my consultation?',
+                    'How does Teleconsultation work for returning patients?',
+                    'How is my medical data protected?',
+                ],
+                4,
+            ],
+            [
+                'consultation-requirements', 'en', 'both',
+                'What should I prepare for my consultation?',
+                'For <strong>Face-to-Face</strong> visits, bring a valid ID, your printable <strong>Appointment Slip</strong> or <strong>Digital Patient ID (QR)</strong> from the Patient Portal, and any prior prescriptions or lab results. For <strong>Teleconsultation</strong>, keep your active mobile number reachable and open your Patient Portal 5–10 minutes before your scheduled block.',
+                ['bring', 'prepare', 'requirements', 'id', 'slip', 'triage', 'documents', 'prescription'],
+                [
+                    'How does Teleconsultation work for returning patients?',
+                    'Where is MMWGH and how can I contact the clinic?',
+                    'How is my medical data protected?',
+                ],
+                5,
+            ],
+            [
+                'schedules', 'en', 'both',
+                'How do I check doctor schedules and open slots?',
+                'Open <strong>Clinic Schedules</strong> from the homepage or Patient Portal. Filter the monthly calendar by <strong>All Clinics</strong>, <strong>General Medical</strong>, <strong>Neurology</strong>, or <strong>Psychiatry</strong>, and select any open date to view exact consultation hours before booking.',
+                ['schedule', 'doctor', 'availability', 'calendar', 'slots', 'physician', 'clinic schedules'],
+                [
+                    'What departments and clinic hours are available?',
+                    'How do I book an appointment?',
+                    'Can I book for a family member or just ask an inquiry?',
+                ],
+                6,
+            ],
+            [
+                'other-patient-inquiry', 'en', 'both',
+                'Can I book for a family member or just ask an inquiry?',
+                'Yes. In Step 1 of <strong>Book Appointment</strong>, signed-in patients can book under their locked <strong>Verified Profile (Patient - Me)</strong> or select <strong>Other Patient</strong> for a spouse, child, or dependent. If you only have a question without reserving a clinic slot, check <strong>Inquiry Only</strong> and staff will contact you.',
+                ['family', 'dependent', 'other patient', 'someone else', 'inquiry', 'question'],
+                [
+                    'How do I book an appointment?',
+                    'How do I track or reschedule my appointment?',
+                    'Where is MMWGH and how can I contact the clinic?',
+                ],
+                7,
+            ],
+            [
+                'sdn-facility', 'en', 'both',
+                'Where is MMWGH and how can I contact the clinic?',
+                '<strong>Mariveles Mental Wellness and General Hospital</strong> is located at <strong>P. Monroe St., Poblacion, Mariveles, Bataan</strong>. Open the <strong>Location Map</strong> on the homepage to view directions and partner SDN facilities, or call OPU-Medical at <strong>(047) 935-4645</strong> for schedule assistance and verified record corrections.',
+                ['where', 'location', 'address', 'map', 'contact', 'phone', 'hotline', 'sdn', 'mmwgh'],
+                [
+                    'What departments and clinic hours are available?',
+                    'What should I prepare for my consultation?',
+                    'How do I book an appointment?',
+                ],
+                8,
+            ],
+            [
+                'dpa-consent', 'en', 'both',
+                'How is my medical data protected?',
+                'LINGKOD complies with <strong>Republic Act 10173 (Data Privacy Act of 2012)</strong>. Clinical notes and diagnoses are restricted to your attending department, your verified hospital identity is protected from unauthorized edits, and you can enable <strong>Two-Step Verification (Email OTP)</strong> anytime in <strong>Patient Portal &gt; Account Settings</strong>.',
+                ['privacy', 'dpa', 'consent', 'data', 'security', 'otp', 'two-step', 'protected', '10173'],
+                [
+                    'How do I track or reschedule my appointment?',
+                    'How do I book an appointment?',
+                    'Where is MMWGH and how can I contact the clinic?',
+                ],
+                9,
             ],
             [
                 'request-appointment', 'tl', 'both',
-                'Paano ako mag-request ng appointment/iskedyul?',
-                "I-click ang <strong>'Book Appointment'</strong> sa homepage, piliin ang departamento, at kumpletuhin ang form. Makikipag-ugnayan ang aming staff upang kumpirmahin ang inyong iskedyul.",
-                ['paano', 'appointment', 'iskedyul', 'mag-book', 'request'],
-                ['Ano ang mga oras ng operasyon at iskedyul ng doktor?', 'Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?'],
+                'Paano ako mag-book ng appointment?',
+                'Pindutin ang <strong>Book Appointment</strong>, tanggapin ang Data Privacy notice, at sagutan ang 4-step form (Personal Info, Medical Info, Appointment Details, at Confirmation). Maaaring mag-book mula <strong>Lunes hanggang Sabado</strong> (hindi bababa sa 1 araw bago ang konsulta) para sa Morning o Afternoon session. Magsisimula ito bilang <strong>For Approval</strong> habang bineberipika ng staff ang iskedyul ng doktor.',
+                ['book', 'request', 'appointment', 'iskedyul', 'magpa-schedule', 'slot'],
+                [
+                    'Paano gumagana ang Teleconsultation para sa returning patients?',
+                    'Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?',
+                    'Paano ko masusuri o mare-reschedule ang aking appointment?',
+                ],
                 1,
             ],
             [
-                'hospital-hours', 'tl', 'dr_leo',
-                'Ano ang mga oras ng operasyon at iskedyul ng doktor?',
-                'Ang <strong>Emergency Triage</strong> ay bukas 24/7. Ang <strong>Outpatient (OPD) clinics</strong> ay bukas Lunes hanggang Biyernes, <strong>8:00 AM hanggang 5:00 PM</strong>.',
-                ['oras', 'operasyon', 'doktor', 'iskedyul', 'bukas', 'opd'],
-                ['Paano ako mag-request ng appointment/iskedyul?'],
+                'teleconsultation-flow', 'tl', 'both',
+                'Paano gumagana ang Teleconsultation para sa returning patients?',
+                'Ang mga first-time patients ay kinakailangan munang mag-<strong>Face-to-Face</strong> na konsultasyon. Kapag may kahit isang <strong>completed</strong> visit ka na, bubukas ang <strong>Teleconsultation</strong> sa Step 3 ng booking. Kapag naaprubahan ng staff, makikita ang iyong <strong>meeting link</strong> (Google Meet/Zoom) o tagubilin sa tawag nang direkta sa iyong <strong>Patient Portal</strong>.',
+                ['teleconsult', 'teleconsultation', 'online', 'video', 'returning', 'remote'],
+                [
+                    'Paano ako mag-book ng appointment?',
+                    'Ano ang dapat kong ihanda para sa aking konsultasyon?',
+                    'Paano ko masusuri o mare-reschedule ang aking appointment?',
+                ],
                 2,
             ],
             [
-                'consultation-requirements', 'tl', 'nurse_mika',
-                'Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?',
-                'Magdala ng valid ID, aktibong numero ng telepono, at anumang nakaraang medical records, lab results, o reseta.',
-                ['dalhin', 'konsultasyon', 'triage', 'emr', 'id', 'reseta'],
-                ['Paano ako mag-request ng appointment/iskedyul?'],
+                'hospital-hours', 'tl', 'both',
+                'Anong mga departamento at oras ng klinika ang bukas?',
+                'Bukas ang MMWGH Outpatient Clinics para sa <strong>General Medical</strong>, <strong>Neurology</strong>, at <strong>Psychiatry</strong> mula <strong>Lunes hanggang Sabado, 8:00 AM – 5:00 PM</strong> (Morning: 8:00 AM – 12:00 PM; Afternoon: 1:00 PM – 5:00 PM; sarado tuwing Linggo). Para sa agarang emergency, bukas 24/7 ang <strong>Emergency Triage</strong>.',
+                ['departamento', 'oras', 'operasyon', 'bukas', 'general medical', 'neurology', 'psychiatry', 'emergency'],
+                [
+                    'Paano ko makikita ang iskedyul ng mga doktor?',
+                    'Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?',
+                    'Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?',
+                ],
                 3,
+            ],
+            [
+                'portal-status', 'tl', 'both',
+                'Paano ko masusuri o mare-reschedule ang aking appointment?',
+                'Mag-sign in sa <strong>Patient Portal</strong> gamit ang iyong username o email at password. Makikita rito ang status (<strong>For Approval</strong>, <strong>Confirmed</strong>, <strong>Checked In</strong>, <strong>Completed</strong>), nada-download ang <strong>Appointment/Teleconsultation Slip</strong> at <strong>Digital Patient ID</strong>, at maaaring mag-reschedule habang <strong>For Approval</strong> pa ang iyong iskedyul.',
+                ['portal', 'status', 'reschedule', 'slip', 'qr', 'login', 'account'],
+                [
+                    'Ano ang dapat kong ihanda para sa aking konsultasyon?',
+                    'Paano gumagana ang Teleconsultation para sa returning patients?',
+                    'Paano pinoprotektahan ang aking medical data?',
+                ],
+                4,
+            ],
+            [
+                'consultation-requirements', 'tl', 'both',
+                'Ano ang dapat kong ihanda para sa aking konsultasyon?',
+                'Para sa <strong>Face-to-Face</strong> na konsultasyon, magdala ng valid ID, printable <strong>Appointment Slip</strong> o <strong>Digital Patient ID (QR)</strong> mula sa Patient Portal, at mga nakaraang reseta o lab results. Para sa <strong>Teleconsultation</strong>, panatilihing bukas ang iyong cellphone at tingnan ang Patient Portal 5–10 minuto bago ang iyong iskedyul.',
+                ['dalhin', 'ihanda', 'dokumento', 'id', 'slip', 'reseta', 'lab'],
+                [
+                    'Paano gumagana ang Teleconsultation para sa returning patients?',
+                    'Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?',
+                    'Paano pinoprotektahan ang aking medical data?',
+                ],
+                5,
+            ],
+            [
+                'schedules', 'tl', 'both',
+                'Paano ko makikita ang iskedyul ng mga doktor?',
+                'Buksan ang <strong>Clinic Schedules</strong> sa homepage o Patient Portal. Maaari mong i-filter ang buwanang kalendaryo sa <strong>General Medical</strong>, <strong>Neurology</strong>, o <strong>Psychiatry</strong> at i-click ang bukas na petsa upang makita ang oras ng mga doktor.',
+                ['iskedyul', 'doktor', 'calendar', 'slots', 'availability'],
+                [
+                    'Anong mga departamento at oras ng klinika ang bukas?',
+                    'Paano ako mag-book ng appointment?',
+                    'Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?',
+                ],
+                6,
+            ],
+            [
+                'other-patient-inquiry', 'tl', 'both',
+                'Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?',
+                'Oo. Sa Step 1 ng <strong>Book Appointment</strong>, maaaring gamitin ng signed-in patient ang kanyang naka-lock na <strong>Verified Profile (Patient - Me)</strong> o piliin ang <strong>Other Patient</strong> para sa asawa, anak, o kaanak. Kung magtatanong lamang nang walang clinic slot, i-check ang <strong>Inquiry Only</strong>.',
+                ['kapamilya', 'dependent', 'other patient', 'inquiry', 'magtanong'],
+                [
+                    'Paano ako mag-book ng appointment?',
+                    'Paano ko masusuri o mare-reschedule ang aking appointment?',
+                    'Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?',
+                ],
+                7,
+            ],
+            [
+                'sdn-facility', 'tl', 'both',
+                'Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?',
+                'Matatagpuan ang <strong>Mariveles Mental Wellness and General Hospital</strong> sa <strong>P. Monroe St., Poblacion, Mariveles, Bataan</strong>. Tingnan ang <strong>Location Map</strong> sa homepage para sa direksyon at partner SDN facilities, o tumawag sa OPU-Medical sa <strong>(047) 935-4645</strong>.',
+                ['saan', 'lokasyon', 'mapa', 'contact', 'telepono', 'hotline', 'mmwgh'],
+                [
+                    'Anong mga departamento at oras ng klinika ang bukas?',
+                    'Ano ang dapat kong ihanda para sa aking konsultasyon?',
+                    'Paano ako mag-book ng appointment?',
+                ],
+                8,
+            ],
+            [
+                'dpa-consent', 'tl', 'both',
+                'Paano pinoprotektahan ang aking medical data?',
+                'Sumusunod ang LINGKOD sa <strong>Republic Act 10173 (Data Privacy Act of 2012)</strong>. Ang iyong mga clinical notes ay nakahiwalay sa bawat departamento, protektado ang iyong verified hospital profile, at maaari kang mag-enable ng <strong>Two-Step Verification (Email OTP)</strong> sa <strong>Patient Portal &gt; Account Settings</strong>.',
+                ['privacy', 'dpa', 'consent', 'datos', 'seguridad', 'otp', '10173'],
+                [
+                    'Paano ko masusuri o mare-reschedule ang aking appointment?',
+                    'Paano ako mag-book ng appointment?',
+                    'Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?',
+                ],
+                9,
             ],
         ];
         foreach ($seedFaqs as $f) {
-            $insFaq->execute([$f[0], $f[1], $f[2], $f[3], $f[4], json_encode($f[5]), json_encode($f[6]), $f[7]]);
+            $kwJson = json_encode($f[5]);
+            $fuJson = json_encode($f[6]);
+            $insFaq->execute([$f[0], $f[1], $f[2], $f[3], $f[4], $kwJson, $fuJson, $f[7]]);
+            $updFaq->execute([$f[2], $f[3], $f[4], $kwJson, $fuJson, $f[7], $f[0], $f[1]]);
         }
+        @file_put_contents($faqSyncLock, '1');
     }
 }

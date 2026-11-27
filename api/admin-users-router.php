@@ -102,7 +102,7 @@ if ($method === 'GET' && $route === '/admin/users/staff') {
     $sql = "SELECT id, username, full_name, role, department, status, profile_image, created_at
             FROM users
             WHERE " . implode(' AND ', $where) . "
-            ORDER BY FIELD(LOWER(role), 'superadmin', 'admin', 'staff'), department ASC, full_name ASC";
+            ORDER BY CASE LOWER(role) WHEN 'superadmin' THEN 1 WHEN 'admin' THEN 2 WHEN 'staff' THEN 3 ELSE 4 END, department ASC, full_name ASC";
     $st = $pdo->prepare($sql);
     $st->execute($params);
 
@@ -248,7 +248,7 @@ if ($method === 'POST' && preg_match('#^/admin/users/staff/(\d+)/reset-password$
 if ($method === 'GET' && $route === '/admin/users/patients') {
     $search = strtolower(trim((string)($_GET['search'] ?? '')));
 
-    $pCols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+    $pCols = dbTableColumns($pdo, 'patients');
     $hasRecipient = in_array('appointment_recipient', $pCols, true);
 
     $where  = ["username IS NOT NULL", "username <> ''", "password IS NOT NULL", "password <> ''"];

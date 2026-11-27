@@ -40,6 +40,46 @@ if ($username === '' || $password === '') {
 try {
     ensurePatientOtpColumns($pdo);
 
+    // Persistent brute-force rate limiting (protects system-generated usernames & emails)
+    $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $now = time();
+    $windowStart = $now - 900; // 15 minutes
+    $identBucket = 'pt_login_id:' . hash('sha256', $clientIp . '|' . strtolower($username));
+    $ipBucket    = 'pt_login_ip:' . hash('sha256', $clientIp);
+    try {
+        if (!dbIsPgsql()) {
+            @$pdo->exec("
+                CREATE TABLE IF NOT EXISTS `auth_rate_limits` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `bucket_key` VARCHAR(191) NOT NULL,
+                    `created_at` INT UNSIGNED NOT NULL,
+                    INDEX `idx_bucket_time` (`bucket_key`, `created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+        $pdo->prepare("DELETE FROM auth_rate_limits WHERE created_at < ?")->execute([$windowStart]);
+        $cIdent = $pdo->prepare("SELECT COUNT(*) FROM auth_rate_limits WHERE bucket_key = ? AND created_at >= ?");
+        $cIdent->execute([$identBucket, $windowStart]);
+        $cIp = $pdo->prepare("SELECT COUNT(*) FROM auth_rate_limits WHERE bucket_key = ? AND created_at >= ?");
+        $cIp->execute([$ipBucket, $windowStart]);
+        if ((int)$cIdent->fetchColumn() >= 10 || (int)$cIp->fetchColumn() >= 25) {
+            http_response_code(429);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Too many failed sign-in attempts. Please wait 15 minutes before trying again.'
+            ]);
+            exit;
+        }
+    } catch (Throwable $ignoreRl) {}
+
+    $recordLoginFailure = static function () use ($pdo, $identBucket, $ipBucket, $now): void {
+        try {
+            $ins = $pdo->prepare("INSERT INTO auth_rate_limits (bucket_key, created_at) VALUES (?, ?)");
+            $ins->execute([$identBucket, $now]);
+            $ins->execute([$ipBucket, $now]);
+        } catch (Throwable $ignore) {}
+    };
+
     $stmt = $pdo->prepare("
         SELECT id, patient_id, full_name, email, username, password, is_verified, status,
                COALESCE(account_status, 'active') AS account_status,
@@ -55,7 +95,8 @@ try {
     $stmt->execute([':ident_user' => $username, ':ident_email' => $username]);
     $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$patient || empty($patient['password'])) {
+    if (!$patient || empty($patient['password']) || !password_verify($password, $patient['password'])) {
+        $recordLoginFailure();
         http_response_code(401);
         echo json_encode([
             'success' => false,
@@ -64,14 +105,10 @@ try {
         exit;
     }
 
-    if (!password_verify($password, $patient['password'])) {
-        http_response_code(401);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Invalid username, email, or password.'
-        ]);
-        exit;
-    }
+    // Clear failed-attempt bucket for this IP+identifier upon valid credentials
+    try {
+        $pdo->prepare("DELETE FROM auth_rate_limits WHERE bucket_key = ?")->execute([$identBucket]);
+    } catch (Throwable $ignoreClear) {}
 
     if (strtolower((string)($patient['account_status'] ?? 'active')) === 'suspended') {
         http_response_code(403);
@@ -100,8 +137,9 @@ try {
         $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
 
-        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), otp_attempts = 0 WHERE id = ?")
-            ->execute([$otpHash, $otpHash, $otpTtlSeconds, $patient['id']]);
+        $otpExpiresAt = date('Y-m-d H:i:s', time() + $otpTtlSeconds);
+        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
+            ->execute([$otpHash, $otpHash, $otpExpiresAt, $patient['id']]);
 
         $_SESSION['pending_otp_patient_id'] = (int)$patient['id'];
         $_SESSION['pending_otp_mode']       = 'login';
@@ -141,8 +179,9 @@ try {
         $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
 
-        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), otp_attempts = 0 WHERE id = ?")
-            ->execute([$otpHash, $otpHash, $otpTtlSeconds, $patient['id']]);
+        $otpExpiresAt = date('Y-m-d H:i:s', time() + $otpTtlSeconds);
+        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
+            ->execute([$otpHash, $otpHash, $otpExpiresAt, $patient['id']]);
 
         $_SESSION['pending_otp_patient_id'] = (int)$patient['id'];
         $_SESSION['pending_otp_mode']       = 'login_2fa';

@@ -20,8 +20,7 @@ require_once __DIR__ . '/config/settings_helper.php';
 
 function isPatientFirstTime(PDO $pdo, string $sessionPatientId, string $email, string $firstName, string $lastName, string $birthdate, bool $isOtherPatient): bool {
     $baseWhere = "COALESCE(inquiry_only, 0) = 0
-        AND appointment_date IS NOT NULL
-        AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show')";
+        AND LOWER(COALESCE(status, '')) IN ('completed', 'attended')";
 
     $firstName = trim($firstName);
     $lastName  = trim($lastName);
@@ -121,6 +120,75 @@ $isOtherPatient = in_array(strtolower($rawRecipient), ['other patient', 'someone
 $appointmentRecipient  = $isOtherPatient ? 'Other Patient' : 'Patient (Me)';
 $relationshipToPatient = trim((string)($b['relationship_to_patient'] ?? ''));
 $withCompanion         = (!empty($b['with_companion']) && in_array(strtolower((string)$b['with_companion']), ['1', 'true', 'yes'], true)) ? 1 : 0;
+
+// Server-side identity guard: for signed-in Patient (Me) bookings, enforce verified owner identity
+// so client-side edits cannot decouple email or attach another person's name/DOB to the owner's HRN.
+$isSignedInPatient = !empty($_SESSION['patient_logged_in']) && ($sessionPatientId !== '' || $sessionEmail !== '');
+if ($isSignedInPatient && !$isOtherPatient) {
+    $ownerProfile = null;
+    try {
+        $sessUid = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? null;
+        if ($sessUid) {
+            $uOwnerStmt = $pdo->prepare("SELECT patient_id FROM users WHERE id = ? LIMIT 1");
+            $uOwnerStmt->execute([$sessUid]);
+            $ownerRowId = $uOwnerStmt->fetchColumn();
+            if ($ownerRowId && is_numeric($ownerRowId)) {
+                $stmtOwner = $pdo->prepare("
+                    SELECT first_name, last_name, middle_initial, full_name, gender, birthdate, email
+                    FROM patients
+                    WHERE id = ?
+                    LIMIT 1
+                ");
+                $stmtOwner->execute([(int)$ownerRowId]);
+                $ownerProfile = $stmtOwner->fetch(PDO::FETCH_ASSOC) ?: null;
+            }
+        }
+        if (!$ownerProfile) {
+            $stmtOwner = $pdo->prepare("
+                SELECT first_name, last_name, middle_initial, full_name, gender, birthdate, email
+                FROM patients
+                WHERE ((patient_id != '' AND patient_id = :pid) OR (email != '' AND LOWER(TRIM(email)) = LOWER(:pemail)))
+                  AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
+                ORDER BY (password IS NOT NULL AND password <> '') DESC, id ASC
+                LIMIT 1
+            ");
+            $stmtOwner->execute([':pid' => $sessionPatientId, ':pemail' => $sessionEmail]);
+            $ownerProfile = $stmtOwner->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+    } catch (Throwable $ignoreOwner) {
+        $ownerProfile = null;
+    }
+
+    if ($ownerProfile) {
+        $oFirst = trim((string)($ownerProfile['first_name'] ?? ''));
+        $oLast  = trim((string)($ownerProfile['last_name'] ?? ''));
+        $oMi    = trim((string)($ownerProfile['middle_initial'] ?? ''));
+        if ($oFirst === '' && $oLast === '' && !empty($ownerProfile['full_name'])) {
+            $parts = preg_split('/\s+/', trim((string)$ownerProfile['full_name'])) ?: [];
+            if (count($parts) === 1) {
+                $oFirst = $parts[0];
+            } elseif (count($parts) === 2) {
+                $oFirst = $parts[0];
+                $oLast  = $parts[1];
+            } elseif (count($parts) >= 3) {
+                $oFirst = $parts[0];
+                $oLast  = end($parts);
+                $oMi    = $parts[1];
+            }
+        }
+        if ($oFirst !== '') $firstName = $oFirst;
+        if ($oLast !== '') $lastName = $oLast;
+        if ($oFirst !== '' && $oLast !== '') $middleInitial = $oMi;
+        $oGender = trim((string)($ownerProfile['gender'] ?? ''));
+        if ($oGender !== '') $gender = $oGender;
+        $oBirth = trim((string)($ownerProfile['birthdate'] ?? ''));
+        if ($oBirth !== '') $birthdate = $oBirth;
+        $oEmail = trim(strtolower((string)($ownerProfile['email'] ?? $sessionEmail)));
+        if ($oEmail !== '') $email = $oEmail;
+    } elseif ($sessionEmail !== '') {
+        $email = strtolower($sessionEmail);
+    }
+}
 
 $chiefComplaints          = trim((string)($b['chief_complaints'] ?? ''));
 $existingConditions       = trim((string)($b['existing_medical_conditions'] ?? ''));
@@ -320,7 +388,7 @@ if (!$inquiryOnly && !$isOtherPatient && $appointmentDate !== '' && ($sessionPat
         FROM patients
         WHERE ($idSql)
           AND appointment_date = ?
-          AND LOWER(status) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show')
+          AND LOWER(status) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show', 'transferred')
     ");
     $stmtConflict->execute(array_merge($idParams, [$appointmentDate]));
     $existingDayBookings = $stmtConflict->fetchAll(PDO::FETCH_ASSOC);
@@ -441,7 +509,7 @@ try {
     $referenceNo = sprintf('%s-%s-%04d', $prefix, date('Y'), $insertedPatientRowId);
 
     try {
-        if ($pdo->query("SHOW COLUMNS FROM patients LIKE 'reference_no'")->fetch()) {
+        if (in_array('reference_no', dbTableColumns($pdo, 'patients'), true)) {
             $pdo->prepare("UPDATE patients SET reference_no = ? WHERE id = ?")
                 ->execute([$referenceNo, $insertedPatientRowId]);
         }
@@ -503,9 +571,10 @@ try {
 
     // System log
     try {
+        $uCol = dbQuoteIdent('user');
         $stmtLog = $pdo->prepare("
-            INSERT INTO system_logs (level, action, user, details, created_at)
-            VALUES ('info', ?, ?, ?, NOW())
+            INSERT INTO system_logs (level, action, {$uCol}, details, created_at)
+            VALUES ('info', ?, ?, ?, CURRENT_TIMESTAMP)
         ");
         $stmtLog->execute([
             'PATIENT_BOOK_APPOINTMENT',
@@ -517,7 +586,7 @@ try {
         try {
             $pdo->prepare("
                 INSERT INTO system_logs (action, description, performed_by, created_at)
-                VALUES (?, ?, ?, NOW())
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
             ")->execute([
                 'PATIENT_BOOK_APPOINTMENT',
                 "Patient {$fullName} (Ref: {$referenceNo}) booked {$deptName} appointment for {$appointmentDate}",
@@ -531,7 +600,7 @@ try {
     $accountPatientId = '';
     if ($userId) {
         try {
-            if ($pdo->query("SHOW COLUMNS FROM users LIKE 'account_patient_id'")->fetch()) {
+            if (in_array('account_patient_id', dbTableColumns($pdo, 'users'), true)) {
                 $apStmt = $pdo->prepare("SELECT account_patient_id FROM users WHERE id = ? LIMIT 1");
                 $apStmt->execute([$userId]);
                 $accountPatientId = trim((string)($apStmt->fetchColumn() ?: ''));

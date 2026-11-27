@@ -10,7 +10,7 @@
       nav_contact: 'Contact Us',
       nav_portal: 'Patient Portal',
       hero_sub: 'Localized Integrated Network for Governance,<br>Knowledge, and Operation in Digital Healthcare',
-      hero_desc: 'Dedicated to promoting total wellness, the hospital delivers quality, compassionate, and patient-centered<br> healthcare services to the community and surrounding regions.',
+      hero_desc: 'Dedicated to promoting total wellness, the hospital delivers quality, compassionate, and patient-centered healthcare services to the community and surrounding regions.',
       hero_book: 'Book an Appointment',
       hero_schedule: 'View Schedule',
       pbc_eyebrow: 'MMWGH • LINGKOD',

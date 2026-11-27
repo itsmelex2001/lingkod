@@ -16,21 +16,25 @@ requireRole('admin');
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? (getBody()['action'] ?? '');
 
+$uCol = dbQuoteIdent('user');
+$tsFmt = dbDateFormat('l.created_at', '%Y-%m-%d %H:%i');
+$idCast = dbIsPgsql() ? 'CAST(u.id AS TEXT)' : 'CAST(u.id AS CHAR)';
+
 // ── GET: list logs ───────────────────────────────────────────────────────────
 if ($method === 'GET' && $action !== 'export') {
     $stmt = $pdo->query("
         SELECT 
             l.id, 
             l.level, 
-            DATE_FORMAT(l.created_at,'%Y-%m-%d %H:%i') AS timestamp,
+            {$tsFmt} AS timestamp,
             l.action, 
             COALESCE(
-                IF(u.role = 'admin', 'admin', CONCAT('staff: ', u.username)),
-                l.user
-            ) AS user, 
+                CASE WHEN u.role = 'admin' THEN 'admin' ELSE CONCAT('staff: ', u.username) END,
+                l.{$uCol}
+            ) AS {$uCol}, 
             l.details
         FROM system_logs l
-        LEFT JOIN users u ON l.user = u.id
+        LEFT JOIN users u ON l.{$uCol} = {$idCast}
         ORDER BY l.created_at DESC
     ");
     respondOk(['data' => $stmt->fetchAll()]);
@@ -41,15 +45,15 @@ if ($method === 'GET' && $action === 'export') {
     $stmt = $pdo->query("
         SELECT 
             l.level, 
-            DATE_FORMAT(l.created_at,'%Y-%m-%d %H:%i') AS timestamp,
+            {$tsFmt} AS timestamp,
             l.action, 
             COALESCE(
-                IF(u.role = 'admin', 'admin', CONCAT('staff: ', u.username)),
-                l.user
-            ) AS user, 
+                CASE WHEN u.role = 'admin' THEN 'admin' ELSE CONCAT('staff: ', u.username) END,
+                l.{$uCol}
+            ) AS {$uCol}, 
             l.details
         FROM system_logs l
-        LEFT JOIN users u ON l.user = u.id
+        LEFT JOIN users u ON l.{$uCol} = {$idCast}
         ORDER BY l.created_at DESC
     ");
     $rows = $stmt->fetchAll();

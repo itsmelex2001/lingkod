@@ -61,31 +61,66 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
-    // 1. Look up patient by email
+    // Persistent IP-based rate limiting: max 5 forgot-password requests per 15 minutes
+    try {
+        if (!dbIsPgsql()) {
+            @$pdo->exec("
+                CREATE TABLE IF NOT EXISTS `auth_rate_limits` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `bucket_key` VARCHAR(191) NOT NULL,
+                    `created_at` INT UNSIGNED NOT NULL,
+                    INDEX `idx_bucket_time` (`bucket_key`, `created_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $now = time();
+        $windowStart = $now - 900;
+        $bucketKey = 'pt_forgot:' . hash('sha256', $clientIp);
+        $pdo->prepare("DELETE FROM auth_rate_limits WHERE created_at < ?")->execute([$windowStart]);
+        $cntStmt = $pdo->prepare("SELECT COUNT(*) FROM auth_rate_limits WHERE bucket_key = ? AND created_at >= ?");
+        $cntStmt->execute([$bucketKey, $windowStart]);
+        if ((int)$cntStmt->fetchColumn() >= 5) {
+            http_response_code(429);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Too many password reset requests. Please wait 15 minutes before trying again.'
+            ]);
+            exit;
+        }
+        $pdo->prepare("INSERT INTO auth_rate_limits (bucket_key, created_at) VALUES (?, ?)")->execute([$bucketKey, $now]);
+    } catch (Throwable $ignoreRl) {}
+
+    $genericSuccessMsg = 'If an account is registered with that email address, a password reset link has been sent. Please check your inbox or spam folder.';
+
+    // 1. Look up patient account owner by email
     $stmt = $pdo->prepare("
         SELECT id, patient_id, full_name, email, is_verified 
         FROM patients 
-        WHERE email = :email 
+        WHERE LOWER(TRIM(email)) = LOWER(:email)
+          AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
+        ORDER BY (password IS NOT NULL AND password <> '') DESC, id ASC
         LIMIT 1
     ");
     $stmt->execute([':email' => $email]);
     $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$patient) {
-        // Return clear feedback to patient
-        http_response_code(404);
+        // Generic HTTP 200 prevents registered-email enumeration
         echo json_encode([
-            'success' => false,
-            'message' => 'No patient account was found registered with this email address.'
+            'success'   => true,
+            'message'   => $genericSuccessMsg,
+            'emailSent' => true
         ]);
         exit;
     }
 
-    // 2. Generate secure reset token (64 hex characters) and 1 hour expiration
+    // 2. Generate secure reset token (store SHA-256 hash in DB; send raw token only via email)
     $token = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
     $expiresAt = date('Y-m-d H:i:s', time() + 3600); // 1 hour
 
-    // 3. Store in database
+    // 3. Store hashed token in database
     $updateStmt = $pdo->prepare("
         UPDATE patients 
         SET reset_token = :token, 
@@ -94,15 +129,14 @@ try {
         WHERE id = :id
     ");
     $updateStmt->execute([
-        ':token'   => $token,
+        ':token'   => $tokenHash,
         ':expires' => $expiresAt,
         ':id'      => $patient['id']
     ]);
 
-    // 4. Construct reset URL
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $resetUrl = "{$protocol}://{$host}/sdn/pages/patient-reset-password.php?token=" . urlencode($token);
+    // 4. Construct reset URL strictly from trusted APP_URL (never untrusted Host header)
+    $baseUrl  = rtrim((string) envValue('APP_URL', 'http://localhost/sdn'), '/');
+    $resetUrl = "{$baseUrl}/pages/patient-reset-password.php?token=" . urlencode($token);
 
     // 5. Build basic plain text email
     $patientName = !empty($patient['full_name']) ? $patient['full_name'] : 'Patient';
@@ -121,29 +155,29 @@ try {
 
     flushJsonAndContinue([
         'success'   => true,
-        'message'   => 'A password reset link has been sent to your email address (' . htmlspecialchars($patient['email']) . '). Please check your Gmail inbox or spam folder.',
+        'message'   => $genericSuccessMsg,
         'emailSent' => true
     ]);
 
     // 6. Send email via PHPMailer / Gmail SMTP (After Response Flushed)
-    $smtpUser = trim($_ENV['SMTP_USER'] ?? '');
-    $smtpPass = trim($_ENV['SMTP_PASS'] ?? '');
+    $smtpUser = trim((string) envValue('SMTP_USER', ''));
+    $smtpPass = trim((string) envValue('SMTP_PASS', ''));
 
     if (!empty($smtpUser) && !empty($smtpPass) && class_exists(PHPMailer::class)) {
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
             $mail->Timeout    = 8;
-            $mail->Host       = !empty($_ENV['SMTP_HOST']) ? $_ENV['SMTP_HOST'] : 'smtp.gmail.com';
+            $mail->Host       = (string) envValue('SMTP_HOST', 'smtp.gmail.com');
             $mail->SMTPAuth   = true;
             $mail->Username   = $smtpUser;
             $mail->Password   = $smtpPass;
-            $mail->SMTPSecure = !empty($_ENV['SMTP_SECURE']) ? $_ENV['SMTP_SECURE'] : PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = !empty($_ENV['SMTP_PORT']) ? (int)$_ENV['SMTP_PORT'] : 587;
+            $mail->SMTPSecure = (string) envValue('SMTP_SECURE', PHPMailer::ENCRYPTION_STARTTLS);
+            $mail->Port       = (int) envValue('SMTP_PORT', '587');
             $mail->CharSet    = 'UTF-8';
 
-            $fromEmail = !empty($_ENV['SMTP_FROM_EMAIL']) ? $_ENV['SMTP_FROM_EMAIL'] : $smtpUser;
-            $fromName  = !empty($_ENV['SMTP_FROM_NAME']) ? trim($_ENV['SMTP_FROM_NAME'], '"') : 'MMWGH LINGKOD Portal';
+            $fromEmail = (string) envValue('SMTP_FROM_EMAIL', $smtpUser);
+            $fromName  = trim((string) envValue('SMTP_FROM_NAME', 'MMWGH LINGKOD Portal'), "\"'");
             $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($patient['email'], $patientName);
 

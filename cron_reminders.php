@@ -21,12 +21,14 @@ $isCli = (php_sapi_name() === 'cli');
 
 if (!$isCli) {
     header('Content-Type: application/json; charset=UTF-8');
-    $secret = $_ENV['CRON_SECRET'] ?? getenv('CRON_SECRET') ?: 'mmwgh_cron_secret_2026';
+    $secret = getenv('CRON_SECRET') ?: ($_ENV['CRON_SECRET'] ?? 'mmwgh_cron_secret_2026');
     $token  = $_GET['token'] ?? '';
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    $bearerToken = (stripos($authHeader, 'Bearer ') === 0) ? trim(substr($authHeader, 7)) : '';
     $ip     = $_SERVER['REMOTE_ADDR'] ?? '';
     $isLocal = in_array($ip, ['127.0.0.1', '::1', 'localhost'], true);
 
-    if (!$isLocal && $token !== $secret) {
+    if (!$isLocal && $token !== $secret && $bearerToken !== $secret) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'Forbidden: Invalid cron secret token.']);
         exit;
@@ -57,17 +59,19 @@ if ($isCli) {
 // where `1_day_reminder_sent` = 0
 // ─────────────────────────────────────────────────────────────────────────────
 try {
+    $col1Day = dbQuoteIdent('1_day_reminder_sent');
+    $tomorrowDate = date('Y-m-d', strtotime('+1 day'));
     $stmt1 = $pdo->prepare("
         SELECT id, patient_id, full_name, email, contact_number,
                appointment_date, scheduled_time
         FROM patients
         WHERE status = 'approved'
-          AND appointment_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-          AND `1_day_reminder_sent` = 0
+          AND appointment_date = ?
+          AND {$col1Day} = 0
         ORDER BY scheduled_time ASC
         LIMIT 200
     ");
-    $stmt1->execute();
+    $stmt1->execute([$tomorrowDate]);
     $tomorrowRows = $stmt1->fetchAll(PDO::FETCH_ASSOC);
 
     $output['scenario_1_day_before']['found'] = count($tomorrowRows);
@@ -77,10 +81,10 @@ try {
 
     $upd1 = $pdo->prepare("
         UPDATE patients
-        SET `1_day_reminder_sent` = 1,
-            `reminder_status`     = '1-Day Sent',
-            `reminder_sent_at`    = NOW(),
-            `updated_at`          = NOW()
+        SET {$col1Day} = 1,
+            reminder_status  = '1-Day Sent',
+            reminder_sent_at = CURRENT_TIMESTAMP,
+            updated_at       = CURRENT_TIMESTAMP
         WHERE id = ?
     ");
 
@@ -148,19 +152,22 @@ try {
 // and `day_of_reminder_sent` = 0
 // ─────────────────────────────────────────────────────────────────────────────
 try {
+    $todayDate  = date('Y-m-d');
+    $nowTime    = date('H:i:s');
+    $windowTime = date('H:i:s', strtotime('+2 hours 15 minutes'));
     $stmt2 = $pdo->prepare("
         SELECT id, patient_id, full_name, email, contact_number,
                appointment_date, scheduled_time
         FROM patients
         WHERE status = 'approved'
-          AND appointment_date = CURDATE()
-          AND `day_of_reminder_sent` = 0
+          AND appointment_date = ?
+          AND day_of_reminder_sent = 0
           AND scheduled_time IS NOT NULL
-          AND scheduled_time BETWEEN CURTIME() AND ADDTIME(CURTIME(), '02:15:00')
+          AND scheduled_time BETWEEN ? AND ?
         ORDER BY scheduled_time ASC
         LIMIT 200
     ");
-    $stmt2->execute();
+    $stmt2->execute([$todayDate, $nowTime, $windowTime]);
     $dayOfRows = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
     $output['scenario_2_day_of']['found'] = count($dayOfRows);
@@ -170,10 +177,10 @@ try {
 
     $upd2 = $pdo->prepare("
         UPDATE patients
-        SET `day_of_reminder_sent` = 1,
-            `reminder_status`      = 'Day-Of Sent',
-            `reminder_sent_at`     = NOW(),
-            `updated_at`           = NOW()
+        SET day_of_reminder_sent = 1,
+            reminder_status      = 'Day-Of Sent',
+            reminder_sent_at     = CURRENT_TIMESTAMP,
+            updated_at           = CURRENT_TIMESTAMP
         WHERE id = ?
     ");
 

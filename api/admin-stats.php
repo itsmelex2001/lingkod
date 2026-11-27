@@ -17,15 +17,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $staffStats = getStaffStats($pdo);
     $doctorStats = getDoctorStats($pdo);
     
+    // Cross-dialect date filters (Asia/Manila)
+    date_default_timezone_set('Asia/Manila');
+    $todayDate = date('Y-m-d');
+    $weekStart = date('Y-m-d', strtotime('monday this week'));
+    $weekEnd   = date('Y-m-d', strtotime($weekStart . ' +6 days'));
+    $monthStart = date('Y-m-01');
+    $monthEnd   = date('Y-m-t');
+    $yearStart  = date('Y-01-01');
+    $yearEnd    = date('Y-12-31');
+    $dateColExpr = dbIsPgsql() ? 'CAST(created_at AS DATE)' : 'DATE(created_at)';
+    $monthExpr   = dbIsPgsql() ? 'EXTRACT(MONTH FROM created_at)::int' : 'MONTH(created_at)';
+    $dayExpr     = dbIsPgsql() ? 'EXTRACT(DAY FROM created_at)::int' : 'DAY(created_at)';
+
     // For "Today's Patients"
-    $todayStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE DATE(created_at) = CURDATE()");
+    $todayStmt = $pdo->prepare("SELECT COUNT(*) FROM patients WHERE {$dateColExpr} = ?");
+    $todayStmt->execute([$todayDate]);
     $todaysPatients = $todayStmt->fetchColumn() ?? 0;
 
     // Pending approvals are real bookings or inquiries. Account profiles
     // (status leftover as pending, with no visit details) are not appointments.
     $pendingStatusSql = "LOWER(TRIM(COALESCE(status, ''))) IN ('pending', 'for_approval', 'for_processing', 'for approval')";
+    $validApptDateSql = dbIsPgsql() ? "appointment_date IS NOT NULL" : "(appointment_date IS NOT NULL AND appointment_date <> '0000-00-00')";
     $realBookingSql = "(
-        (appointment_date IS NOT NULL AND appointment_date <> '0000-00-00')
+        {$validApptDateSql}
         OR (department IS NOT NULL AND TRIM(department) <> '')
         OR (chief_complaints IS NOT NULL AND TRIM(chief_complaints) <> '')
         OR (consultation_nature IS NOT NULL AND TRIM(consultation_nature) <> '')
@@ -46,13 +61,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $unassignedUpcoming = (int)($unassignedStmt->fetchColumn() ?? 0);
 
     // Overall Patients
-    $weekStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)");
+    $weekStmt = $pdo->prepare("SELECT COUNT(*) FROM patients WHERE {$dateColExpr} BETWEEN ? AND ?");
+    $weekStmt->execute([$weekStart, $weekEnd]);
     $thisWeek = $weekStmt->fetchColumn() ?? 0;
 
-    $monthStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())");
+    $monthStmt = $pdo->prepare("SELECT COUNT(*) FROM patients WHERE {$dateColExpr} BETWEEN ? AND ?");
+    $monthStmt->execute([$monthStart, $monthEnd]);
     $thisMonth = $monthStmt->fetchColumn() ?? 0;
 
-    $yearStmt = $pdo->query("SELECT COUNT(*) FROM patients WHERE YEAR(created_at) = YEAR(CURDATE())");
+    $yearStmt = $pdo->prepare("SELECT COUNT(*) FROM patients WHERE {$dateColExpr} BETWEEN ? AND ?");
+    $yearStmt->execute([$yearStart, $yearEnd]);
     $thisYear = $yearStmt->fetchColumn() ?? 0;
 
     // Recent system logs for overview notifications
@@ -76,7 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     };
 
     if ($chartFilter === 'year') {
-        $stmt = $pdo->query("SELECT MONTH(created_at) as m, department, COUNT(*) as c FROM patients WHERE YEAR(created_at) = YEAR(CURDATE()) GROUP BY m, department");
+        $stmt = $pdo->prepare("SELECT {$monthExpr} as m, department, COUNT(*) as c FROM patients WHERE {$dateColExpr} BETWEEN ? AND ? GROUP BY m, department");
+        $stmt->execute([$yearStart, $yearEnd]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $counts = [];
         $deptCounts = ['general' => [], 'neurology' => [], 'psychiatry' => []];
@@ -96,7 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $deptSeries['psychiatry'][] = $deptCounts['psychiatry'][$i] ?? 0;
         }
     } elseif ($chartFilter === 'month') {
-        $stmt = $pdo->query("SELECT DAY(created_at) as d, department, COUNT(*) as c FROM patients WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) GROUP BY d, department");
+        $stmt = $pdo->prepare("SELECT {$dayExpr} as d, department, COUNT(*) as c FROM patients WHERE {$dateColExpr} BETWEEN ? AND ? GROUP BY d, department");
+        $stmt->execute([$monthStart, $monthEnd]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $counts = [];
         $deptCounts = ['general' => [], 'neurology' => [], 'psychiatry' => []];
@@ -116,7 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $deptSeries['psychiatry'][] = $deptCounts['psychiatry'][$i] ?? 0;
         }
     } elseif ($chartFilter === 'week') {
-        $stmt = $pdo->query("SELECT DATE(created_at) as d, department, COUNT(*) as c FROM patients WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1) GROUP BY d, department");
+        $stmt = $pdo->prepare("SELECT {$dateColExpr} as d, department, COUNT(*) as c FROM patients WHERE {$dateColExpr} BETWEEN ? AND ? GROUP BY d, department");
+        $stmt->execute([$weekStart, $weekEnd]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $counts = [];
         $deptCounts = ['general' => [], 'neurology' => [], 'psychiatry' => []];
@@ -146,12 +167,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Today's OPD summary (scheduled for today)
     $todaySummary = ['total' => 0, 'waiting' => 0, 'ongoing' => 0, 'completed' => 0];
     try {
-        $tsStmt = $pdo->query("
+        $tsStmt = $pdo->prepare("
             SELECT LOWER(COALESCE(status, '')) AS st, COUNT(*) AS cnt
             FROM patients
-            WHERE appointment_date = CURDATE() AND COALESCE(inquiry_only, 0) = 0
+            WHERE appointment_date = ? AND COALESCE(inquiry_only, 0) = 0
             GROUP BY st
         ");
+        $tsStmt->execute([$todayDate]);
         foreach ($tsStmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $st  = $r['st'];
             $cnt = (int)$r['cnt'];
@@ -186,14 +208,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $bookedTodayByDept = ['general' => 0, 'neurology' => 0, 'psychiatry' => 0];
     try {
-        $bkStmt = $pdo->query("
+        $bkStmt = $pdo->prepare("
             SELECT department, COUNT(*) AS cnt
             FROM patients
-            WHERE appointment_date = CURDATE()
+            WHERE appointment_date = ?
               AND COALESCE(inquiry_only, 0) = 0
               AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'rejected', 'cancelled_by_patient', 'no-show')
             GROUP BY department
         ");
+        $bkStmt->execute([$todayDate]);
         foreach ($bkStmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $dk = $classifyDept($r['department']);
             $bookedTodayByDept[$dk] = ($bookedTodayByDept[$dk] ?? 0) + (int)$r['cnt'];

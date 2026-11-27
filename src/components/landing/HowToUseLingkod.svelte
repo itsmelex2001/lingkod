@@ -347,13 +347,29 @@
                       draggable="false"
                       class="step-sprite-layer thumbs-sparkle absolute inset-0 h-full w-full select-none object-contain [image-rendering:pixelated]"
                     />
-                    <img
-                      src="/sdn/public/assets/howto/step4-body.png"
-                      alt=""
-                      aria-hidden="true"
-                      draggable="false"
-                      class="step-sprite-layer person-body absolute inset-0 h-full w-full select-none object-contain [image-rendering:pixelated]"
-                    />
+                    <div class="person-head-group absolute inset-0">
+                      <img
+                        src="/sdn/public/assets/howto/step4-body.png"
+                        alt=""
+                        aria-hidden="true"
+                        draggable="false"
+                        class="step-sprite-layer person-body absolute inset-0 h-full w-full select-none object-contain [image-rendering:pixelated]"
+                      />
+                      <img
+                        src="/sdn/public/assets/howto/step4-eyes-open.png"
+                        alt=""
+                        aria-hidden="true"
+                        draggable="false"
+                        class="step-sprite-layer person-eyes-open absolute inset-0 h-full w-full select-none object-contain [image-rendering:pixelated]"
+                      />
+                      <img
+                        src="/sdn/public/assets/howto/step4-mouth-smile.png"
+                        alt=""
+                        aria-hidden="true"
+                        draggable="false"
+                        class="step-sprite-layer person-mouth-smile absolute inset-0 h-full w-full select-none object-contain [image-rendering:pixelated]"
+                      />
+                    </div>
                     <img
                       src="/sdn/public/assets/howto/step4-thumb-left.png"
                       alt=""
@@ -536,12 +552,39 @@
     image-rendering: pixelated;
   }
 
+  .person-head-group {
+    transform-origin: 50% 82%;
+  }
+
+  .person-eyes-open,
+  .person-mouth-smile {
+    opacity: 0;
+  }
+
   .thumb-left {
     transform-origin: 18% 92%;
   }
 
   .thumb-right {
     transform-origin: 82% 92%;
+  }
+
+  .step-confirmed:hover .person-head-group,
+  .step-confirmed:focus-visible .person-head-group,
+  .step-confirmed.is-active .person-head-group {
+    animation: person-head-nod 1.36s ease-in-out infinite;
+  }
+
+  .step-confirmed:hover .person-eyes-open,
+  .step-confirmed:focus-visible .person-eyes-open,
+  .step-confirmed.is-active .person-eyes-open {
+    animation: person-eyes-blink 1.36s steps(1, end) infinite;
+  }
+
+  .step-confirmed:hover .person-mouth-smile,
+  .step-confirmed:focus-visible .person-mouth-smile,
+  .step-confirmed.is-active .person-mouth-smile {
+    animation: person-mouth-cheer 1.36s steps(1, end) infinite;
   }
 
   .step-confirmed:hover .thumb-left,
@@ -560,6 +603,48 @@
   .step-confirmed:focus-visible .thumbs-sparkle,
   .step-confirmed.is-active .thumbs-sparkle {
     animation: sparkle-pop 0.34s ease-in-out infinite;
+  }
+
+  @keyframes person-head-nod {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    25% {
+      transform: translateY(-1.5px) rotate(-1.2deg);
+    }
+    50% {
+      transform: translateY(0.5px) rotate(0deg);
+    }
+    75% {
+      transform: translateY(-1.5px) rotate(1.2deg);
+    }
+  }
+
+  @keyframes person-eyes-blink {
+    0%,
+    42% {
+      opacity: 1;
+    }
+    42.01%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes person-mouth-cheer {
+    0%,
+    38% {
+      opacity: 1;
+    }
+    38.01%,
+    94% {
+      opacity: 0;
+    }
+    94.01%,
+    100% {
+      opacity: 1;
+    }
   }
 
   @keyframes thumb-left-bob {

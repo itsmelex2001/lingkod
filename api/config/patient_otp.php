@@ -13,6 +13,7 @@ function ensurePatientOtpColumns(PDO $pdo): void {
     static $checked = false;
     if ($checked) return;
     $checked = true;
+    if (function_exists('dbIsPgsql') && dbIsPgsql()) return;
     try {
         $cols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('otp_code', $cols, true)) {
@@ -72,11 +73,16 @@ function sendPatientOtpEmail(string $email, string $fullName, string $otp, int $
     if (class_exists(PHPMailer::class)) {
         $mail = new PHPMailer(true);
         try {
-            $smtpHost   = !empty($_ENV['SMTP_HOST']) ? $_ENV['SMTP_HOST'] : 'smtp.gmail.com';
-            $smtpPort   = !empty($_ENV['SMTP_PORT']) ? (int)$_ENV['SMTP_PORT'] : 587;
-            $smtpUser   = trim($_ENV['SMTP_USER'] ?? '');
-            $smtpPass   = trim($_ENV['SMTP_PASS'] ?? '');
-            $smtpSecure = strtolower(trim($_ENV['SMTP_SECURE'] ?? 'tls'));
+            $envGet = static function (string $k, string $default = ''): string {
+                $v = getenv($k);
+                if ($v !== false && $v !== '') return trim($v, "\"' ");
+                return isset($_ENV[$k]) && $_ENV[$k] !== '' ? trim((string)$_ENV[$k], "\"' ") : $default;
+            };
+            $smtpHost   = $envGet('SMTP_HOST', 'smtp.gmail.com');
+            $smtpPort   = (int)$envGet('SMTP_PORT', '587');
+            $smtpUser   = $envGet('SMTP_USER', '');
+            $smtpPass   = $envGet('SMTP_PASS', '');
+            $smtpSecure = strtolower($envGet('SMTP_SECURE', 'tls'));
 
             if ($smtpUser !== '' && $smtpPass !== '') {
                 $mail->isSMTP();
@@ -88,8 +94,8 @@ function sendPatientOtpEmail(string $email, string $fullName, string $otp, int $
                 $mail->Port       = $smtpPort;
                 $mail->SMTPSecure = ($smtpSecure === 'ssl') ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->SMTPOptions = ['ssl' => ['verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true]];
-                $fromEmail = !empty($_ENV['SMTP_FROM_EMAIL']) ? $_ENV['SMTP_FROM_EMAIL'] : $smtpUser;
-                $fromName  = !empty($_ENV['SMTP_FROM_NAME']) ? trim($_ENV['SMTP_FROM_NAME'], "\"'") : 'MMWGH LINGKOD Portal';
+                $fromEmail = $envGet('SMTP_FROM_EMAIL', $smtpUser);
+                $fromName  = $envGet('SMTP_FROM_NAME', 'MMWGH LINGKOD Portal');
                 $mail->setFrom($fromEmail, $fromName);
             } else {
                 $mail->isMail();
@@ -131,6 +137,11 @@ function flushJsonAndContinue(array $payload): void {
         ob_end_clean();
     }
     header('Content-Type: application/json; charset=utf-8');
+    // On Vercel serverless, keep execution open until subsequent SMTP send finishes
+    if (getenv('VERCEL') === '1') {
+        echo $body;
+        return;
+    }
     header('Connection: close');
     header('Content-Length: ' . strlen($body));
     echo $body;
@@ -155,7 +166,8 @@ function completePatientLogin(PDO $pdo, array $patient, bool $remember): void {
         $pdo->prepare("UPDATE patients SET user_id = ? WHERE id = ? AND user_id IS NULL")->execute([$userId, $patient['id']]);
 
         try {
-            $hasCol = (bool)$pdo->query("SHOW COLUMNS FROM users LIKE 'account_patient_id'")->fetch();
+            $uCols = function_exists('dbTableColumns') ? dbTableColumns($pdo, 'users') : [];
+            $hasCol = in_array('account_patient_id', $uCols, true);
             if ($hasCol && $userId) {
                 $apStmt = $pdo->prepare("SELECT account_patient_id FROM users WHERE id = ? LIMIT 1");
                 $apStmt->execute([$userId]);

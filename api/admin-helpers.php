@@ -112,16 +112,19 @@ function getFailedLogins($pdo, $limit = 10) {
 function getAdminActivity($pdo, $limit = 20) {
     $safeLimit = max(1, min(100, (int)$limit));
     try {
+        $uCol = dbQuoteIdent('user');
+        $tsExpr = dbDateFormat('l.created_at', '%b %d, %h:%i %p');
+        $idCast = dbIsPgsql() ? 'CAST(u.id AS TEXT)' : 'CAST(u.id AS CHAR)';
         $stmt = $pdo->prepare(
             "SELECT l.id,
                     l.level,
-                    DATE_FORMAT(l.created_at, '%b %d, %h:%i %p') AS timestamp,
+                    {$tsExpr} AS timestamp,
                     l.created_at,
                     l.action,
-                    COALESCE(IF(u.role = 'admin', 'admin', u.username), l.user) AS user,
+                    COALESCE(CASE WHEN u.role = 'admin' THEN 'admin' ELSE u.username END, l.{$uCol}) AS {$uCol},
                     l.details
              FROM system_logs l
-             LEFT JOIN users u ON l.user = u.id
+             LEFT JOIN users u ON l.{$uCol} = {$idCast}
              ORDER BY l.created_at DESC
              LIMIT ?"
         );
@@ -198,12 +201,16 @@ function getDoctorLoad($pdo, $doctorId) {
 function getAllStaff($pdo, $status = null) {
     try {
         $sql = "SELECT id, username, role, department, status, created_at FROM users WHERE role = 'staff'";
-        if ($status) {
-            $sql .= " AND status = '" . $pdo->quote($status) . "'";
+        $params = [];
+        if ($status !== null && $status !== '') {
+            $sql .= " AND status = ?";
+            $params[] = (string)$status;
         }
         $sql .= " ORDER BY department, username";
-        
-        return $pdo->query($sql)->fetchAll();
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     } catch (Exception $e) {
         error_log("Error getting staff: " . $e->getMessage());
         return [];
@@ -216,12 +223,16 @@ function getAllStaff($pdo, $status = null) {
 function getAllDoctors($pdo, $department = null) {
     try {
         $sql = "SELECT * FROM doctors WHERE 1=1";
-        if ($department) {
-            $sql .= " AND department = '" . $pdo->quote($department) . "'";
+        $params = [];
+        if ($department !== null && $department !== '') {
+            $sql .= " AND department = ?";
+            $params[] = (string)$department;
         }
         $sql .= " ORDER BY department, name";
-        
-        return $pdo->query($sql)->fetchAll();
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     } catch (Exception $e) {
         error_log("Error getting doctors: " . $e->getMessage());
         return [];
@@ -257,8 +268,7 @@ function getSystemHealth($pdo) {
         
         // Check critical tables
         foreach (['users', 'doctors', 'login_history'] as $table) {
-            $result = $pdo->query("SHOW TABLES LIKE '$table'");
-            $health['tables'][$table] = $result->fetch() !== false;
+            $health['tables'][$table] = dbTableExists($pdo, $table);
         }
         
         // Record counts
@@ -280,12 +290,13 @@ function generateActivityReport($pdo, $days = 7) {
     try {
         $date = date('Y-m-d H:i:s', strtotime("-$days days"));
         
+        $uCol = dbQuoteIdent('user');
         $stmt = $pdo->prepare(
             "SELECT 
-                action, COUNT(*) as count, user as actor
+                action, COUNT(*) as count, {$uCol} as actor
              FROM system_logs 
              WHERE created_at >= ?
-             GROUP BY action, user
+             GROUP BY action, {$uCol}
              ORDER BY count DESC"
         );
         $stmt->execute([$date]);

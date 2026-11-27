@@ -12,7 +12,7 @@ async function requestCode() {
         });
         const result = await res.json();
         if (result.success) {
-            alert(result.message + "\n\n(SIMULATION: Your code is " + result.mock_code + ")");
+            alert(result.message);
             document.getElementById('step1').style.display = 'none';
             document.getElementById('step2').style.display = 'block';
         } else {

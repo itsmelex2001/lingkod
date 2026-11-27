@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const profDd = document.getElementById('adminProfileDropdown');
         if (profWrap && profDd && !profWrap.contains(e.target)) {
             profDd.classList.remove('open');
+            document.getElementById('adminProfileBtn')?.setAttribute('aria-expanded', 'false');
         }
         const docMenuWrap = document.getElementById('admDocFilterBtn')?.parentElement;
         const docMenu = document.getElementById('admDocFilterMenu');
@@ -1995,7 +1996,9 @@ function filterPMITable() {
             ((p.patient_id || '').toLowerCase().includes(searchQuery)) ||
             ((p.hrn || '').toLowerCase().includes(searchQuery)) ||
             ((p.reference_no || '').toLowerCase().includes(searchQuery)) ||
-            ((p.contact_number || '').toLowerCase().includes(searchQuery))
+            ((p.contact_number || '').toLowerCase().includes(searchQuery)) ||
+            ((p.appointment_recipient || '').toLowerCase().includes(searchQuery)) ||
+            ((p.relationship_to_patient || '').toLowerCase().includes(searchQuery))
         );
     }
 
@@ -2047,6 +2050,13 @@ function filterPMITable() {
         const inquiryTag = isInquiry
             ? `<span class="badge badge-yellow" style="margin-left:6px;">Inquiry</span>`
             : '';
+        const isOtherPatient = ['other patient', 'someone else / dependent'].includes(
+            String(p.appointment_recipient || '').trim().toLowerCase()
+        );
+        const otherRel = p.relationship_to_patient ? ` · ${p.relationship_to_patient}` : '';
+        const otherPatientTag = isOtherPatient
+            ? `<span style="display:inline-flex;align-items:center;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:0.68rem;font-weight:700;background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;vertical-align:middle;">Other Patient${escapeHtml(otherRel)}</span>`
+            : '';
 
         const lookupId = escapeHtml(rowLookupId);
         const displayId = escapeHtml(showPendingVisit ? rowLookupId : (p.canonical_patient_id || p.patient_id || p.id || ''));
@@ -2080,7 +2090,7 @@ function filterPMITable() {
                 <small style="font-weight:600; color:var(--deep-green);">${displayId}</small>
             </td>
             <td>
-                <div><strong>${safeName}</strong>${inquiryTag}</div>
+                <div><strong>${safeName}</strong>${otherPatientTag}${inquiryTag}</div>
                 ${demoLine}
             </td>
             <td>
@@ -2615,8 +2625,10 @@ function openAdminPatientSlip() {
         consultType: p.consultation_nature || p.consultation_mode || 'Face-to-Face',
         remarks: p.recommendation_remarks || p.chief_complaints || '',
         encodedBy: p.medical_history_recorded_by || p.receiver || 'Admin',
+        encodedDate: p.medical_history_date || p.updated_at || '',
         attendedDate: p.medical_history_date || p.appointment_date || '',
-        nextVisitDate: p.next_visit_date || ''
+        nextVisitDate: p.next_visit_date || '',
+        followUpNotes: p.follow_up_notes || ''
     });
 }
 

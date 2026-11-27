@@ -50,11 +50,12 @@ if ($method === 'GET') {
     // Fetch patient progress notes (staff or admin)
     $patientId = $_GET['patient_id'] ?? null;
     if ($patientId) {
+        $noteTs = dbDateFormat('created_at', '%M %d, %Y %h:%i %p');
         $stmt = $pdo->prepare(
             "SELECT id, 
-                    IF(? = 'admin', '[REDACTED FOR PATIENT PRIVACY]', note) as note, 
+                    CASE WHEN ? = 'admin' THEN '[REDACTED FOR PATIENT PRIVACY]' ELSE note END AS note, 
                     noted_by,
-                    DATE_FORMAT(created_at,'%M %d, %Y %h:%i %p') AS created_at
+                    {$noteTs} AS created_at
              FROM progress_notes
              WHERE patient_id = ?
              ORDER BY created_at ASC"

@@ -171,13 +171,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const signedInIdentityCard = document.getElementById('signedInIdentityCard');
+  const identityInputsWrap = document.getElementById('baIdentityInputsWrap');
+  const emailFieldWrap = document.getElementById('baEmailFieldWrap');
+  const contactRow = document.getElementById('baContactRow');
+
   function updateRecipientState() {
     const selected = document.querySelector('input[name="booking_for"]:checked')?.value || 'Patient (Me)';
     const isOther = selected === 'Other Patient';
+    const useSummaryCard = Boolean(profile.isLoggedIn && profile.hasCompleteIdentity && !isOther);
 
     if (pillBookingMyself) pillBookingMyself.classList.toggle('is-selected', !isOther);
     if (pillBookingDependent) pillBookingDependent.classList.toggle('is-selected', isOther);
     if (boxRelationshipToPatient) boxRelationshipToPatient.classList.toggle('is-open', isOther);
+
+    if (signedInIdentityCard) signedInIdentityCard.hidden = !useSummaryCard;
+    if (identityInputsWrap) identityInputsWrap.hidden = useSummaryCard;
+    if (emailFieldWrap) emailFieldWrap.hidden = useSummaryCard;
+    if (contactRow) contactRow.classList.toggle('is-contact-only', useSummaryCard);
 
     clearAllFieldErrors(document.getElementById('phaseStep1'));
 
@@ -186,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (signedInBannerText) {
         signedInBannerText.innerHTML = isOther
           ? '<strong>Booking for another patient:</strong> Enter the patient&#39;s personal details below. This appointment will appear in your dashboard labeled as Other Patient.'
-          : '<strong>Signed-in booking:</strong> Your saved profile is pre-filled. Clinic staff will call your active mobile number to confirm before placing you in the queue.';
+          : '<strong>Signed-in booking:</strong> Your verified profile identity is locked to your hospital record. Confirm your active mobile number below so clinic staff can call to verify your slot.';
       }
       if (isOther) {
         inputFirstName.value = '';
@@ -204,9 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
         selectGender.value = profile.gender || '';
         inputBirthdate.value = profile.birthdate || '';
         computeAgeFromBirthdate();
-        inputContactNumber.value = profile.contactNumber || '';
+        if (!inputContactNumber.value.trim()) {
+          inputContactNumber.value = profile.contactNumber || '';
+        }
         inputEmail.value = profile.email || '';
-        inputAddress.value = profile.address || '';
+        if (!inputAddress.value.trim()) {
+          inputAddress.value = profile.address || '';
+        }
         if (selectRelationshipToPatient) {
           selectRelationshipToPatient.value = '';
           syncSelectPlaceholder(selectRelationshipToPatient);
@@ -225,6 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = document.querySelector('input[name="consultation_mode"]:checked')?.value || '';
     if (cardModeF2F) cardModeF2F.classList.toggle('is-selected', val === 'Face-to-Face');
     if (cardModeTele) cardModeTele.classList.toggle('is-selected', val === 'Teleconsultation');
+    const teleInfoEl = document.getElementById('teleconsultModeInfo');
+    if (teleInfoEl) teleInfoEl.style.display = (!isFirstTimePatient && val === 'Teleconsultation') ? 'block' : 'none';
     const errEl = document.getElementById('errConsultationMode');
     if (errEl && val) {
       errEl.closest('.ba-field')?.classList.remove('has-error');
@@ -663,6 +680,28 @@ document.addEventListener('DOMContentLoaded', () => {
       step2SidebarLabel.textContent = currentStep === 4 ? 'Medical Details' : 'Medical Information';
     }
 
+    // Sync compact mobile percentage progress status
+    const mobProg = document.getElementById('baMobileProgress');
+    const mobLabel = document.getElementById('baMobileProgressLabel');
+    const mobPct = document.getElementById('baMobileProgressPct');
+    const mobFill = document.getElementById('baMobileProgressFill');
+    if (mobProg && mobLabel && mobPct && mobFill) {
+      const inquiry = isInquiryMode();
+      const totalDisplaySteps = inquiry ? 3 : 4;
+      const stepIndex = inquiry && currentStep === 4 ? 3 : currentStep;
+      const pct = Math.round((stepIndex / totalDisplaySteps) * 100);
+      const stepTitles = {
+        1: 'Personal Information',
+        2: inquiry ? 'Inquiry Details' : 'Medical Information',
+        3: 'Appointment Details',
+        4: 'Confirmation'
+      };
+      mobProg.setAttribute('aria-valuenow', String(pct));
+      mobLabel.textContent = `Step ${stepIndex} of ${totalDisplaySteps} \u00B7 ${stepTitles[currentStep] || ''}`;
+      mobPct.textContent = `${pct}%`;
+      mobFill.style.width = `${pct}%`;
+    }
+
     if (btnBack) {
       btnBack.style.display = currentStep > 1 ? 'inline-flex' : 'none';
     }
@@ -788,6 +827,16 @@ document.addEventListener('DOMContentLoaded', () => {
             indEl.classList.add('is-completed');
           }
         }
+        const mobProg = document.getElementById('baMobileProgress');
+        const mobLabel = document.getElementById('baMobileProgressLabel');
+        const mobPct = document.getElementById('baMobileProgressPct');
+        const mobFill = document.getElementById('baMobileProgressFill');
+        if (mobProg && mobLabel && mobPct && mobFill) {
+          mobProg.setAttribute('aria-valuenow', '100');
+          mobLabel.textContent = 'Completed';
+          mobPct.textContent = '100%';
+          mobFill.style.width = '100%';
+        }
       } catch (err) {
         console.error('Booking submission error:', err);
         showAlert('Unable to reach the server. Please check your connection and try again.');
@@ -878,7 +927,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!modalPrivacyConsentCheck?.checked) return;
       if (privacyOverlay) privacyOverlay.classList.add('hidden-overlay');
       document.body.classList.remove('privacy-locked');
-      if (inputFirstName) inputFirstName.focus();
+      if (identityInputsWrap && !identityInputsWrap.hidden && inputFirstName) {
+        inputFirstName.focus();
+      } else if (inputContactNumber) {
+        inputContactNumber.focus();
+      }
     });
   }
 

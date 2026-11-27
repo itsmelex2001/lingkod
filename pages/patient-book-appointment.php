@@ -118,19 +118,34 @@ if ($isLoggedIn && isset($pdo)) {
     }
 }
 
+$hrn = trim((string)($patient['hrn'] ?? ''));
+$hasCompleteIdentity = $isLoggedIn
+    && $firstName !== ''
+    && $lastName !== ''
+    && $gender !== ''
+    && $birthdate !== ''
+    && $email !== '';
+
+$displayFullName = trim($firstName . ($middleInitial !== '' ? ' ' . rtrim($middleInitial, '.') . '.' : '') . ' ' . $lastName);
+$displayBirthdate = ($birthdate !== '' && strtotime($birthdate) !== false)
+    ? date('M j, Y', strtotime($birthdate))
+    : $birthdate;
+
 $profileBootstrap = [
-    'isLoggedIn'    => $isLoggedIn,
-    'isFirstTime'   => $isFirstTimePatient,
-    'firstName'     => $firstName,
-    'lastName'      => $lastName,
-    'middleInitial' => $middleInitial,
-    'gender'        => $gender,
-    'birthdate'     => $birthdate,
-    'age'           => (string)$age,
-    'contactNumber' => $contactNumber,
-    'email'         => $email,
-    'address'       => $address,
-    'withCompanion' => $withCompanion === 1 ? 'yes' : 'no',
+    'isLoggedIn'          => $isLoggedIn,
+    'hasCompleteIdentity' => $hasCompleteIdentity,
+    'isFirstTime'         => $isFirstTimePatient,
+    'firstName'           => $firstName,
+    'lastName'            => $lastName,
+    'middleInitial'       => $middleInitial,
+    'gender'              => $gender,
+    'birthdate'           => $birthdate,
+    'age'                 => (string)$age,
+    'contactNumber'       => $contactNumber,
+    'email'               => $email,
+    'address'             => $address,
+    'hrn'                 => $hrn,
+    'withCompanion'       => $withCompanion === 1 ? 'yes' : 'no',
 ];
 ?>
 <!doctype html>
@@ -247,21 +262,27 @@ $profileBootstrap = [
         </div>
       </a>
 
-      <a href="/sdn/index.php#footer-new" class="nav-contact-link">
-        <span class="nav-contact-circle" aria-hidden="true">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            <path d="M9.5 8.5c.3 1.8 1.7 3.2 3.5 3.5"></path>
-          </svg>
-        </span>
+      <a href="/sdn/index.php#footer-new" class="nav-contact-link" aria-label="Contact Us">
+        <svg class="nav-contact-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+        </svg>
         <span>Contact Us</span>
       </a>
     </header>
 
     <!-- Main Two-Column Workspace -->
     <div class="ba-workspace">
-      <!-- Left Vertical Stepper Sidebar -->
-      <aside class="ba-sidebar" aria-label="Booking Steps">
+      <!-- Left Vertical Stepper Sidebar (Desktop) / Compact Percentage Progress (Mobile) -->
+      <aside class="ba-sidebar" aria-label="Booking Progress">
+        <div class="ba-mobile-progress" id="baMobileProgress" role="progressbar" aria-label="Booking progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25">
+          <div class="ba-mobile-progress-head">
+            <span class="ba-mobile-progress-step" id="baMobileProgressLabel">Step 1 of 4 &middot; Personal Information</span>
+            <span class="ba-mobile-progress-pct" id="baMobileProgressPct">25%</span>
+          </div>
+          <div class="ba-mobile-progress-track">
+            <div class="ba-mobile-progress-fill" id="baMobileProgressFill" style="width: 25%;"></div>
+          </div>
+        </div>
         <nav class="ba-stepper-list">
           <div class="ba-step-item is-active" id="stepIndicator1" data-step="1" role="button" tabindex="0" aria-current="step">
             <div class="ba-step-circle">1</div>
@@ -361,60 +382,102 @@ $profileBootstrap = [
                 </div>
               </div>
 
-              <!-- Row 1: First Name, Last Name, M.I. -->
-              <div class="ba-row-3">
-                <div class="ba-field">
-                  <label for="inputFirstName" class="ba-label">First Name <span class="req-mark">*</span></label>
-                  <input type="text" id="inputFirstName" class="ba-input" placeholder="Enter First Name" value="<?= htmlspecialchars($firstName) ?>" required />
-                  <div class="ba-error-msg" id="errFirstName" role="alert"><span class="ba-error-text"></span></div>
-                </div>
-
-                <div class="ba-field">
-                  <label for="inputLastName" class="ba-label">Last Name <span class="req-mark">*</span></label>
-                  <input type="text" id="inputLastName" class="ba-input" placeholder="Enter Last Name" value="<?= htmlspecialchars($lastName) ?>" required />
-                  <div class="ba-error-msg" id="errLastName" role="alert"><span class="ba-error-text"></span></div>
-                </div>
-
-                <div class="ba-field">
-                  <label for="inputMiddleInitial" class="ba-label">M.I. (Optional)</label>
-                  <input type="text" id="inputMiddleInitial" class="ba-input" placeholder="e.g., B." maxlength="5" value="<?= htmlspecialchars($middleInitial) ?>" />
-                </div>
-              </div>
-
-              <!-- Row 2: Gender, Birthdate, Age -->
-              <div class="ba-row-3">
-                <div class="ba-field">
-                  <label for="selectGender" class="ba-label">Gender <span class="req-mark">*</span></label>
-                  <div class="ba-select-wrap">
-                    <select id="selectGender" class="ba-select <?= empty($gender) ? 'is-placeholder' : '' ?>" required>
-                      <option value="" disabled <?= empty($gender) ? 'selected' : '' ?>>Select Gender</option>
-                      <option value="Male" <?= $gender === 'Male' ? 'selected' : '' ?>>Male</option>
-                      <option value="Female" <?= $gender === 'Female' ? 'selected' : '' ?>>Female</option>
-                      <option value="Other" <?= $gender === 'Other' ? 'selected' : '' ?>>Other</option>
-                    </select>
-                    <svg class="chevron-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
+              <?php if ($hasCompleteIdentity): ?>
+              <!-- Compact Verified Profile Summary Card (Signed-in Patient (Me)) -->
+              <section id="signedInIdentityCard" class="ba-identity-card" aria-label="Verified Patient Profile">
+                <div class="ba-identity-card-head">
+                  <div class="ba-identity-title-wrap">
+                    <span class="ba-identity-badge">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <polyline points="9 12 11 14 15 10"></polyline>
+                      </svg>
+                      Verified Profile
+                    </span>
+                    <?php if ($hrn !== ''): ?>
+                    <span class="ba-identity-hrn"><?= htmlspecialchars($hrn) ?></span>
+                    <?php endif; ?>
                   </div>
-                  <div class="ba-error-msg" id="errGender" role="alert"><span class="ba-error-text"></span></div>
+                  <a href="/sdn/index.php#footer-new" class="ba-identity-help-link">Need a correction?</a>
                 </div>
 
-                <div class="ba-field">
-                  <label for="inputBirthdate" class="ba-label">Birthdate <span class="req-mark">*</span></label>
-                  <input type="date" id="inputBirthdate" class="ba-input" value="<?= htmlspecialchars($birthdate) ?>" max="<?= date('Y-m-d') ?>" required />
-                  <div class="ba-error-msg" id="errBirthdate" role="alert"><span class="ba-error-text"></span></div>
+                <div class="ba-identity-grid">
+                  <div class="ba-identity-item">
+                    <span class="ba-identity-lbl">Full Name</span>
+                    <span class="ba-identity-val"><?= htmlspecialchars($displayFullName) ?></span>
+                  </div>
+                  <div class="ba-identity-item">
+                    <span class="ba-identity-lbl">Gender</span>
+                    <span class="ba-identity-val"><?= htmlspecialchars($gender) ?></span>
+                  </div>
+                  <div class="ba-identity-item">
+                    <span class="ba-identity-lbl">Birthdate &amp; Age</span>
+                    <span class="ba-identity-val"><?= htmlspecialchars($displayBirthdate) ?><?= $age !== '' ? ' &middot; ' . htmlspecialchars((string)$age) . ' yrs' : '' ?></span>
+                  </div>
+                  <div class="ba-identity-item">
+                    <span class="ba-identity-lbl">Email Address</span>
+                    <span class="ba-identity-val ba-identity-email"><?= htmlspecialchars($email) ?></span>
+                  </div>
+                </div>
+              </section>
+              <?php endif; ?>
+
+              <div id="baIdentityInputsWrap" <?= $hasCompleteIdentity ? 'hidden' : '' ?>>
+                <!-- Row 1: First Name, Last Name, M.I. -->
+                <div class="ba-row-3">
+                  <div class="ba-field">
+                    <label for="inputFirstName" class="ba-label">First Name <span class="req-mark">*</span></label>
+                    <input type="text" id="inputFirstName" class="ba-input" placeholder="Enter First Name" value="<?= htmlspecialchars($firstName) ?>" required />
+                    <div class="ba-error-msg" id="errFirstName" role="alert"><span class="ba-error-text"></span></div>
+                  </div>
+
+                  <div class="ba-field">
+                    <label for="inputLastName" class="ba-label">Last Name <span class="req-mark">*</span></label>
+                    <input type="text" id="inputLastName" class="ba-input" placeholder="Enter Last Name" value="<?= htmlspecialchars($lastName) ?>" required />
+                    <div class="ba-error-msg" id="errLastName" role="alert"><span class="ba-error-text"></span></div>
+                  </div>
+
+                  <div class="ba-field">
+                    <label for="inputMiddleInitial" class="ba-label">M.I. (Optional)</label>
+                    <input type="text" id="inputMiddleInitial" class="ba-input" placeholder="e.g., B." maxlength="5" value="<?= htmlspecialchars($middleInitial) ?>" />
+                  </div>
                 </div>
 
-                <div class="ba-field">
-                  <label for="inputAge" class="ba-label">Age</label>
-                  <input type="number" id="inputAge" class="ba-input" value="<?= htmlspecialchars((string)$age) ?>" readonly />
+                <!-- Row 2: Gender, Birthdate, Age -->
+                <div class="ba-row-3">
+                  <div class="ba-field">
+                    <label for="selectGender" class="ba-label">Gender <span class="req-mark">*</span></label>
+                    <div class="ba-select-wrap">
+                      <select id="selectGender" class="ba-select <?= empty($gender) ? 'is-placeholder' : '' ?>" required>
+                        <option value="" disabled <?= empty($gender) ? 'selected' : '' ?>>Select Gender</option>
+                        <option value="Male" <?= $gender === 'Male' ? 'selected' : '' ?>>Male</option>
+                        <option value="Female" <?= $gender === 'Female' ? 'selected' : '' ?>>Female</option>
+                        <option value="Other" <?= $gender === 'Other' ? 'selected' : '' ?>>Other</option>
+                      </select>
+                      <svg class="chevron-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </div>
+                    <div class="ba-error-msg" id="errGender" role="alert"><span class="ba-error-text"></span></div>
+                  </div>
+
+                  <div class="ba-field">
+                    <label for="inputBirthdate" class="ba-label">Birthdate <span class="req-mark">*</span></label>
+                    <input type="date" id="inputBirthdate" class="ba-input" value="<?= htmlspecialchars($birthdate) ?>" max="<?= date('Y-m-d') ?>" required />
+                    <div class="ba-error-msg" id="errBirthdate" role="alert"><span class="ba-error-text"></span></div>
+                  </div>
+
+                  <div class="ba-field">
+                    <label for="inputAge" class="ba-label">Age</label>
+                    <input type="number" id="inputAge" class="ba-input" value="<?= htmlspecialchars((string)$age) ?>" readonly />
+                  </div>
                 </div>
               </div>
 
               <!-- Row 3: Contact Number & Email Address -->
-              <div class="ba-row-contact">
+              <div class="ba-row-contact <?= $hasCompleteIdentity ? 'is-contact-only' : '' ?>" id="baContactRow">
                 <div class="ba-field">
-                  <label for="inputContactNumber" class="ba-label">Contact Number <span class="req-mark">*</span></label>
+                  <label for="inputContactNumber" class="ba-label">Active Mobile Number <span class="req-mark">*</span></label>
                   <div class="ba-phone-split">
                     <span class="ba-phone-code">+63</span>
                     <input type="text" id="inputContactNumber" class="ba-input" placeholder="9XXXXXXXXX" maxlength="10" inputmode="numeric" value="<?= htmlspecialchars($contactNumber) ?>" required />
@@ -422,7 +485,7 @@ $profileBootstrap = [
                   <div class="ba-error-msg" id="errContact" role="alert"><span class="ba-error-text"></span></div>
                 </div>
 
-                <div class="ba-field">
+                <div class="ba-field" id="baEmailFieldWrap" <?= $hasCompleteIdentity ? 'hidden' : '' ?>>
                   <label for="inputEmail" class="ba-label">Email Address <span class="req-mark">*</span></label>
                   <input type="email" id="inputEmail" class="ba-input" placeholder="Enter Email Address" value="<?= htmlspecialchars($email) ?>" required />
                   <div class="ba-error-msg" id="errEmail" role="alert"><span class="ba-error-text"></span></div>
@@ -554,7 +617,10 @@ $profileBootstrap = [
                     </label>
                   </div>
                   <p id="firstTimeModeNotice" class="ba-mode-policy-notice" style="display: none;">
-                    * Hospital Policy: First-time patients are required to have an initial Face-to-Face consultation. Teleconsultation is only available for returning (2nd-time or follow-up) patients.
+                    * Hospital Policy: First-time patients are required to have an initial Face-to-Face consultation. Teleconsultation is only available for returning patients with a completed prior visit.
+                  </p>
+                  <p id="teleconsultModeInfo" class="ba-mode-policy-notice" style="display: none; color: #1e40af; background: #eff6ff; border-color: #bfdbfe;">
+                    Once approved by clinic staff, your Teleconsultation meeting link or call instructions will appear inside your Patient Portal.
                   </p>
                   <div class="ba-error-msg" id="errConsultationMode" role="alert"><span class="ba-error-text"></span></div>
                 </div>

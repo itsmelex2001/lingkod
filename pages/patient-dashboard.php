@@ -120,9 +120,9 @@ $initials  = count($nameParts) >= 2
         height: 100vh;
         position: sticky;
         top: 0;
-        background: linear-gradient(180deg, #1b9e43 0%, #15803d 48%, #0b5324 100%);
+        background: linear-gradient(180deg, #0d7a31 0%, #15803d 50%, #04561e 100%);
         border-right: 1px solid rgba(255, 255, 255, 0.14);
-        box-shadow: 4px 0 24px rgba(6, 50, 22, 0.14);
+        box-shadow: 4px 0 24px rgba(4, 38, 12, 0.22);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -312,7 +312,12 @@ $initials  = count($nameParts) >= 2
         height: 100vh;
         overflow-x: hidden;
         overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
         background-color: var(--bg-page);
+      }
+      .main-content::-webkit-scrollbar {
+        display: none;
       }
 
       /* â”€â”€ Topbar â”€â”€ */
@@ -1788,6 +1793,111 @@ $initials  = count($nameParts) >= 2
         cursor: pointer;
         transition: all 0.15s ease;
       }
+      .teleconsult-join-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        padding: 5px 11px;
+        border-radius: 8px;
+        background: #15803d;
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-decoration: none;
+        width: fit-content;
+        transition: background-color 0.15s ease;
+      }
+      .teleconsult-join-btn:hover {
+        background: #166534;
+      }
+      .teleconsult-join-btn:focus-visible {
+        outline: 2px solid #15803d;
+        outline-offset: 2px;
+      }
+      .teleconsult-session-note {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.74rem;
+        color: #475569;
+        line-height: 1.4;
+      }
+      .followup-meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 4px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #15803d;
+        font-size: 0.73rem;
+        font-weight: 700;
+        width: fit-content;
+      }
+      .followup-slip-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: 9px;
+        border: 1px solid #bbf7d0;
+        background: #f0fdf4;
+        color: #15803d;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      }
+      .followup-slip-btn:hover {
+        background: #15803d;
+        border-color: #15803d;
+        color: #ffffff;
+      }
+      .followup-slip-btn:focus-visible {
+        outline: 2px solid #15803d;
+        outline-offset: 2px;
+      }
+      #dashFollowUpsList {
+        gap: 8px;
+      }
+      #dashFollowUpsList.is-scrollable {
+        max-height: 280px;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-right: 0;
+      }
+      #dashFollowUpsList.is-scrollable::-webkit-scrollbar {
+        display: none;
+      }
+      #dashFollowUpsList .item-row {
+        padding: 10px 14px;
+      }
+      .dash-followups-toggle {
+        margin-top: 10px;
+        width: 100%;
+        min-height: 36px;
+        border-radius: 9px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+      }
+      .dash-followups-toggle:hover {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #15803d;
+      }
+      .dash-followups-toggle:focus-visible {
+        outline: 2px solid #15803d;
+        outline-offset: 2px;
+      }
       .btn-primary-action:hover {
         background: var(--brand-green-hover);
       }
@@ -1920,6 +2030,12 @@ $initials  = count($nameParts) >= 2
         border-color: #cbd5e1;
         box-shadow: none;
         outline: none;
+      }
+      .settings-readonly-note {
+        margin: 14px 0 0;
+        font-size: 0.78rem;
+        color: #64748b;
+        line-height: 1.45;
       }
       .settings-save-btn {
         display: inline-flex;
@@ -2810,6 +2926,27 @@ $initials  = count($nameParts) >= 2
                 </div>
                 <div class="card-item-list" id="dashUpcomingList"></div>
               </div>
+
+              <!-- Staff-Encoded Follow-Up Slips (shown automatically when available) -->
+              <div class="section-card" id="dashFollowUpsCard" style="display:none;">
+                <div class="section-header">
+                  <div class="section-title-group">
+                    <div class="section-title-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    </div>
+                    <div>
+                      <div class="section-title">Follow-Up Slips</div>
+                      <div style="font-size:0.78rem; color:var(--text-secondary);">Follow-up schedules encoded by your clinic staff</div>
+                    </div>
+                  </div>
+                  <button type="button" class="section-link" onclick="switchView('appointments'); filterApptTab('past', document.getElementById('btnApptPast'));">
+                    <span>View history</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                </div>
+                <div class="card-item-list" id="dashFollowUpsList"></div>
+                <button type="button" id="dashFollowUpsToggle" class="dash-followups-toggle" style="display:none;" onclick="toggleDashFollowUps()"></button>
+              </div>
             </div>
 
             <!-- Summary cards -->
@@ -2976,6 +3113,9 @@ $initials  = count($nameParts) >= 2
                   </select>
                 </div>
               </div>
+              <p class="settings-readonly-note">
+                Full name, Patient ID, email, and contact number are locked to your verified hospital record. Contact the clinic desk for record corrections.
+              </p>
             </div>
 
             <div class="settings-card">
@@ -3184,6 +3324,7 @@ $initials  = count($nameParts) >= 2
         past: [],
         cancelled: [],
         rescheduled: [],
+        follow_ups: [],
         medications: [],
         notifications: []
       };
@@ -3440,6 +3581,79 @@ $initials  = count($nameParts) >= 2
         return 'status-waiting';
       }
 
+      let dashFollowUpsExpanded = false;
+      function toggleDashFollowUps() {
+        dashFollowUpsExpanded = !dashFollowUpsExpanded;
+        renderDashFollowUps();
+      }
+
+      function renderDashFollowUps() {
+        const card = document.getElementById('dashFollowUpsCard');
+        const list = document.getElementById('dashFollowUpsList');
+        const toggleBtn = document.getElementById('dashFollowUpsToggle');
+        if (!card || !list) return;
+        const items = (portalData.follow_ups && portalData.follow_ups.length)
+          ? portalData.follow_ups
+          : (portalData.past || []).filter(r => r.status_raw === 'completed' && (r.next_visit_date || r.follow_up_notes));
+        if (!items.length) {
+          card.style.display = 'none';
+          list.innerHTML = '';
+          if (toggleBtn) toggleBtn.style.display = 'none';
+          return;
+        }
+        card.style.display = '';
+        const visibleItems = dashFollowUpsExpanded ? items : items.slice(0, 2);
+        list.classList.toggle('is-scrollable', dashFollowUpsExpanded && items.length > 2);
+        if (toggleBtn) {
+          if (items.length > 2) {
+            toggleBtn.style.display = '';
+            toggleBtn.textContent = dashFollowUpsExpanded
+              ? 'Show fewer'
+              : `Show all ${items.length} follow-up slips`;
+          } else {
+            toggleBtn.style.display = 'none';
+          }
+        }
+        list.innerHTML = visibleItems.map(item => {
+          const badgeMonth = item.next_visit_month || item.month || '';
+          const badgeDay = item.next_visit_day || item.day || '';
+          const fuDateLabel = item.next_visit_date_formatted || 'As advised by physician';
+          const encodedInfo = item.encoded_date ? `Encoded ${escapeHtml(item.encoded_date)}` : '';
+          const notesInfo = item.follow_up_notes ? `<span class="teleconsult-session-note">Instructions: ${escapeHtml(item.follow_up_notes)}</span>` : '';
+          return `<div class="item-row" style="cursor:default;">
+            <div class="appt-info-left">
+              <div class="date-badge">
+                <span class="date-month">${escapeHtml(badgeMonth)}</span>
+                <span class="date-day">${escapeHtml(badgeDay)}</span>
+              </div>
+              <div class="appt-desc">
+                <div class="appt-title-row">
+                  <span class="appt-title">${escapeHtml(item.department)} Follow-Up</span>
+                  <span class="appt-visit-badge is-followup">Follow-Up Slip</span>
+                </div>
+                <div class="appt-meta-row">
+                  <span class="appt-code-tag">${escapeHtml(item.patient_code)}</span>
+                  ${renderOtherPatientBadge(item)}
+                </div>
+                ${notesInfo}
+              </div>
+            </div>
+            <div class="appt-schedule-col">
+              <span class="appt-sched-line">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>Follow-Up: ${escapeHtml(fuDateLabel)}</span>
+              </span>
+              ${encodedInfo ? `<span class="appt-sched-sub">${encodedInfo}${item.encoded_by ? ' &middot; ' + escapeHtml(item.encoded_by) : ''}</span>` : ''}
+            </div>
+            <div class="appt-status-col">
+              <button type="button" class="followup-slip-btn" title="View Follow-Up Slip" aria-label="View Follow-Up Slip" onclick="openPatientSlipById(${Number(item.id)}, 'followUp')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
       function renderAppointmentViews() {
         const upcoming = portalData.upcoming || [];
         const dash = document.getElementById('dashUpcomingList');
@@ -3460,6 +3674,7 @@ $initials  = count($nameParts) >= 2
               </div>
             `;
         }
+        renderDashFollowUps();
         paintAppointmentList();
       }
 
@@ -3501,8 +3716,40 @@ $initials  = count($nameParts) >= 2
         return `<span class="appt-resched-badge">Rescheduled</span>`;
       }
 
+      function renderModeAndTeleconsultBlock(item) {
+        const isTele = String(item?.mode || '').trim().toLowerCase() === 'teleconsultation';
+        const iconSvg = isTele
+          ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>'
+          : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
+        let extra = '';
+        if (isTele) {
+          const st = String(item.status || '').toLowerCase();
+          const isApprovedLike = ['confirmed', 'checked in', 'in consultation', 'rescheduled'].includes(st);
+          const rawLink = String(item.teleconsult_link || '').trim();
+          const safeLink = /^https?:\/\/\S+$/i.test(rawLink) ? rawLink : '';
+          const platform = String(item.teleconsult_platform || '').trim();
+          const notes = String(item.teleconsult_notes || '').trim();
+          if (isApprovedLike) {
+            if (safeLink) {
+              extra += `<a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer" class="teleconsult-join-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                <span>Join ${escapeHtml(platform || 'Teleconsultation')}</span>
+              </a>`;
+              if (notes) extra += `<span class="teleconsult-session-note">${escapeHtml(notes)}</span>`;
+            } else {
+              const channelText = platform ? `${platform}: ` : '';
+              extra += `<span class="teleconsult-session-note">${escapeHtml(channelText)}Clinic will reach you during your scheduled block.${notes ? ' ' + escapeHtml(notes) : ''}</span>`;
+            }
+          } else if (st === 'for approval') {
+            extra += '<span class="teleconsult-session-note">Session link or call instructions will appear here once approved.</span>';
+          }
+        }
+        return `<span class="appt-sched-sub">${iconSvg}<span>${escapeHtml(item.mode)}</span></span>${extra}`;
+      }
+
       function apptDashRow(item) {
         const stClass = getStatusBadgeClass(item.status);
+
         const actionsBtn = renderRowActionTrigger(item, (item.is_rescheduled || item.rescheduled_by_staff) ? 'rescheduled' : '');
         return `<div class="item-row" style="cursor:default;">
           <div class="appt-info-left">
@@ -3527,10 +3774,7 @@ $initials  = count($nameParts) >= 2
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               <span>${escapeHtml(item.date)} &middot; ${escapeHtml(item.time_label)}</span>
             </span>
-            <span class="appt-sched-sub">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              <span>${escapeHtml(item.mode)}</span>
-            </span>
+            ${renderModeAndTeleconsultBlock(item)}
           </div>
           <div class="appt-status-col">
             <div class="status-pill ${stClass}">
@@ -3689,7 +3933,15 @@ $initials  = count($nameParts) >= 2
         const reschedNote = (isUpcomingTab && isResched && item.rescheduled_from_date)
           ? `<span class="appt-resched-note">Moved from ${escapeHtml(item.rescheduled_from_date)}</span>`
           : '';
-        const actionsBtn = renderRowActionTrigger(item, isResched ? 'rescheduled' : '');
+        const hasFollowUpInfo = Boolean(item.next_visit_date_formatted || item.follow_up_notes);
+        const followUpMeta = (!isUpcomingTab && hasFollowUpInfo)
+          ? `<span class="followup-meta-pill">Follow-Up: ${escapeHtml(item.next_visit_date_formatted || 'As advised')}</span>${item.follow_up_notes ? `<span class="teleconsult-session-note">${escapeHtml(item.follow_up_notes)}</span>` : ''}`
+          : '';
+        const isCompletedWithFollowUp = !isUpcomingTab && String(item.status_raw || item.status || '').toLowerCase() === 'completed';
+        const directFollowUpBtn = isCompletedWithFollowUp
+          ? `<button type="button" class="followup-slip-btn" title="View Follow-Up Slip" aria-label="View Follow-Up Slip" onclick="openPatientSlipById(${Number(item.id)}, 'followUp')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></button>`
+          : '';
+        const actionsBtn = isCompletedWithFollowUp ? '' : renderRowActionTrigger(item, isResched ? 'rescheduled' : '');
 
         return `<div class="item-row" style="cursor:default;">
           <div class="appt-info-left">
@@ -3714,10 +3966,8 @@ $initials  = count($nameParts) >= 2
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               <span>${escapeHtml(item.date)} &middot; ${escapeHtml(item.time_label)}</span>
             </span>
-            <span class="appt-sched-sub">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              <span>${escapeHtml(item.mode)}</span>
-            </span>
+            ${renderModeAndTeleconsultBlock(item)}
+            ${followUpMeta}
             ${reschedNote}
           </div>
           <div class="appt-status-col">
@@ -3725,6 +3975,7 @@ $initials  = count($nameParts) >= 2
               <span class="status-dot"></span>
               <span>${escapeHtml(stLabel)}</span>
             </div>
+            ${directFollowUpBtn}
             ${actionsBtn}
           </div>
         </div>`;
@@ -4368,7 +4619,7 @@ $initials  = count($nameParts) >= 2
         const dateInput = document.getElementById('rescheduleDate');
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const iso = tomorrow.toISOString().slice(0, 10);
+        const iso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
         dateInput.min = iso;
         dateInput.value = item.date_iso && item.date_iso >= iso ? item.date_iso : iso;
         const timeSel = document.getElementById('rescheduleTime');
@@ -4414,6 +4665,7 @@ $initials  = count($nameParts) >= 2
           }
           const rescheduledId = rescheduleTarget.id;
           closeRescheduleModal();
+          showPortalToast('Appointment Rescheduled', data.message || 'Your new preferred schedule has been saved.', 'success');
           await initPortal();
           const updatedItem = findAppointment(rescheduledId);
           if (updatedItem && window.PatientSlip && window.PatientSlip.canGenerateSlip(updatedItem)) {
@@ -4525,10 +4777,14 @@ $initials  = count($nameParts) >= 2
 
         const itemsHtml = [];
         if (window.PatientSlip && window.PatientSlip.canGenerateSlip(item)) {
+          const resolvedType = window.PatientSlip.resolveSlipType(item, forcedSlipType);
+          const slipLabel = resolvedType === 'followUp'
+            ? 'Follow-Up Slip'
+            : (resolvedType === 'rescheduled' ? 'Rescheduled Slip' : 'View Slip');
           itemsHtml.push(`
             <button type="button" class="row-action-item" role="menuitem" onclick="closeRowActionMenu(); openPatientSlipById(${Number(item.id)}, '${escapeHtml(forcedSlipType || '')}')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-              <span>View Slip</span>
+              <span>${slipLabel}</span>
             </button>
           `);
         }
@@ -4575,10 +4831,16 @@ $initials  = count($nameParts) >= 2
           appointmentTime: item.time_label || item.time || '',
           specialty: item.department || '',
           consultType: item.consult_type || item.mode || '',
+          consultationMode: item.mode || item.consult_mode || 'Face-to-Face',
+          teleconsultPlatform: item.teleconsult_platform || '',
+          teleconsultLink: item.teleconsult_link || '',
+          teleconsultNotes: item.teleconsult_notes || '',
           remarks: item.remarks || item.chief_complaints || '',
           encodedBy: item.encoded_by || 'Online Portal',
+          encodedDate: item.encoded_date || item.attended_date || '',
           attendedDate: item.attended_date || item.date || '',
-          nextVisitDate: item.next_visit_date || ''
+          nextVisitDate: item.next_visit_date || '',
+          followUpNotes: item.follow_up_notes || ''
         });
       }
 
@@ -4623,6 +4885,11 @@ $initials  = count($nameParts) >= 2
       document.addEventListener('DOMContentLoaded', () => {
         initSidebarToggle();
         initNotificationServiceWorker();
+        renderPatientQrCode(<?= json_encode($patientId) ?>, <?= json_encode($patientName) ?>);
+        const initialView = new URLSearchParams(window.location.search).get('view');
+        if (initialView && ['dashboard', 'appointments', 'settings'].includes(initialView)) {
+          switchView(initialView);
+        }
         initPortal();
       });
 

@@ -356,10 +356,18 @@ try {
     $_SESSION['pending_otp_mode']       = 'verify_only';
     $_SESSION['pending_otp_sent_at']    = time();
 
-    // ── 6. Construct Localhost Verification URL & Flush Fast Response ─────
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $verificationUrl = "{$protocol}://{$host}/sdn/pages/verify-otp.php?token={$token}";
+    // ── 6. Construct Verification URL (APP_URL on Vercel/prod, host fallback locally) & Flush Fast Response ─────
+    $configuredAppUrl = rtrim((string) envValue('APP_URL', ''), '/');
+    if ($configuredAppUrl !== '') {
+        $basePortalUrl = $configuredAppUrl;
+    } else {
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $protocol = $isHttps ? 'https' : 'http';
+        $basePortalUrl = "{$protocol}://{$host}/sdn";
+    }
+    $verificationUrl = "{$basePortalUrl}/pages/verify-otp.php?token={$token}";
 
     $domain = substr(strrchr($email, "@"), 1);
     $webmailUrl = 'https://mail.google.com';
@@ -391,11 +399,11 @@ try {
     if (class_exists(PHPMailer::class)) {
         $mail = new PHPMailer(true);
         try {
-            $smtpHost   = !empty($_ENV['SMTP_HOST']) ? $_ENV['SMTP_HOST'] : 'smtp.gmail.com';
-            $smtpPort   = !empty($_ENV['SMTP_PORT']) ? (int)$_ENV['SMTP_PORT'] : 587;
-            $smtpUser   = trim($_ENV['SMTP_USER'] ?? '');
-            $smtpPass   = trim($_ENV['SMTP_PASS'] ?? '');
-            $smtpSecure = strtolower(trim($_ENV['SMTP_SECURE'] ?? 'tls'));
+            $smtpHost   = (string) envValue('SMTP_HOST', 'smtp.gmail.com');
+            $smtpPort   = (int) envValue('SMTP_PORT', '587');
+            $smtpUser   = trim((string) envValue('SMTP_USER', ''));
+            $smtpPass   = trim((string) envValue('SMTP_PASS', ''));
+            $smtpSecure = strtolower(trim((string) envValue('SMTP_SECURE', 'tls')));
 
             if (!empty($smtpUser) && !empty($smtpPass)) {
                 $mail->isSMTP();
@@ -417,8 +425,8 @@ try {
                         'allow_self_signed' => true
                     ]
                 ];
-                $fromEmail = !empty($_ENV['SMTP_FROM_EMAIL']) ? $_ENV['SMTP_FROM_EMAIL'] : $smtpUser;
-                $fromName  = !empty($_ENV['SMTP_FROM_NAME']) ? trim($_ENV['SMTP_FROM_NAME'], "\"'") : 'MMWGH LINGKOD Portal';
+                $fromEmail = (string) envValue('SMTP_FROM_EMAIL', $smtpUser);
+                $fromName  = trim((string) envValue('SMTP_FROM_NAME', 'MMWGH LINGKOD Portal'), "\"'");
                 $mail->setFrom($fromEmail, $fromName);
             } else {
                 // Fallback to PHP mail transport
@@ -429,7 +437,7 @@ try {
             $mail->addAddress($email, $fullName);
             $mail->addReplyTo('support@mmwgh.gov.ph', 'MMWGH Support');
 
-            $loginPortalUrl = "{$protocol}://{$host}/sdn/pages/patient-login.php";
+            $loginPortalUrl = "{$basePortalUrl}/pages/patient-login.php";
 
             // Attach email-optimized logo via standard inline CID
             $logoPath = dirname(__DIR__) . '/public/assets/v3_lingkod_logo_email.png';
@@ -508,13 +516,9 @@ try {
         $emailError = 'PHPMailer class not available';
     }
 
-    // Always log the generated verification link so localhost development and manual testing succeed reliably
-    $logDir = __DIR__ . '/../logs';
-    if (!is_dir($logDir)) {
-        @mkdir($logDir, 0777, true);
-    }
+    // Always log the generated verification link (Vercel runtime logs in cloud, local file on XAMPP)
     $logEntry = sprintf(
-        "[%s] Patient: %s (%s) | ID: %s | Verify URL: %s | Email Sent: %s\n",
+        "[%s] Patient: %s (%s) | ID: %s | Verify URL: %s | Email Sent: %s",
         date('Y-m-d H:i:s'),
         $fullName,
         $email,
@@ -522,7 +526,15 @@ try {
         $verificationUrl,
         $emailSent ? 'YES' : 'NO (' . ($emailError ?? 'none') . ')'
     );
-    @file_put_contents($logDir . '/sent_verification_emails.log', $logEntry, FILE_APPEND);
+    if (getenv('VERCEL') === '1') {
+        error_log($logEntry);
+    } else {
+        $logDir = __DIR__ . '/../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0777, true);
+        }
+        @file_put_contents($logDir . '/sent_verification_emails.log', $logEntry . "\n", FILE_APPEND);
+    }
 } catch (PDOException $e) {
     http_response_code(500);
     error_log("Registration database error: " . $e->getMessage());

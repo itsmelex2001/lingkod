@@ -1,0 +1,51 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "functions": {
+    "api/vercel_router.php": {
+      "runtime": "vercel-php@0.7.3",
+      "maxDuration": 10,
+      "includeFiles": "{index.php,*-inline.php,cron_reminders.php,pages/**,api/**,vendor/**,public/assets/**,assets/images/**}"
+    }
+  },
+  "routes": [
+    {
+      "src": "^/sdn/((?:public|assets|dist)/.+)$",
+      "dest": "/$1"
+    },
+    {
+      "src": "^/((?:public|assets|dist)/.+)$",
+      "dest": "/$1"
+    },
+    {
+      "src": "^/sw\\.js$",
+      "dest": "/sw.js"
+    },
+    {
+      "src": "^/(.*\\.sql|\\.env.*|composer\\.(json|lock)|setup\\.php|test.*\\.php)$",
+      "status": 403
+    },
+    {
+      "src": "^/sdn/(.*)$",
+      "dest": "/api/vercel_router.php?__route=/$1"
+    },
+    {
+      "src": "^/sdn/?$",
+      "dest": "/api/vercel_router.php?__route=/"
+    },
+    {
+      "src": "^/(api/.*|pages/.*|cron_reminders\\.php|cron-reminders|index\\.php)$",
+      "dest": "/api/vercel_router.php?__route=/$1"
+    },
+    {
+      "src": "^/$",
+      "dest": "/api/vercel_router.php?__route=/"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron-reminders",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

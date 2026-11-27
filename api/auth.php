@@ -70,11 +70,12 @@ if ($method === 'POST') {
 
     // Rate limiting: check failed attempts in the last 15 minutes
     try {
+        $since15m = dbNowSubInterval(15, 'MINUTE');
         $rateStmt = $pdo->prepare(
             "SELECT COUNT(*) FROM login_history 
              WHERE (ip_address = ? OR username = ?) 
                AND status = 'failed' 
-               AND login_time > DATE_SUB(NOW(), INTERVAL 15 MINUTE)"
+               AND login_time > {$since15m}"
         );
         $rateStmt->execute([$ip, $username]);
         $recentFailed = (int) $rateStmt->fetchColumn();

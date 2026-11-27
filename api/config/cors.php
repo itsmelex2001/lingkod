@@ -23,21 +23,22 @@ header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
-// Determine allowed origin (default to same-origin host if available)
+// Explicit origin allowlist (same-origin host + optional CORS_ALLOWED_ORIGINS; no wildcard '*' on authenticated APIs)
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 $httpHost = $_SERVER['HTTP_HOST'] ?? '';
-if (!empty($origin)) {
-    $parsedOrigin = parse_url($origin, PHP_URL_HOST);
+if ($origin !== '') {
+    $parsedHost = parse_url($origin, PHP_URL_HOST);
     $parsedPort = parse_url($origin, PHP_URL_PORT);
-    $originHostPort = $parsedOrigin . ($parsedPort ? ':' . $parsedPort : '');
-    
-    // Allow local XAMPP host access
-    if ($originHostPort === $httpHost || in_array($parsedOrigin, ['localhost', '127.0.0.1'])) {
+    $originHostPort = $parsedHost . ($parsedPort ? ':' . $parsedPort : '');
+    $envOrigins = array_filter(array_map('trim', explode(',', $_ENV['CORS_ALLOWED_ORIGINS'] ?? '')));
+    $devOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost', 'http://127.0.0.1'];
+    $allowed = array_unique(array_merge($envOrigins, $devOrigins));
+
+    if ($originHostPort === $httpHost || in_array($origin, $allowed, true)) {
         header("Access-Control-Allow-Origin: $origin");
         header('Access-Control-Allow-Credentials: true');
+        header('Vary: Origin');
     }
-} else {
-    header('Access-Control-Allow-Origin: *');
 }
 
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
@@ -142,8 +143,9 @@ function getBody(): array {
 
 /** Insert a row into system_logs. */
 function addLog(PDO $pdo, string $level, string $action, string $user, string $details): void {
+    $userCol = function_exists('dbQuoteIdent') ? dbQuoteIdent('user') : '`user`';
     $stmt = $pdo->prepare(
-        "INSERT INTO system_logs (level, action, user, details) VALUES (?, ?, ?, ?)"
+        "INSERT INTO system_logs (level, action, {$userCol}, details) VALUES (?, ?, ?, ?)"
     );
     $stmt->execute([$level, $action, $user, $details]);
 }
@@ -170,22 +172,42 @@ function saveUploadedAvatar(?string $imageData, string $prefix, $entityId): ?str
         respondErr('Uploaded file is not a valid image.', 400);
     }
 
+    $safePrefix = preg_replace('/[^a-z0-9_-]/i', '', $prefix) ?: 'avatar';
+    $safeId     = preg_replace('/[^a-z0-9_-]/i', '', (string)$entityId) ?: '0';
+    $filename   = "{$safePrefix}_{$safeId}_" . time() . '_' . bin2hex(random_bytes(3)) . ".{$ext}";
+
+    // Use Supabase Storage in cloud / serverless deployments (ephemeral filesystem)
+    require_once __DIR__ . '/supabase_storage.php';
+    if (supabaseStorageConfigured()) {
+        $mime = $ext === 'png' ? 'image/png' : ($ext === 'webp' ? 'image/webp' : 'image/jpeg');
+        $cloudUrl = supabaseUploadAvatar($decoded, $filename, $mime);
+        if ($cloudUrl === null) {
+            respondErr('Failed to upload profile image to cloud storage.', 500);
+        }
+        return $cloudUrl;
+    }
+
     $uploadDir = dirname(__DIR__, 2) . '/public/uploads/avatars/';
     if (!is_dir($uploadDir)) {
         @mkdir($uploadDir, 0777, true);
     }
-    $safePrefix = preg_replace('/[^a-z0-9_-]/i', '', $prefix) ?: 'avatar';
-    $safeId     = preg_replace('/[^a-z0-9_-]/i', '', (string)$entityId) ?: '0';
-    $filename   = "{$safePrefix}_{$safeId}_" . time() . '_' . bin2hex(random_bytes(3)) . ".{$ext}";
     if (@file_put_contents($uploadDir . $filename, $decoded) === false) {
         respondErr('Failed to save profile image.', 500);
     }
     return '/sdn/public/uploads/avatars/' . $filename;
 }
 
-/** Delete an existing local avatar file if stored under /sdn/public/uploads/avatars/. */
+/** Delete an existing avatar from Supabase Storage or local /public/uploads/avatars/. */
 function deleteLocalAvatar(?string $url): void {
-    if (empty($url) || !str_starts_with($url, '/sdn/public/uploads/avatars/')) {
+    if (empty($url)) {
+        return;
+    }
+    require_once __DIR__ . '/supabase_storage.php';
+    if (supabaseStorageConfigured() && str_contains($url, '/storage/v1/object/public/')) {
+        supabaseDeleteAvatar($url);
+        return;
+    }
+    if (!str_starts_with($url, '/sdn/public/uploads/avatars/')) {
         return;
     }
     $filename = basename($url);

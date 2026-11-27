@@ -17,14 +17,14 @@
 
 @media (max-width: 767px) {
   :root {
-    --gutter: 16px;
-    --section-gap: 16px;
-    --card-pad: 16px;
+    --gutter: 12px;
+    --section-gap: 12px;
+    --card-pad: 12px;
     --radius-card: 12px;
     --radius-control: 8px;
-    --control-h: 48px;
-    --appbar-h: 56px;
-    --bottomnav-h: 64px;
+    --control-h: 40px;
+    --appbar-h: 52px;
+    --bottomnav-h: 60px;
   }
 
   .app-layout *,
@@ -349,21 +349,33 @@
     min-height: var(--control-h);
     border-radius: var(--radius-control);
     justify-content: center;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
-    padding: 0 16px;
+    padding: 0 12px;
+    height: 38px;
+    min-height: 38px;
+  }
+
+  .view-header h1 {
+    font-size: 19px !important;
+    line-height: 1.25;
+  }
+
+  .view-header p {
+    font-size: 12.5px !important;
+    line-height: 1.4;
   }
 
   /* ── DASHBOARD: Hero ── */
   .hero-banner {
-    background: linear-gradient(135deg, #166534 0%, #15803d 100%);
-    border-radius: 16px;
-    padding: 20px;
+    background: #15803d;
+    border-radius: 12px;
+    padding: 14px 16px;
     margin: 0 !important;
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 16px;
+    gap: 12px;
     box-shadow: none;
     text-align: left;
     min-width: 0;
@@ -375,26 +387,26 @@
   }
 
   .hero-eyebrow {
-    font-size: 12px;
+    font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.85);
-    margin: 0 0 4px;
+    margin: 0 0 3px;
   }
 
   .hero-banner h1 {
-    font-size: 24px;
+    font-size: 18px;
     line-height: 1.25;
     font-weight: 700;
     color: #ffffff;
-    margin: 0 0 8px;
+    margin: 0 0 4px;
     overflow-wrap: anywhere;
   }
 
   .hero-banner p {
-    font-size: 14px;
-    line-height: 1.45;
+    font-size: 12.5px;
+    line-height: 1.4;
     color: rgba(255, 255, 255, 0.92);
     margin: 0;
   }
@@ -406,20 +418,20 @@
   .hero-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
     width: 100%;
   }
 
   .btn-hero-white,
   .btn-hero-outline {
     width: 100%;
-    height: 42px;
-    min-height: 42px;
-    border-radius: 10px;
+    height: 36px;
+    min-height: 36px;
+    border-radius: 8px;
     justify-content: center;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
-    padding: 0 10px;
+    padding: 0 8px;
     white-space: nowrap;
   }
 
@@ -435,12 +447,25 @@
     color: #ffffff;
   }
 
-  /* ── DASHBOARD: 3 Stacked Stat Cards ── */
+  /* ── DASHBOARD: KPI Summary Above Appointments (matches desktop order) ── */
+  #view-dashboard .hero-banner {
+    order: 1;
+  }
+
+  #view-dashboard .content-grid {
+    order: 3;
+  }
+
   .metrics-row {
+    order: 2;
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
     margin: 0 !important;
+  }
+
+  .metrics-row .metric-card:first-child {
+    grid-column: 1 / -1;
   }
 
   .metric-card,
@@ -468,19 +493,24 @@
   }
 
   .metric-card .metric-lbl {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #475569;
-    margin: 0 0 4px;
+    margin: 0 0 2px;
   }
 
   .metric-card .metric-value {
-    font-size: 24px;
+    font-size: 19px;
     font-weight: 700;
     color: #0f172a;
-    line-height: 1.25;
+    line-height: 1.2;
+  }
+
+  .metric-card .metric-sub {
+    font-size: 11.5px;
+    line-height: 1.3;
   }
 
   .metric-card .metric-sub {
@@ -539,7 +569,8 @@
     color: #0f172a;
   }
 
-  #dashUpcomingList {
+  #dashUpcomingList,
+  #dashFollowUpsList {
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -559,9 +590,37 @@
     width: 100%;
   }
 
-  #dashUpcomingList .item-row:last-child {
+  #dashFollowUpsList .item-row {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 6px;
+    align-items: start;
+    padding: 12px 0;
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 0;
+    background: transparent;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #dashUpcomingList .item-row:last-child,
+  #dashFollowUpsList .item-row:last-child {
     border-bottom: none;
     padding-bottom: 0;
+  }
+
+  #dashFollowUpsCard .section-link {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .appt-other-badge {
+    max-width: 100%;
+    border-radius: 8px;
+    white-space: normal;
+    word-break: break-word;
   }
 
   .appt-info-left {
@@ -625,6 +684,29 @@
     justify-self: start;
     display: flex;
     align-items: center;
+  }
+
+  #dashFollowUpsList .appt-desc {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  #dashFollowUpsList .appt-status-col {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+  }
+
+  #dashFollowUpsList .appt-schedule-col {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  #dashFollowUpsList .appt-title {
+    white-space: normal;
   }
 
   .status-pill {
@@ -736,30 +818,27 @@
   /* Segmented Control Filter Tabs */
   .filter-pills-row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
     padding: 4px;
     background: #e2e8f0;
     border-radius: var(--radius-control);
     width: 100%;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
   }
 
   .filter-pill {
-    min-height: 40px;
-    padding: 6px 4px;
+    min-height: 34px;
+    padding: 5px 4px;
     border-radius: 6px;
     border: none;
     background: transparent;
     color: #475569;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    scroll-snap-align: start;
   }
 
   .filter-pill.active {
@@ -797,7 +876,7 @@
     height: 100%;
     border: none;
     background: transparent;
-    font-size: 16px;
+    font-size: 13.5px;
     outline: none;
   }
 
@@ -834,34 +913,45 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    height: var(--control-h);
+    height: 38px;
     border: 1px solid #cbd5e1;
     border-radius: var(--radius-control);
-    padding: 0 12px;
-    font-size: 14px;
+    padding: 0 8px;
+    font-size: 12.5px;
     background: #ffffff;
   }
 
   .btn-apply-date {
-    grid-column: 1 / -1;
+    grid-column: 1;
     width: 100%;
-    height: var(--control-h);
-    min-height: var(--control-h);
+    height: 36px;
+    min-height: 36px;
     border-radius: var(--radius-control);
     justify-content: center;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
   }
 
   .btn-refresh-date {
-    grid-column: 1 / -1;
+    grid-column: 2;
     width: 100%;
-    height: 44px;
-    min-height: 44px;
+    height: 36px;
+    min-height: 36px;
     border-radius: var(--radius-control);
     justify-content: center;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
+  }
+
+  .appt-sched-line,
+  .appt-sched-sub {
+    align-items: flex-start;
+    line-height: 1.4;
+  }
+
+  .appt-sched-line svg,
+  .appt-sched-sub svg {
+    margin-top: 2px;
   }
 
   /* Appointments List: No Outer White Container (No Card-Inside-Card) */

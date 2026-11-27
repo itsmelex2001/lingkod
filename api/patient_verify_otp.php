@@ -35,8 +35,7 @@ try {
     ensurePatientOtpColumns($pdo);
 
     $stmt = $pdo->prepare("
-        SELECT id, patient_id, full_name, email, username, password, is_verified, status, otp_code, otp_hash, otp_expires_at, otp_attempts, is_otp_enabled,
-               TIMESTAMPDIFF(SECOND, NOW(), otp_expires_at) AS otp_seconds_left
+        SELECT id, patient_id, full_name, email, username, password, is_verified, status, otp_code, otp_hash, otp_expires_at, otp_attempts, is_otp_enabled
         FROM patients
         WHERE id = ?
         LIMIT 1
@@ -71,8 +70,9 @@ try {
         }
         $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $otpHash = password_hash($otp, PASSWORD_BCRYPT, ['cost' => 10]);
-        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), otp_attempts = 0 WHERE id = ?")
-            ->execute([$otpHash, $otpHash, $expiresSeconds, $pendingId]);
+        $otpExpiresAt = date('Y-m-d H:i:s', time() + $expiresSeconds);
+        $pdo->prepare("UPDATE patients SET otp_code = ?, otp_hash = ?, otp_expires_at = ?, otp_attempts = 0 WHERE id = ?")
+            ->execute([$otpHash, $otpHash, $otpExpiresAt, $pendingId]);
         $_SESSION['pending_otp_sent_at']    = time();
         $_SESSION['pending_otp_expires_at'] = time() + $expiresSeconds;
         flushJsonAndContinue([
@@ -93,7 +93,7 @@ try {
     }
 
     $storedHash = $patient['otp_hash'] ?: ($patient['otp_code'] ?? '');
-    $dbSecondsLeft = isset($patient['otp_seconds_left']) ? (int)$patient['otp_seconds_left'] : 0;
+    $dbSecondsLeft = !empty($patient['otp_expires_at']) ? (strtotime((string)$patient['otp_expires_at']) - time()) : 0;
     $sessionExpired = !empty($_SESSION['pending_otp_expires_at']) && time() >= (int)$_SESSION['pending_otp_expires_at'];
 
     if ($storedHash === '' || empty($patient['otp_expires_at']) || $dbSecondsLeft <= 0 || $sessionExpired) {
@@ -126,7 +126,7 @@ try {
         $pdo->prepare("UPDATE patients SET otp_code = NULL, otp_hash = NULL, otp_expires_at = NULL, otp_attempts = 0, updated_at = NOW() WHERE id = ?")
             ->execute([$pendingId]);
     } else {
-        $pdo->prepare("UPDATE patients SET is_verified = 1, verified_at = IFNULL(verified_at, NOW()), otp_code = NULL, otp_hash = NULL, otp_expires_at = NULL, otp_attempts = 0, updated_at = NOW() WHERE id = ?")
+        $pdo->prepare("UPDATE patients SET is_verified = 1, verified_at = COALESCE(verified_at, CURRENT_TIMESTAMP), otp_code = NULL, otp_hash = NULL, otp_expires_at = NULL, otp_attempts = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
             ->execute([$pendingId]);
     }
 

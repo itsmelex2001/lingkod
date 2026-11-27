@@ -49,366 +49,324 @@
 
   const topics = {
     EN: [
-      "How do I request an appointment/schedule?",
-      "What are the hospital's operating hours & doctor schedules?",
-      "Where I can find the nearest MMWGH hospital?",
-      "What should I bring for my consultation & EMR triage?"
+      "How do I book an appointment?",
+      "How does Teleconsultation work for returning patients?",
+      "What departments and clinic hours are available?",
+      "How do I track or reschedule my appointment?"
     ],
     TL: [
-      "Paano ako mag-request ng appointment/iskedyul?",
-      "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
-      "Saan ko makikita ang pinakamalapit na ospital ng MMWGH?",
-      "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?"
+      "Paano ako mag-book ng appointment?",
+      "Paano gumagana ang Teleconsultation para sa returning patients?",
+      "Anong mga departamento at oras ng klinika ang bukas?",
+      "Paano ko masusuri o mare-reschedule ang aking appointment?"
     ]
   };
 
   const dict = {
     EN: {
-      selectQuestion: "CHOOSE A TOPIC TO ASK:",
-      followUpLabel: "CHOOSE A FOLLOW-UP QUESTION:",
+      selectQuestion: "TOPICS YOU CAN ASK",
+      followUpLabel: "FOLLOW-UP QUESTIONS",
       backToTopics: "← Back to Main Topics",
       closeAria: "Close support chat",
       defaultUnmatched:
-        "I could not locate an exact match for your inquiry. Please choose one of the core appointment workflow topics below:",
+        "I could not find an exact match for that question. Choose one of the core LINGKOD appointment topics below:",
       defaultFollowUps: [
-        "How do I check my appointment status on the portal?",
-        "Can I make a same-day appointment or walk-in booking?",
-        "What should I bring for my consultation & EMR triage?"
+        "How do I book an appointment?",
+        "How does Teleconsultation work for returning patients?",
+        "How do I track or reschedule my appointment?"
       ]
     },
     TL: {
-      selectQuestion: "PUMILI NG TANONG:",
-      followUpLabel: "MGA KAUGNAY NA TANONG:",
-      backToTopics: "← Bumalik sa Pangunahing Tanong",
+      selectQuestion: "MGA PAKSANG MAAARING ITANONG",
+      followUpLabel: "MGA KAUGNAY NA TANONG",
+      backToTopics: "← Bumalik sa Pangunahing Paksa",
       closeAria: "Isara ang support chat",
       defaultUnmatched:
-        "Hindi nahanap ang eksaktong sagot para sa inyong tanong. Pumili sa mga sumusunod na paksa:",
+        "Hindi nahanap ang eksaktong sagot para sa inyong tanong. Pumili sa mga pangunahing paksa sa ibaba:",
       defaultFollowUps: [
-        "Paano ko masusuri ang status ng aking appointment sa portal?",
-        "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
-        "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?"
+        "Paano ako mag-book ng appointment?",
+        "Paano gumagana ang Teleconsultation para sa returning patients?",
+        "Paano ko masusuri o mare-reschedule ang aking appointment?"
       ]
     }
   };
 
-  const faqs = {
+  const defaultFaqs = {
     EN: [
       {
         id: "request-appointment",
-        question: "How do I request an appointment/schedule?",
-        keywords: ["request", "appointment", "schedule", "book", "reserve", "slot"],
+        persona: "both",
+        question: "How do I book an appointment?",
+        keywords: ["book", "request", "appointment", "schedule", "reserve", "slot", "register"],
         answer:
-          "Click <strong>'Book Appointment'</strong> on the homepage, select your desired clinical department, and complete the registration. <strong>Staff Verification Protocol:</strong> Our clinic staff will call your active phone number to confirm your details before placing you in the physician queue. Please keep your phone line active!",
+          "Click <strong>Book Appointment</strong>, review and accept the Data Privacy notice, then complete the 4-step form (Personal Info, Medical Info, Appointment Details, and Confirmation). Online appointments can be booked <strong>Monday to Saturday</strong> at least 1 day ahead for Morning or Afternoon sessions. Your request starts as <strong>For Approval</strong> while clinic staff verifies physician availability.",
         followUps: [
-          "Why does clinic staff call before confirming my appointment?",
-          "Can I make a same-day appointment or walk-in booking?",
-          "What should I bring for my consultation & EMR triage?"
+          "How does Teleconsultation work for returning patients?",
+          "Can I book for a family member or just ask an inquiry?",
+          "How do I track or reschedule my appointment?"
+        ]
+      },
+      {
+        id: "teleconsultation-flow",
+        persona: "both",
+        question: "How does Teleconsultation work for returning patients?",
+        keywords: ["teleconsult", "teleconsultation", "online", "video", "returning", "remote", "google meet", "zoom"],
+        answer:
+          "First-time patients are required to complete an initial <strong>Face-to-Face</strong> visit. Once you have at least one <strong>completed</strong> hospital consultation, <strong>Teleconsultation</strong> unlocks in Step 3 of booking. After staff approves your visit, your session link (e.g., Google Meet/Zoom) or clinic call instructions appear directly on your appointment card in the <strong>Patient Portal</strong>.",
+        followUps: [
+          "How do I book an appointment?",
+          "What should I prepare for my consultation?",
+          "How do I track or reschedule my appointment?"
         ]
       },
       {
         id: "hospital-hours",
-        question: "What are the hospital's operating hours & doctor schedules?",
-        keywords: ["hours", "operating", "doctor", "schedules", "time", "open", "opd", "emergency"],
+        persona: "both",
+        question: "What departments and clinic hours are available?",
+        keywords: ["department", "hours", "operating", "open", "opd", "general medical", "neurology", "psychiatry", "emergency"],
         answer:
-          "The <strong>Emergency Triage</strong> operates 24/7. <strong>Outpatient (OPD) specialty clinics</strong> and telehealth services run Monday through Friday from <strong>8:00 AM to 5:00 PM</strong>. Live doctor availability and open slots can be inspected in the Schedules section.",
+          "MMWGH Outpatient Clinics serve <strong>General Medical</strong>, <strong>Neurology</strong>, and <strong>Psychiatry</strong> from <strong>Monday to Saturday, 8:00 AM – 5:00 PM</strong> (Morning: 8:00 AM – 12:00 PM; Afternoon: 1:00 PM – 5:00 PM; closed Sundays). For urgent emergencies, our <strong>Emergency Triage</strong> is open 24/7.",
         followUps: [
-          "How do I check live doctor availability and clinic schedules?",
-          "What is the cut-off time for same-day clinic queues?",
-          "Can I make a same-day appointment or walk-in booking?"
-        ]
-      },
-      {
-        id: "sdn-facility",
-        question: "Where I can find the nearest MMWGH hospital?",
-        keywords: ["where", "nearest", "mmwgh", "hospital", "sdn", "facility", "location", "rhu", "bhs", "network"],
-        answer:
-          "Access the interactive <strong>'Location Map'</strong> on our portal to view Mariveles Mental Wellness and General Hospital (MMWGH) and all affiliated Service Delivery Network (SDN) facilities, Rural Health Units (RHUs), and Barangay Health Stations (BHS).",
-        followUps: [
-          "How do I check my appointment status on the portal?",
-          "What should I bring for my consultation & EMR triage?",
-          "Why is Data Privacy Act (DPA) consent required?"
-        ]
-      },
-      {
-        id: "consultation-requirements",
-        question: "What should I bring for my consultation & EMR triage?",
-        keywords: ["bring", "consultation", "triage", "emr", "requirements", "documents", "id", "vitals"],
-        answer:
-          "Please present a valid government, company, or student ID, your active contact phone number, and any prior medical records, lab results, or prescription lists. Our staff records triage vitals into your electronic medical record (EMR) and issues printable clinical notes.",
-        followUps: [
-          "Why is Data Privacy Act (DPA) consent required?",
-          "How do I check my appointment status on the portal?",
-          "What happens if I miss the phone verification call?"
+          "How do I check doctor schedules and open slots?",
+          "Can I book for a family member or just ask an inquiry?",
+          "Where is MMWGH and how can I contact the clinic?"
         ]
       },
       {
         id: "portal-status",
-        question: "How do I check my appointment status on the portal?",
-        keywords: ["portal", "status", "check", "dashboard", "queue", "reference"],
+        persona: "both",
+        question: "How do I track or reschedule my appointment?",
+        keywords: ["portal", "track", "status", "reschedule", "slip", "qr", "login", "account"],
         answer:
-          "Log in with your registered mobile number or patient reference number under the <strong>Patient Portal</strong> tab. Your dashboard displays your scheduled date, designated physician, and real-time consultation queue position.",
+          "Sign in to the <strong>Patient Portal</strong> using your username or email and password. You can check real-time status (<strong>For Approval</strong>, <strong>Confirmed</strong>, <strong>Checked In</strong>, <strong>Completed</strong>), download your <strong>Appointment/Teleconsultation Slip</strong> and <strong>Digital Patient ID</strong>, and reschedule directly while your visit is still <strong>For Approval</strong>.",
         followUps: [
-          "Where can I view clinical notes and doctor prescriptions?",
-          "What happens if I miss the phone verification call?",
-          "Why is Data Privacy Act (DPA) consent required?"
+          "What should I prepare for my consultation?",
+          "How does Teleconsultation work for returning patients?",
+          "How is my medical data protected?"
         ]
       },
       {
-        id: "portal-records",
-        question: "Where can I view clinical notes and doctor prescriptions?",
-        keywords: ["notes", "prescriptions", "records", "clinical", "pdf", "medical", "lab"],
+        id: "consultation-requirements",
+        persona: "both",
+        question: "What should I prepare for my consultation?",
+        keywords: ["bring", "prepare", "requirements", "id", "slip", "triage", "documents", "prescription"],
         answer:
-          "Completed consultation summaries, digital prescriptions, and laboratory referral forms are automatically archived in your <strong>Patient Portal &gt; Medical Records</strong> section as downloadable PDFs.",
+          "For <strong>Face-to-Face</strong> visits, bring a valid ID, your printable <strong>Appointment Slip</strong> or <strong>Digital Patient ID (QR)</strong> from the Patient Portal, and any prior prescriptions or lab results. For <strong>Teleconsultation</strong>, keep your active mobile number reachable and open your Patient Portal 5–10 minutes before your scheduled block.",
         followUps: [
-          "How do I check my appointment status on the portal?",
-          "What should I bring for my consultation & EMR triage?",
-          "Why is Data Privacy Act (DPA) consent required?"
-        ]
-      },
-      {
-        id: "dpa-consent",
-        question: "Why is Data Privacy Act (DPA) consent required?",
-        keywords: ["privacy", "dpa", "consent", "data", "confidential", "security", "law", "act"],
-        answer:
-          "Under <strong>Republic Act 10173 (Data Privacy Act of 2012)</strong>, explicit consent is required before processing healthcare data. Your personal identifiable information and medical records remain encrypted and restricted strictly to attending medical personnel.",
-        followUps: [
-          "What patient information is collected and how is it protected?",
-          "How do I check my appointment status on the portal?",
-          "Can I make a same-day appointment or walk-in booking?"
-        ]
-      },
-      {
-        id: "dpa-protection",
-        question: "What patient information is collected and how is it protected?",
-        keywords: ["collected", "protected", "stored", "safety", "records", "personal"],
-        answer:
-          "We collect basic demographic details, contact information, and triage vitals. Records are hosted within certified healthcare data infrastructure conforming to Department of Health (DOH) security guidelines.",
-        followUps: [
-          "Why is Data Privacy Act (DPA) consent required?",
-          "Why does clinic staff call before confirming my appointment?",
-          "Can I make a same-day appointment or walk-in booking?"
-        ]
-      },
-      {
-        id: "same-day",
-        question: "Can I make a same-day appointment or walk-in booking?",
-        keywords: ["same-day", "same day", "today", "walk-in", "walkin", "urgent"],
-        answer:
-          "Online same-day bookings are accepted for morning clinics until <strong>10:00 AM</strong>, subject to slot quotas. For acute or emergency conditions, report directly to the <strong>24/7 Emergency Triage</strong> without needing prior booking.",
-        followUps: [
-          "What is the cut-off time for same-day clinic queues?",
-          "What are the hospital's operating hours & doctor schedules?",
-          "Why does clinic staff call before confirming my appointment?"
-        ]
-      },
-      {
-        id: "cutoff-time",
-        question: "What is the cut-off time for same-day clinic queues?",
-        keywords: ["cut-off", "cutoff", "time", "deadline", "queue", "limit", "morning"],
-        answer:
-          "Outpatient departments enforce a strict <strong>10:00 AM cut-off</strong> for morning clinics and <strong>2:00 PM cut-off</strong> for afternoon clinics to ensure timely physical triage and examination.",
-        followUps: [
-          "Can I make a same-day appointment or walk-in booking?",
-          "What are the hospital's operating hours & doctor schedules?",
-          "Why does clinic staff call before confirming my appointment?"
+          "How does Teleconsultation work for returning patients?",
+          "Where is MMWGH and how can I contact the clinic?",
+          "How is my medical data protected?"
         ]
       },
       {
         id: "schedules",
-        question: "How do I check live doctor availability and clinic schedules?",
-        keywords: ["schedule", "doctor", "availability", "roster", "physician", "slots", "calendar"],
+        persona: "both",
+        question: "How do I check doctor schedules and open slots?",
+        keywords: ["schedule", "doctor", "availability", "calendar", "slots", "physician", "clinic schedules"],
         answer:
-          "Open the <strong>Schedules</strong> module to inspect weekly rosters across specialties (Internal Medicine, Pediatrics, OB-GYN, Surgery). Open daily slots update dynamically according to duty shifts.",
+          "Open <strong>Clinic Schedules</strong> from the homepage or Patient Portal. Filter the monthly calendar by <strong>All Clinics</strong>, <strong>General Medical</strong>, <strong>Neurology</strong>, or <strong>Psychiatry</strong>, and select any open date to view exact consultation hours before booking.",
         followUps: [
-          "What are the hospital's operating hours & doctor schedules?",
-          "Can I make a same-day appointment or walk-in booking?",
-          "How do I check my appointment status on the portal?"
+          "What departments and clinic hours are available?",
+          "How do I book an appointment?",
+          "Can I book for a family member or just ask an inquiry?"
         ]
       },
       {
-        id: "verification-call",
-        question: "Why does clinic staff call before confirming my appointment?",
-        keywords: ["call", "phone", "verify", "verification", "confirm", "staff", "nurse"],
+        id: "other-patient-inquiry",
+        persona: "both",
+        question: "Can I book for a family member or just ask an inquiry?",
+        keywords: ["family", "dependent", "other patient", "someone else", "inquiry", "question"],
         answer:
-          "A nurse or admitting officer conducts a brief phone verification to review symptom urgency and ensure allocation to the proper specialty department before locking your consultation slot.",
+          "Yes. In Step 1 of <strong>Book Appointment</strong>, signed-in patients can book under their locked <strong>Verified Profile (Patient - Me)</strong> or select <strong>Other Patient</strong> for a spouse, child, or dependent. If you only have a question without reserving a clinic slot, check <strong>Inquiry Only</strong> and staff will contact you.",
         followUps: [
-          "What happens if I miss the phone verification call?",
-          "What should I bring for my consultation & EMR triage?",
-          "Why is Data Privacy Act (DPA) consent required?"
+          "How do I book an appointment?",
+          "How do I track or reschedule my appointment?",
+          "Where is MMWGH and how can I contact the clinic?"
         ]
       },
       {
-        id: "missed-call",
-        question: "What happens if I miss the phone verification call?",
-        keywords: ["missed", "miss", "unanswered", "retry", "released", "cancel"],
+        id: "sdn-facility",
+        persona: "both",
+        question: "Where is MMWGH and how can I contact the clinic?",
+        keywords: ["where", "location", "address", "map", "contact", "phone", "hotline", "sdn", "mmwgh"],
         answer:
-          "Staff make up to <strong>two retry attempts</strong> within 30 minutes. If unreachable, the pending slot is released back to the general queue. You can re-initiate booking or call our support hotline directly.",
+          "<strong>Mariveles Mental Wellness and General Hospital</strong> is located at <strong>P. Monroe St., Poblacion, Mariveles, Bataan</strong>. Open the <strong>Location Map</strong> on the homepage to view directions and partner SDN facilities, or call OPU-Medical at <strong>(047) 935-4645</strong> for schedule assistance and verified record corrections.",
         followUps: [
-          "Why does clinic staff call before confirming my appointment?",
-          "How do I check my appointment status on the portal?",
-          "Can I make a same-day appointment or walk-in booking?"
+          "What departments and clinic hours are available?",
+          "What should I prepare for my consultation?",
+          "How do I book an appointment?"
+        ]
+      },
+      {
+        id: "dpa-consent",
+        persona: "both",
+        question: "How is my medical data protected?",
+        keywords: ["privacy", "dpa", "consent", "data", "security", "otp", "two-step", "protected", "10173"],
+        answer:
+          "LINGKOD complies with <strong>Republic Act 10173 (Data Privacy Act of 2012)</strong>. Clinical notes and diagnoses are restricted to your attending department, your verified hospital identity is protected from unauthorized edits, and you can enable <strong>Two-Step Verification (Email OTP)</strong> anytime in <strong>Patient Portal &gt; Account Settings</strong>.",
+        followUps: [
+          "How do I track or reschedule my appointment?",
+          "How do I book an appointment?",
+          "Where is MMWGH and how can I contact the clinic?"
         ]
       }
     ],
     TL: [
       {
         id: "request-appointment",
-        question: "Paano ako mag-request ng appointment/iskedyul?",
-        keywords: ["request", "appointment", "iskedyul", "book", "magpa-schedule"],
+        persona: "both",
+        question: "Paano ako mag-book ng appointment?",
+        keywords: ["book", "request", "appointment", "iskedyul", "magpa-schedule", "slot"],
         answer:
-          "Pindutin ang <strong>'Book Appointment'</strong> sa homepage, piliin ang inyong departamento, at sagutan ang form. <strong>Staff Verification Protocol:</strong> Tatawagan po kayo ng clinic staff sa inyong numero upang kumpirmahin ang detalye bago ilagay sa queue ng doktor. Pakisigurong aktibo ang inyong linya!",
+          "Pindutin ang <strong>Book Appointment</strong>, tanggapin ang Data Privacy notice, at sagutan ang 4-step form (Personal Info, Medical Info, Appointment Details, at Confirmation). Maaaring mag-book mula <strong>Lunes hanggang Sabado</strong> (hindi bababa sa 1 araw bago ang konsulta) para sa Morning o Afternoon session. Magsisimula ito bilang <strong>For Approval</strong> habang bineberipika ng staff ang iskedyul ng doktor.",
         followUps: [
-          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
-          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
-          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?"
+          "Paano gumagana ang Teleconsultation para sa returning patients?",
+          "Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?",
+          "Paano ko masusuri o mare-reschedule ang aking appointment?"
+        ]
+      },
+      {
+        id: "teleconsultation-flow",
+        persona: "both",
+        question: "Paano gumagana ang Teleconsultation para sa returning patients?",
+        keywords: ["teleconsult", "teleconsultation", "online", "video", "returning", "remote"],
+        answer:
+          "Ang mga first-time patients ay kinakailangan munang mag-<strong>Face-to-Face</strong> na konsultasyon. Kapag may kahit isang <strong>completed</strong> visit ka na, bubukas ang <strong>Teleconsultation</strong> sa Step 3 ng booking. Kapag naaprubahan ng staff, makikita ang iyong <strong>meeting link</strong> (Google Meet/Zoom) o tagubilin sa tawag nang direkta sa iyong <strong>Patient Portal</strong>.",
+        followUps: [
+          "Paano ako mag-book ng appointment?",
+          "Ano ang dapat kong ihanda para sa aking konsultasyon?",
+          "Paano ko masusuri o mare-reschedule ang aking appointment?"
         ]
       },
       {
         id: "hospital-hours",
-        question: "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
-        keywords: ["oras", "operasyon", "iskedyul", "doktor", "bukas", "emergency", "opd"],
+        persona: "both",
+        question: "Anong mga departamento at oras ng klinika ang bukas?",
+        keywords: ["departamento", "oras", "operasyon", "bukas", "general medical", "neurology", "psychiatry", "emergency"],
         answer:
-          "Bukas ang <strong>Emergency Triage</strong> 24 oras araw-araw. Ang <strong>Outpatient (OPD) clinics</strong> at telehealth ay bukas Lunes hanggang Biyernes mula <strong>8:00 AM hanggang 5:00 PM</strong>.",
+          "Bukas ang MMWGH Outpatient Clinics para sa <strong>General Medical</strong>, <strong>Neurology</strong>, at <strong>Psychiatry</strong> mula <strong>Lunes hanggang Sabado, 8:00 AM – 5:00 PM</strong> (Morning: 8:00 AM – 12:00 PM; Afternoon: 1:00 PM – 5:00 PM; sarado tuwing Linggo). Para sa agarang emergency, bukas 24/7 ang <strong>Emergency Triage</strong>.",
         followUps: [
-          "Paano masusuri ang availability ng doktor at iskedyul ng klinika?",
-          "Ano ang cut-off time para sa same-day clinic queues?",
-          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
-        ]
-      },
-      {
-        id: "sdn-facility",
-        question: "Saan ko makikita ang pinakamalapit na ospital ng MMWGH?",
-        keywords: ["saan", "mmwgh", "ospital", "pasilidad", "sdn", "lokasyon", "rhu", "bhs", "mapa"],
-        answer:
-          "Maaari ninyong tingnan ang aming interactive na <strong>'Location Map'</strong> upang makita ang MMWGH, partner hospitals, RHU, at BHS stations. Maaari ring mag-asikaso ang staff ng inter-facility electronic referral.",
-        followUps: [
-          "Paano ko masusuri ang status ng aking appointment sa portal?",
-          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
-          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
-        ]
-      },
-      {
-        id: "consultation-requirements",
-        question: "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
-        keywords: ["dalhin", "dokumento", "id", "kailangan", "triage", "vitals", "emr"],
-        answer:
-          "Magdala ng valid ID, inyong aktibong cellphone number, at anumang lumang laboratory results o reseta. Itatala ng aming nursing staff ang inyong vitals sa inyong Electronic Medical Record (EMR).",
-        followUps: [
-          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
-          "Paano ko masusuri ang status ng aking appointment sa portal?",
-          "Ano ang mangyayari kung hindi nasagot ang verification call?"
+          "Paano ko makikita ang iskedyul ng mga doktor?",
+          "Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?",
+          "Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?"
         ]
       },
       {
         id: "portal-status",
-        question: "Paano ko masusuri ang status ng aking appointment sa portal?",
-        keywords: ["portal", "status", "tingnan", "appointment", "iskedyul", "queue"],
+        persona: "both",
+        question: "Paano ko masusuri o mare-reschedule ang aking appointment?",
+        keywords: ["portal", "status", "reschedule", "slip", "qr", "login", "account"],
         answer:
-          "Mag-log in sa <strong>Patient Portal</strong> gamit ang inyong registered mobile number o reference number. Makikita rito ang petsa, nakatalagang doktor, at queue status.",
+          "Mag-sign in sa <strong>Patient Portal</strong> gamit ang iyong username o email at password. Makikita rito ang status (<strong>For Approval</strong>, <strong>Confirmed</strong>, <strong>Checked In</strong>, <strong>Completed</strong>), nada-download ang <strong>Appointment/Teleconsultation Slip</strong> at <strong>Digital Patient ID</strong>, at maaaring mag-reschedule habang <strong>For Approval</strong> pa ang iyong iskedyul.",
         followUps: [
-          "Saan makikita ang clinical notes at reseta ng doktor?",
-          "Ano ang mangyayari kung hindi nasagot ang verification call?",
-          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
+          "Ano ang dapat kong ihanda para sa aking konsultasyon?",
+          "Paano gumagana ang Teleconsultation para sa returning patients?",
+          "Paano pinoprotektahan ang aking medical data?"
         ]
       },
       {
-        id: "portal-records",
-        question: "Saan makikita ang clinical notes at reseta ng doktor?",
-        keywords: ["notes", "reseta", "doktor", "rekord", "laboratory", "pdf"],
+        id: "consultation-requirements",
+        persona: "both",
+        question: "Ano ang dapat kong ihanda para sa aking konsultasyon?",
+        keywords: ["dalhin", "ihanda", "dokumento", "id", "slip", "reseta", "lab"],
         answer:
-          "Ang mga clinical summary, lab referral forms, at digital na reseta ay naka-archive sa <strong>Patient Portal &gt; Medical Records</strong> bilang mga nada-download na PDF.",
+          "Para sa <strong>Face-to-Face</strong> na konsultasyon, magdala ng valid ID, printable <strong>Appointment Slip</strong> o <strong>Digital Patient ID (QR)</strong> mula sa Patient Portal, at mga nakaraang reseta o lab results. Para sa <strong>Teleconsultation</strong>, panatilihing bukas ang iyong cellphone at tingnan ang Patient Portal 5–10 minuto bago ang iyong iskedyul.",
         followUps: [
-          "Paano ko masusuri ang status ng aking appointment sa portal?",
-          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
-          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
-        ]
-      },
-      {
-        id: "dpa-consent",
-        question: "Bakit kailangan ang Data Privacy Act (DPA) consent?",
-        keywords: ["privacy", "dpa", "consent", "datos", "batas", "proteksyon"],
-        answer:
-          "Ayon sa <strong>Republic Act 10173 (Data Privacy Act ng 2012)</strong>, kailangan ang inyong pahintulot upang maiproseso ang inyong medical data nang may mataas na antas ng encryption at seguridad.",
-        followUps: [
-          "Anong impormasyon ang kinokolekta at paano pinoprotektahan?",
-          "Paano ko masusuri ang status ng aking appointment sa portal?",
-          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
-        ]
-      },
-      {
-        id: "dpa-protection",
-        question: "Anong impormasyon ang kinokolekta at paano pinoprotektahan?",
-        keywords: ["kinokolekta", "protektado", "datos", "ingat", "seguridad"],
-        answer:
-          "Kinokolekta lamang ang pangalan, contact details, at triage vitals alinsunod sa mga pamantayan ng Department of Health (DOH).",
-        followUps: [
-          "Bakit kailangan ang Data Privacy Act (DPA) consent?",
-          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
-          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
-        ]
-      },
-      {
-        id: "same-day",
-        question: "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
-        keywords: ["same-day", "walk-in", "ngayon", "urgent", "emergency"],
-        answer:
-          "Tumatanggap ng online same-day bookings hanggang <strong>10:00 AM</strong> depende sa natitirang slots. Para sa mga agarang emergency, dumiretso sa <strong>24/7 Emergency Triage</strong>.",
-        followUps: [
-          "Ano ang cut-off time para sa same-day clinic queues?",
-          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
-          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?"
-        ]
-      },
-      {
-        id: "cutoff-time",
-        question: "Ano ang cut-off time para sa same-day clinic queues?",
-        keywords: ["cut-off", "cutoff", "oras", "deadline", "pila"],
-        answer:
-          "Ipinapatupad ang <strong>10:00 AM cut-off</strong> sa pang-umaga at <strong>2:00 PM cut-off</strong> sa panghapon upang masiguro ang masusing konsultasyon.",
-        followUps: [
-          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
-          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
-          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?"
+          "Paano gumagana ang Teleconsultation para sa returning patients?",
+          "Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?",
+          "Paano pinoprotektahan ang aking medical data?"
         ]
       },
       {
         id: "schedules",
-        question: "Paano masusuri ang availability ng doktor at iskedyul ng klinika?",
-        keywords: ["iskedyul", "doktor", "availability", "duty", "slots"],
+        persona: "both",
+        question: "Paano ko makikita ang iskedyul ng mga doktor?",
+        keywords: ["iskedyul", "doktor", "calendar", "slots", "availability"],
         answer:
-          "Buksan ang <strong>Schedules</strong> tab upang makita ang talaan ng mga doktor sa iba't ibang klinika at ang natitirang consultation quota.",
+          "Buksan ang <strong>Clinic Schedules</strong> sa homepage o Patient Portal. Maaari mong i-filter ang buwanang kalendaryo sa <strong>General Medical</strong>, <strong>Neurology</strong>, o <strong>Psychiatry</strong> at i-click ang bukas na petsa upang makita ang oras ng mga doktor.",
         followUps: [
-          "Ano ang mga oras ng operasyon at iskedyul ng doktor?",
-          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?",
-          "Paano ko masusuri ang status ng aking appointment sa portal?"
+          "Anong mga departamento at oras ng klinika ang bukas?",
+          "Paano ako mag-book ng appointment?",
+          "Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?"
         ]
       },
       {
-        id: "verification-call",
-        question: "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
-        keywords: ["tawag", "staff", "kumpirmahin", "verification", "telepono"],
+        id: "other-patient-inquiry",
+        persona: "both",
+        question: "Maaari ba akong mag-book para sa kapamilya o magtanong lang (Inquiry)?",
+        keywords: ["kapamilya", "dependent", "other patient", "inquiry", "magtanong"],
         answer:
-          "Tumatawag ang nurse o admissions officer upang tiyaking angkop ang departamento para sa inyong sintomas bago pinal na i-lock ang inyong schedule.",
+          "Oo. Sa Step 1 ng <strong>Book Appointment</strong>, maaaring gamitin ng signed-in patient ang kanyang naka-lock na <strong>Verified Profile (Patient - Me)</strong> o piliin ang <strong>Other Patient</strong> para sa asawa, anak, o kaanak. Kung magtatanong lamang nang walang clinic slot, i-check ang <strong>Inquiry Only</strong>.",
         followUps: [
-          "Ano ang mangyayari kung hindi nasagot ang verification call?",
-          "Ano ang dapat kong dalhin para sa aking konsultasyon at EMR?",
-          "Bakit kailangan ang Data Privacy Act (DPA) consent?"
+          "Paano ako mag-book ng appointment?",
+          "Paano ko masusuri o mare-reschedule ang aking appointment?",
+          "Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?"
         ]
       },
       {
-        id: "missed-call",
-        question: "Ano ang mangyayari kung hindi nasagot ang verification call?",
-        keywords: ["hindi nasagot", "missed", "retry", "nakansela"],
+        id: "sdn-facility",
+        persona: "both",
+        question: "Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?",
+        keywords: ["saan", "lokasyon", "mapa", "contact", "telepono", "hotline", "mmwgh"],
         answer:
-          "Magtatangkang tumawag ang staff nang <strong>dalawang beses</strong> sa loob ng 30 minuto. Kung walang sagot, ibabalik ang slot sa pangkalahatang queue.",
+          "Matatagpuan ang <strong>Mariveles Mental Wellness and General Hospital</strong> sa <strong>P. Monroe St., Poblacion, Mariveles, Bataan</strong>. Tingnan ang <strong>Location Map</strong> sa homepage para sa direksyon at partner SDN facilities, o tumawag sa OPU-Medical sa <strong>(047) 935-4645</strong>.",
         followUps: [
-          "Bakit tumatawag ang clinic staff bago kumpirmahin ang appointment?",
-          "Paano ko masusuri ang status ng aking appointment sa portal?",
-          "Maaari ba akong mag-book ng same-day appointment o mag-walk-in?"
+          "Anong mga departamento at oras ng klinika ang bukas?",
+          "Ano ang dapat kong ihanda para sa aking konsultasyon?",
+          "Paano ako mag-book ng appointment?"
+        ]
+      },
+      {
+        id: "dpa-consent",
+        persona: "both",
+        question: "Paano pinoprotektahan ang aking medical data?",
+        keywords: ["privacy", "dpa", "consent", "datos", "seguridad", "otp", "10173"],
+        answer:
+          "Sumusunod ang LINGKOD sa <strong>Republic Act 10173 (Data Privacy Act of 2012)</strong>. Ang iyong mga clinical notes ay nakahiwalay sa bawat departamento, protektado ang iyong verified hospital profile, at maaari kang mag-enable ng <strong>Two-Step Verification (Email OTP)</strong> sa <strong>Patient Portal &gt; Account Settings</strong>.",
+        followUps: [
+          "Paano ko masusuri o mare-reschedule ang aking appointment?",
+          "Paano ako mag-book ng appointment?",
+          "Saan matatagpuan ang MMWGH at paano makikipag-ugnayan?"
         ]
       }
     ]
   };
+
+  const faqs = {
+    EN: defaultFaqs.EN.slice(),
+    TL: defaultFaqs.TL.slice()
+  };
+
+  const ALLOWED_CHAT_TAGS = new Set(['STRONG', 'B', 'EM', 'BR']);
+  function escapeText(str) {
+    return String(str ?? '').replace(/[<>&"']/g, (ch) => ({
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  }
+
+  function sanitizeChatHtml(raw) {
+    const str = String(raw ?? '');
+    if (typeof DOMParser === 'undefined') return escapeText(str);
+    const doc = new DOMParser().parseFromString(`<div>${str}</div>`, 'text/html');
+    const root = doc.body.firstElementChild;
+    if (!root) return '';
+    const serialize = (node) => {
+      if (node.nodeType === 3) return escapeText(node.textContent || '');
+      if (node.nodeType !== 1) return '';
+      const tag = node.tagName.toUpperCase();
+      if (tag === 'SCRIPT' || tag === 'STYLE') return '';
+      const inner = Array.from(node.childNodes).map(serialize).join('');
+      if (!ALLOWED_CHAT_TAGS.has(tag)) return inner;
+      if (tag === 'BR') return '<br>';
+      const lower = tag.toLowerCase();
+      return `<${lower}>${inner}</${lower}>`;
+    };
+    return Array.from(root.childNodes).map(serialize).join('');
+  }
 
   // State
   let currentLang = 'EN';
@@ -499,9 +457,25 @@
 
     stage.addEventListener('click', () => openChatWith(activeChibi));
     stage.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') openChatWith(activeChibi);
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openChatWith(activeChibi);
+      }
     });
     closeBtn.addEventListener('click', toggleChat);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !isOpen) return;
+      if (langMenu && !langMenu.hasAttribute('hidden')) {
+        langMenu.setAttribute('hidden', '');
+        if (langTrigger) {
+          langTrigger.setAttribute('aria-expanded', 'false');
+          langTrigger.focus();
+        }
+        return;
+      }
+      toggleChat();
+    });
 
     if (langTrigger && langMenu) {
       langTrigger.addEventListener('click', (e) => {
@@ -569,8 +543,19 @@
 
       ['EN', 'TL'].forEach((lang) => {
         if (Array.isArray(data[lang]) && data[lang].length > 0) {
-          faqs[lang] = data[lang];
-          topics[lang] = data[lang].slice(0, 4).map((item) => item.question);
+          const liveItems = data[lang].map((item) => ({
+            ...item,
+            keywords: Array.isArray(item.keywords) ? item.keywords : [],
+            followUps: Array.isArray(item.followUps) ? item.followUps : []
+          }));
+          if (liveItems.length < 4) {
+            const seenIds = new Set(liveItems.map((i) => String(i.id || i.slug || '').toLowerCase()));
+            for (const fallback of defaultFaqs[lang]) {
+              if (!seenIds.has(fallback.id)) liveItems.push(fallback);
+            }
+          }
+          faqs[lang] = liveItems;
+          topics[lang] = liveItems.slice(0, 4).map((item) => item.question);
         }
       });
 
@@ -578,7 +563,7 @@
         renderChatBody(false);
       }
     } catch (_) {
-      // Silent fallback to bundled EN/TL FAQs when Laravel API is offline
+      // Silent fallback to bundled EN/TL FAQs when API is offline
     }
   }
 
@@ -706,6 +691,16 @@
     if (windowEl) windowEl.setAttribute('data-assistant', chatAssistant);
   }
 
+  function getFaqSlug(item) {
+    return item ? String(item.slug || item.id || '').toLowerCase() : '';
+  }
+
+  function findFaqBySlug(lang, slug) {
+    if (!slug) return null;
+    const key = String(slug).toLowerCase();
+    return (faqs[lang] || []).find((item) => getFaqSlug(item) === key) || null;
+  }
+
   function switchLanguage(lang) {
     if (currentLang === lang) return;
     currentLang = lang;
@@ -718,7 +713,41 @@
     if (btnTL) btnTL.classList.toggle('active', lang === 'TL');
 
     updateHeaderAssistantUI();
-    resetConversation();
+
+    const prof = ASSISTANTS[chatAssistant];
+    messages = messages.map((m) => {
+      if (m.isInitial) {
+        return { ...m, text: prof.welcome[currentLang], name: prof.name[currentLang] };
+      }
+      if (m.sender === 'user') {
+        const translated = findFaqBySlug(currentLang, m.faqId);
+        return translated ? { ...m, text: translated.question } : m;
+      }
+      const translated = findFaqBySlug(currentLang, m.faqId);
+      if (translated) {
+        return {
+          ...m,
+          name: prof.name[currentLang],
+          questionKey: translated.question.toLowerCase().trim(),
+          text: translated.answer,
+          followUps: translated.followUps || []
+        };
+      }
+      if (m.unmatched) {
+        return {
+          ...m,
+          name: prof.name[currentLang],
+          text: dict[currentLang].defaultUnmatched,
+          followUps: dict[currentLang].defaultFollowUps
+        };
+      }
+      return { ...m, name: prof.name[currentLang] };
+    });
+
+    const chatBody = document.getElementById('chibiChatBody');
+    const prevScroll = chatBody ? chatBody.scrollTop : 0;
+    renderChatBody(false);
+    if (chatBody) chatBody.scrollTop = prevScroll;
   }
 
   function resetConversation() {
@@ -755,13 +784,13 @@
         if (m.id) row.setAttribute('data-msg-id', m.id);
         row.innerHTML = `
           <div class="chibi-msg-avatar">
-            <img src="${m.avatar}" alt="${m.name}" />
+            <img src="${escapeText(m.avatar)}" alt="${escapeText(m.name)}" />
           </div>
           <div class="chibi-msg-box">
             <div class="chibi-msg-bubble bot">
-              ${m.text}
+              ${sanitizeChatHtml(m.text)}
             </div>
-            <span class="chibi-msg-time">${m.time}</span>
+            <span class="chibi-msg-time">${escapeText(m.time)}</span>
           </div>
         `;
         chatBody.appendChild(row);
@@ -777,12 +806,12 @@
           cardContainer.className = 'chibi-faq-container';
           cardContainer.id = 'initialTopicsList';
           cardContainer.innerHTML = `
-            <div class="chibi-faq-label">${dict[currentLang].selectQuestion}</div>
+            <div class="chibi-faq-label">${escapeText(dict[currentLang].selectQuestion)}</div>
             <div class="chibi-faq-list">
               ${displayTopics.map(topic => `
-                <button type="button" class="chibi-faq-item" data-question="${topic.replace(/"/g, '&quot;')}">
-                  <span class="chibi-faq-text">${topic}</span>
-                  <svg class="chibi-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <button type="button" class="chibi-faq-item" data-question="${escapeText(topic)}">
+                  <span class="chibi-faq-text">${escapeText(topic)}</span>
+                  <svg class="chibi-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                     <polyline points="9 18 15 12 9 6"></polyline>
                   </svg>
                 </button>
@@ -803,19 +832,19 @@
           const chipsContainer = document.createElement('div');
           chipsContainer.className = 'chibi-followup-chips';
           chipsContainer.innerHTML = `
-            <div class="chibi-faq-label">${dict[currentLang].followUpLabel}</div>
+            <div class="chibi-faq-label">${escapeText(dict[currentLang].followUpLabel)}</div>
             <div class="chibi-faq-list">
               ${m.followUps.map(chip => `
-                <button type="button" class="chibi-chip-btn" data-question="${chip.replace(/"/g, '&quot;')}">
-                  <span class="chibi-faq-text">${chip}</span>
-                  <svg class="chibi-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <button type="button" class="chibi-chip-btn" data-question="${escapeText(chip)}">
+                  <span class="chibi-faq-text">${escapeText(chip)}</span>
+                  <svg class="chibi-faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                     <polyline points="9 18 15 12 9 6"></polyline>
                   </svg>
                 </button>
               `).join('')}
             </div>
             <button type="button" class="chibi-back-topics-btn">
-              ${dict[currentLang].backToTopics}
+              ${escapeText(dict[currentLang].backToTopics)}
             </button>
           `;
           chatBody.appendChild(chipsContainer);
@@ -844,9 +873,9 @@
         userRow.innerHTML = `
           <div class="chibi-msg-box">
             <div class="chibi-msg-bubble user">
-              ${m.text}
+              ${escapeText(m.text)}
             </div>
-            <span class="chibi-msg-time">${m.time}</span>
+            <span class="chibi-msg-time">${escapeText(m.time)}</span>
           </div>
         `;
         chatBody.appendChild(userRow);
@@ -891,8 +920,10 @@
     if (isTyping) return;
 
     const cleanKey = queryText.toLowerCase().trim();
+    const preMatch = findBestMatch(queryText);
+    const matchSlug = getFaqSlug(preMatch);
     const existingBot = messages.find(
-      m => m.sender === 'bot' && m.questionKey === cleanKey
+      m => m.sender === 'bot' && (m.questionKey === cleanKey || (matchSlug && m.faqId === matchSlug))
     );
 
     // If this question was already asked earlier, scroll up to that earlier response
@@ -923,6 +954,7 @@
     messages.push({
       id: 'user-' + Date.now(),
       sender: 'user',
+      faqId: matchSlug || null,
       text: queryText,
       time: formatTime()
     });
@@ -952,7 +984,8 @@
       if (typ) typ.remove();
       isTyping = false;
 
-      const match = findBestMatch(queryText);
+      const match = (matchSlug && findFaqBySlug(currentLang, matchSlug)) || findBestMatch(queryText);
+      const resolvedSlug = getFaqSlug(match) || matchSlug || null;
       let replyText = '';
       let chips = [];
 
@@ -967,7 +1000,9 @@
       const newBotId = 'bot-' + Date.now();
       messages.push({
         id: newBotId,
-        questionKey: cleanKey,
+        questionKey: match ? match.question.toLowerCase().trim() : cleanKey,
+        faqId: resolvedSlug,
+        unmatched: !match,
         sender: 'bot',
         text: replyText,
         time: formatTime(),

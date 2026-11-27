@@ -7,11 +7,34 @@ if (empty($_SESSION['user']) || !in_array($_SESSION['role'], ['admin', 'staff'])
 $isStaff = ($_SESSION['role'] === 'staff');
 $dashLink = $isStaff ? '/sdn/pages/staff-dashboard.php' : '/sdn/pages/admin-dashboard.php';
 $portalName = $isStaff ? 'Staff Portal' : 'Admin Portal';
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
 ?>
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>" />
+    <script>
+      (function () {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const origFetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+          const opts = init ? Object.assign({}, init) : {};
+          const method = String(opts.method || 'GET').toUpperCase();
+          const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+          const isSameOrigin = !/^https?:\/\//i.test(url) || url.startsWith(window.location.origin);
+          if (token && isSameOrigin && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+            const headers = new Headers(opts.headers || {});
+            if (!headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+            opts.headers = headers;
+          }
+          return origFetch(input, opts);
+        };
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Profile | LINGKOD</title>
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />

@@ -16,6 +16,11 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/patient_otp.php';
+require_once __DIR__ . '/config/patient_remember.php';
+
+if (empty($_SESSION['patient_logged_in']) && !empty($_COOKIE['lingkod_patient_remember']) && isset($pdo)) {
+    tryAutoLoginPatientFromCookie($pdo);
+}
 
 // Access guard
 if (empty($_SESSION['patient_logged_in']) || (empty($_SESSION['patient_id']) && empty($_SESSION['patient_email']))) {
@@ -30,7 +35,9 @@ if (empty($_SESSION['patient_logged_in']) || (empty($_SESSION['patient_id']) && 
 
 $patientId    = $_SESSION['patient_id'] ?? '';
 $patientEmail = $_SESSION['patient_email'] ?? '';
-$userId       = $_SESSION['user_id'] ?? $_SESSION['patient_user_id'] ?? null;
+$hasStaffSession = !empty($_SESSION['user'])
+    && in_array(strtolower(trim((string)($_SESSION['role'] ?? ''))), ['admin', 'superadmin', 'staff'], true);
+$userId       = $_SESSION['patient_user_id'] ?? ($hasStaffSession ? null : ($_SESSION['user_id'] ?? null));
 
 function buildPatientWhereClause($userId, string $patientId, string $patientEmail): array {
     $clauses = [];
@@ -102,6 +109,7 @@ function estimateDaysSupply(string $qtyStr, string $dosageStr): int {
 }
 
 function ensureNotificationStateTable(PDO $pdo): void {
+    if (function_exists('dbIsPgsql') && dbIsPgsql()) return;
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS patient_notification_states (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -171,24 +179,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SELECT id, password 
                 FROM patients 
                 WHERE ({$whereSql})
-                  AND password IS NOT NULL
+                  AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
+                  AND password IS NOT NULL AND password <> ''
                 ORDER BY id DESC LIMIT 1
             ");
             $stmtAcc->execute($whereParams);
             $acc = $stmtAcc->fetch(PDO::FETCH_ASSOC);
 
-            if ($acc && !empty($acc['password']) && $currentPass !== '') {
-                if (!password_verify($currentPass, $acc['password']) && $currentPass !== $acc['password']) {
-                    echo json_encode(['success' => false, 'message' => 'Current password is incorrect.']);
-                    exit;
-                }
+            if (!$acc || empty($acc['password']) || $currentPass === '' || !password_verify($currentPass, $acc['password'])) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => 'Current password is incorrect.']);
+                exit;
             }
 
             $hashed = password_hash($newPass, PASSWORD_DEFAULT);
             $upd = $pdo->prepare("
                 UPDATE patients 
                 SET password = ? 
-                WHERE {$whereSql}
+                WHERE ({$whereSql})
+                  AND COALESCE(appointment_recipient, 'Patient (Me)') NOT IN ('Other Patient', 'Someone Else / Dependent')
             ");
             $upd->execute(array_merge([$hashed], $whereParams));
 
@@ -202,9 +211,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update_avatar') {
         try {
-            $hasCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'profile_image'")->fetch();
-            if (!$hasCol) {
-                $pdo->exec("ALTER TABLE patients ADD COLUMN profile_image VARCHAR(255) NULL");
+            if (!dbIsPgsql()) {
+                $hasCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'profile_image'")->fetch();
+                if (!$hasCol) {
+                    $pdo->exec("ALTER TABLE patients ADD COLUMN profile_image VARCHAR(255) NULL");
+                }
             }
 
             [$whereSql, $whereParams] = buildPatientWhereClause($userId, $patientId, $patientEmail);
@@ -242,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $upd->execute(array_merge([$finalPath], $whereParams));
             if ($userId) {
                 try {
-                    if ($pdo->query("SHOW COLUMNS FROM users LIKE 'profile_image'")->fetch()) {
+                    if (in_array('profile_image', dbTableColumns($pdo, 'users'), true)) {
                         $pdo->prepare("UPDATE users SET profile_image = ? WHERE id = ?")->execute([$finalPath, $userId]);
                     }
                 } catch (Throwable $ignoreUserImg) {}
@@ -307,13 +318,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ensureNotificationStateTable($pdo);
             if (!empty($ids)) {
                 $isDismissed = ($action === 'clear_notifications') ? 1 : 0;
-                $stmt = $pdo->prepare("
-                    INSERT INTO patient_notification_states (patient_key, notification_id, is_read, is_dismissed)
-                    VALUES (:pkey, :nid, 1, :dismissed)
-                    ON DUPLICATE KEY UPDATE
-                        is_read = 1,
-                        is_dismissed = GREATEST(is_dismissed, VALUES(is_dismissed))
-                ");
+                $notifSql = dbIsPgsql()
+                    ? "INSERT INTO patient_notification_states (patient_key, notification_id, is_read, is_dismissed)
+                       VALUES (:pkey, :nid, 1, :dismissed)
+                       ON CONFLICT (patient_key, notification_id) DO UPDATE SET
+                           is_read = 1,
+                           is_dismissed = GREATEST(patient_notification_states.is_dismissed, EXCLUDED.is_dismissed)"
+                    : "INSERT INTO patient_notification_states (patient_key, notification_id, is_read, is_dismissed)
+                       VALUES (:pkey, :nid, 1, :dismissed)
+                       ON DUPLICATE KEY UPDATE
+                           is_read = 1,
+                           is_dismissed = GREATEST(is_dismissed, VALUES(is_dismissed))";
+                $stmt = $pdo->prepare($notifSql);
                 foreach ($ids as $nid) {
                     $stmt->execute([
                         ':pkey'      => $patientKey,
@@ -359,7 +375,7 @@ try {
     ensurePatientOtpColumns($pdo);
     $hasPatientAvatarCol = false;
     try {
-        $hasPatientAvatarCol = (bool)$pdo->query("SHOW COLUMNS FROM patients LIKE 'profile_image'")->fetch();
+        $hasPatientAvatarCol = in_array('profile_image', dbTableColumns($pdo, 'patients'), true);
     } catch (Throwable $ignoreCol) {}
     $avatarSelect = $hasPatientAvatarCol ? ', profile_image' : '';
     $otpSelect = ', COALESCE(is_otp_enabled, 0) AS is_otp_enabled';
@@ -457,7 +473,7 @@ try {
     }
     if ($resolvedAvatar === null && $userId) {
         try {
-            if ($pdo->query("SHOW COLUMNS FROM users LIKE 'profile_image'")->fetch()) {
+            if (in_array('profile_image', dbTableColumns($pdo, 'users'), true)) {
                 $uImgStmt = $pdo->prepare("SELECT profile_image FROM users WHERE id = ? LIMIT 1");
                 $uImgStmt->execute([$userId]);
                 $uImg = $uImgStmt->fetchColumn();
@@ -477,7 +493,7 @@ try {
     $accountPatientId = '';
     if ($userId) {
         try {
-            if ($pdo->query("SHOW COLUMNS FROM users LIKE 'account_patient_id'")->fetch()) {
+            if (in_array('account_patient_id', dbTableColumns($pdo, 'users'), true)) {
                 $apStmt = $pdo->prepare("SELECT account_patient_id FROM users WHERE id = ? LIMIT 1");
                 $apStmt->execute([$userId]);
                 $accountPatientId = trim((string)($apStmt->fetchColumn() ?: ''));
@@ -557,6 +573,9 @@ try {
             status,
             assigned_doctor,
             consultation_mode,
+            teleconsult_platform,
+            teleconsult_link,
+            teleconsult_notes,
             appointment_type,
             chief_complaints,
             consultation_nature,
@@ -570,6 +589,7 @@ try {
             medical_history_date,
             medical_history_recorded_by,
             next_visit_date,
+            follow_up_notes,
             rescheduled_by_staff,
             rescheduled_from_date,
             rescheduled_at,
@@ -577,6 +597,7 @@ try {
             updated_at
         FROM patients
         WHERE ($apptSql)
+          AND LOWER(COALESCE(status, '')) <> 'transferred'
           AND (
             appointment_date IS NOT NULL
             OR (department IS NOT NULL AND department <> '')
@@ -625,6 +646,7 @@ try {
     $past          = [];
     $cancelled     = [];
     $rescheduled   = [];
+    $followUps     = [];
     $medications   = [];
     $notifications = [];
 
@@ -647,6 +669,12 @@ try {
         $isExplicitCompleted = ($statusLower === 'completed');
         $isRescheduledByStaff = !empty($appt['rescheduled_by_staff']) || ($statusLower === 'rescheduled');
         $reschedFromFormatted = !empty($appt['rescheduled_from_date']) ? date('M j, Y', strtotime($appt['rescheduled_from_date'])) : null;
+
+        $recipientRaw = trim((string)($appt['appointment_recipient'] ?? 'Patient (Me)'));
+        $apptFullName = trim((string)($appt['full_name'] ?? ''));
+        $ownerFullName = trim((string)($profile['full_name'] ?? ''));
+        $isOtherPatient = in_array(strtolower($recipientRaw), ['other patient', 'someone else / dependent'], true)
+            || ($apptFullName !== '' && $ownerFullName !== '' && strcasecmp($apptFullName, $ownerFullName) !== 0);
 
         $natureLower   = strtolower(trim((string)($appt['consultation_nature'] ?? '')));
         $apptTypeLower = strtolower(trim((string)($appt['appointment_type'] ?? '')));
@@ -690,11 +718,6 @@ try {
         $rxText = trim($appt['medical_history_prescription'] ?? '');
 
         $refNo = !empty($appt['reference_no']) ? $appt['reference_no'] : ($appt['patient_id'] ?: ('APT-' . $appt['id']));
-        $recipientRaw = trim((string)($appt['appointment_recipient'] ?? 'Patient (Me)'));
-        $apptFullName = trim((string)($appt['full_name'] ?? ''));
-        $ownerFullName = trim((string)($profile['full_name'] ?? ''));
-        $isOtherPatient = in_array(strtolower($recipientRaw), ['other patient', 'someone else / dependent'], true)
-            || ($apptFullName !== '' && $ownerFullName !== '' && strcasecmp($apptFullName, $ownerFullName) !== 0);
         $resolvedPatientName = $apptFullName !== '' ? $apptFullName : $ownerFullName;
         $forWhoSuffix = ($isOtherPatient && $resolvedPatientName !== '') ? " for {$resolvedPatientName}" : '';
 
@@ -708,6 +731,8 @@ try {
             'encoded_by'                  => trim((string)($appt['medical_history_recorded_by'] ?? '')) ?: (trim((string)($appt['receiver'] ?? '')) ?: 'Online Portal'),
             'consult_type'                => $appt['consultation_nature'] ?: ((empty($appt['consultation_mode']) || strcasecmp((string)$appt['consultation_mode'], 'In-Person') === 0) ? 'Face-to-Face' : $appt['consultation_mode']),
             'remarks'                     => $appt['chief_complaints'] ?? '',
+            'encoded_date'                => !empty($appt['medical_history_date']) ? date('F j, Y g:i A', strtotime($appt['medical_history_date'])) : date('F j, Y', strtotime($apptDate)),
+            'encoded_date_raw'            => !empty($appt['medical_history_date']) ? trim((string)$appt['medical_history_date']) : null,
             'attended_date'               => !empty($appt['medical_history_date']) ? date('F j, Y g:i A', strtotime($appt['medical_history_date'])) : date('F j, Y', strtotime($apptDate)),
             'date'                        => date('M j, Y', strtotime($apptDate)),
             'date_raw'                    => $apptDate,
@@ -731,12 +756,18 @@ try {
             'doctor'                    => $doctor,
             'mode'                      => (empty($appt['consultation_mode']) || strcasecmp((string)$appt['consultation_mode'], 'In-Person') === 0) ? 'Face-to-Face' : $appt['consultation_mode'],
             'consult_mode'              => (empty($appt['consultation_mode']) || strcasecmp((string)$appt['consultation_mode'], 'In-Person') === 0) ? 'Face-to-Face' : $appt['consultation_mode'],
+            'teleconsult_platform'      => !empty($appt['teleconsult_platform']) ? trim((string)$appt['teleconsult_platform']) : null,
+            'teleconsult_link'          => !empty($appt['teleconsult_link']) ? trim((string)$appt['teleconsult_link']) : null,
+            'teleconsult_notes'         => !empty($appt['teleconsult_notes']) ? trim((string)$appt['teleconsult_notes']) : null,
             'chief_complaints'          => $appt['chief_complaints'] ?: 'General consultation',
             'diagnosis'                 => $diagText,
             'treatment'                 => $treatText,
             'prescription'              => $rxText,
-            'next_visit_date'           => $appt['next_visit_date'] ?? null,
-            'follow_up_notes'           => $appt['follow_up_notes'] ?? null,
+            'next_visit_date'           => !empty($appt['next_visit_date']) ? trim((string)$appt['next_visit_date']) : null,
+            'next_visit_date_formatted' => !empty($appt['next_visit_date']) ? date('M j, Y', strtotime($appt['next_visit_date'])) : null,
+            'next_visit_month'          => !empty($appt['next_visit_date']) ? strtoupper(date('M', strtotime($appt['next_visit_date']))) : null,
+            'next_visit_day'            => !empty($appt['next_visit_date']) ? date('j', strtotime($appt['next_visit_date'])) : null,
+            'follow_up_notes'           => !empty($appt['follow_up_notes']) ? trim((string)$appt['follow_up_notes']) : null,
             'previous_appointment_date' => $appt['_prev_date'] ?? null,
             'previous_appointment_time' => $appt['_prev_time'] ?? null,
             'previous_department'       => $appt['_prev_dept'] ?? null,
@@ -758,6 +789,9 @@ try {
             $cancelled[] = $item;
         } elseif ($isExplicitCompleted || $isPast) {
             $past[] = $item;
+            if ($isExplicitCompleted && (!empty($item['next_visit_date']) || !empty($item['follow_up_notes']))) {
+                $followUps[] = $item;
+            }
         } else {
             $upcoming[] = $item;
         }
@@ -810,11 +844,14 @@ try {
                 'warn'  => true
             ];
         } elseif ($isExplicitCompleted) {
+            $fuSnippet = !empty($item['next_visit_date_formatted'])
+                ? " Follow-up scheduled for {$item['next_visit_date_formatted']} — Follow-Up Slip available."
+                : '';
             $notifications[] = [
                 'id'    => 'notif-done-' . $appt['id'],
-                'title' => $deptLabel . ' Visit Completed',
-                'text'  => "Your consultation{$forWhoSuffix} with {$doctor} on " . date('M j, Y', strtotime($apptDate)) . " ({$item['patient_code']}) has been completed.",
-                'time'  => date('M j, Y', strtotime($apptDate)),
+                'title' => !empty($item['next_visit_date_formatted']) ? ($deptLabel . ' Follow-Up Scheduled') : ($deptLabel . ' Visit Completed'),
+                'text'  => "Your consultation{$forWhoSuffix} with {$doctor} ({$item['patient_code']}) was completed.{$fuSnippet}",
+                'time'  => $item['encoded_date'] ?: date('M j, Y', strtotime($apptDate)),
                 'view'  => 'appointments',
                 'warn'  => false
             ];
@@ -1010,6 +1047,7 @@ try {
         'past'          => $past,
         'cancelled'     => $cancelled,
         'rescheduled'   => $rescheduled,
+        'follow_ups'    => $followUps,
         'medications'   => $medications,
         'notifications' => array_slice($notifications, 0, 8)
     ]);

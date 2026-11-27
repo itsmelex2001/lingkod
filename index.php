@@ -1,15 +1,9 @@
 <?php
 session_start();
-$avallonDest = __DIR__ . '/public/assets/Avallon.ttf';
-$avallonSrc  = 'C:/Users/andreaanque/.gemini/antigravity-ide/brain/40036de9-516b-4211-8b9d-07e615a3b4e8/scratch/avallon_online.ttf';
-if (!file_exists($avallonDest) && file_exists($avallonSrc)) {
-    @copy($avallonSrc, $avallonDest);
-}
-$splashLogoDest = __DIR__ . '/public/assets/v2_lingkod_logo_splash.png';
-$splashLogoSrc  = 'C:/Users/andreaanque/Downloads/v2_lingkod_logo_splash.png';
-if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
-    @copy($splashLogoSrc, $splashLogoDest);
-}
+$assetVer = static function (string $relPath): string {
+    $full = __DIR__ . $relPath;
+    return is_file($full) ? (string)filemtime($full) : '1';
+};
 ?>
 <!doctype html>
 <html lang="en">
@@ -17,72 +11,21 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Homepage | LINGKOD</title>
+    <link rel="preload" as="image" href="/sdn/public/assets/hero-bg.webp?v=<?= $assetVer('/public/assets/hero-bg.webp') ?>" fetchpriority="high">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Kaushan+Script&display=swap" rel="stylesheet">
-    <style>
-      @font-face {
-        font-family: 'Avallon Alt';
-        src: url('/sdn/public/assets/Avallon.ttf') format('truetype'),
-             url('https://db.onlinewebfonts.com/t/471b859643b4c1b42b7e07e5c50becbb.woff2') format('woff2'),
-             url('https://db.onlinewebfonts.com/t/471b859643b4c1b42b7e07e5c50becbb.woff') format('woff'),
-             url('https://db.onlinewebfonts.com/t/471b859643b4c1b42b7e07e5c50becbb.ttf') format('truetype'),
-             local('Avallon Alt'), local('Avallon-Alt'), local('AvallonAlt'), local('Avallon');
-        font-weight: normal;
-        font-style: normal;
-        font-display: swap;
-      }
-      @font-face {
-        font-family: 'Avallon';
-        src: url('/sdn/public/assets/Avallon.ttf') format('truetype'),
-             url('https://db.onlinewebfonts.com/t/471b859643b4c1b42b7e07e5c50becbb.woff2') format('woff2'),
-             url('https://db.onlinewebfonts.com/t/471b859643b4c1b42b7e07e5c50becbb.woff') format('woff'),
-             url('https://db.onlinewebfonts.com/t/471b859643b4c1b42b7e07e5c50becbb.ttf') format('truetype'),
-             local('Avallon'), local('Avallon Regular'), local('Avallon-Regular');
-        font-weight: normal;
-        font-style: normal;
-        font-display: swap;
-      }
-    </style>
-    <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= time() ?>" />
-    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="/sdn/public/css/landing.css?v=<?= time() ?>">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Outfit:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Kaushan+Script&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/sdn/public/css/global.css?v=<?= $assetVer('/public/css/global.css') ?>" />
+    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=<?= $assetVer('/public/css/navigation.css') ?>">
+    <link rel="stylesheet" href="/sdn/public/css/landing.css?v=<?= $assetVer('/public/css/landing.css') ?>">
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <!-- AOS Library for Scroll Animations -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <!-- Injected Mobile Fixes to force override -->
     <style>
       @media (max-width: 768px) {
         html, body {
-          overflow-x: hidden !important;
-          width: 100vw !important;
-          max-width: 100vw !important;
-        }
-        .hospital-name, [class*="hospital-name"], .hospital-heading {
-          white-space: normal !important;
-          word-wrap: break-word !important;
-          word-break: break-word !important;
-          text-align: left !important;
-          font-size: 1.5rem !important;
-          line-height: 1.2 !important;
-        }
-        .hero-actions, [class*="hero-actions"] {
-          margin-left: 0 !important;
-          width: 100% !important;
-          display: flex !important;
-          flex-direction: column !important;
-          align-items: center !important;
-        }
-        .btn-action, [class*="btn-action"] {
-          width: 100% !important;
-          max-width: 100% !important;
-          margin-left: 0 !important;
-        }
-        .hero-content-wrapper, [class*="hero-content-wrapper"] {
-          padding-left: 1rem !important;
-          padding-right: 1rem !important;
-          width: 100% !important;
-          overflow: hidden !important;
+          overflow-x: hidden;
+          max-width: 100vw;
         }
         .fab-container, [class*="fab-container"] {
           right: 1rem !important;
@@ -94,7 +37,7 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
       .wayfinding-grid, [class*="wayfinding-grid"] {
         display: none !important;
       }
-      /* Hide browser scrollbar to eliminate right-side white line while keeping scrolling active */
+      /* Hide browser scrollbar while keeping scrolling active */
       html, body {
         scrollbar-width: none !important;
         -ms-overflow-style: none !important;
@@ -108,35 +51,43 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
     </style>
   </head>
   <body class="splash-active">
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
 
-    <!-- Splash Screen (Logo-Only Cinematic Entrance) -->
-    <div id="splash-screen">
+    <!-- Splash Screen (Logo-Only Entrance) -->
+    <div id="splash-screen" aria-hidden="true">
       <div class="splash-stage">
-        <!-- Main Logo Card with Smooth Animated Stethoscope -> Original Logo Transition -->
         <div class="splash-logo-card">
           <div class="splash-logo-art-wrap">
             <img
-              src="/sdn/public/assets/v2_lingkod_logo_splash_pixel.png"
+              src="/sdn/public/assets/v2_lingkod_logo_splash_opt.webp?v=<?= $assetVer('/public/assets/v2_lingkod_logo_splash_opt.webp') ?>"
               alt=""
               aria-hidden="true"
               class="splash-logo-img splash-layer-steth"
+              width="640"
+              height="640"
             />
             <img
-              src="/sdn/public/assets/v2_lingkod_logo_splash_pixel.png"
+              src="/sdn/public/assets/v2_lingkod_logo_splash_opt.webp?v=<?= $assetVer('/public/assets/v2_lingkod_logo_splash_opt.webp') ?>"
               alt=""
               aria-hidden="true"
               class="splash-logo-img splash-layer-ingk"
+              width="640"
+              height="640"
             />
             <img
-              src="/sdn/public/assets/v2_lingkod_logo_splash_pixel.png"
+              src="/sdn/public/assets/v2_lingkod_logo_splash_opt.webp?v=<?= $assetVer('/public/assets/v2_lingkod_logo_splash_opt.webp') ?>"
               alt=""
               aria-hidden="true"
               class="splash-logo-img splash-layer-d"
+              width="640"
+              height="640"
             />
             <img
-              src="/sdn/public/assets/v2_lingkod_logo_splash_pixel.png"
+              src="/sdn/public/assets/v2_lingkod_logo_splash_opt.webp?v=<?= $assetVer('/public/assets/v2_lingkod_logo_splash_opt.webp') ?>"
               alt="MMWGH Lingkod Logo"
               class="splash-logo-img splash-layer-original"
+              width="640"
+              height="640"
             />
             <div class="splash-sheen-mask">
               <div class="splash-sheen-beam"></div>
@@ -146,15 +97,22 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
       </div>
     </div>
 
-    <script src="/sdn/public/js/splash-inline.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/splash-inline.js?v=<?= $assetVer('/public/js/splash-inline.js') ?>"></script>
 
     <!-- NAVIGATION -->
-    <nav class="navbar" id="navbar">
+    <nav class="navbar navbar-hero-solid" id="navbar" aria-label="Primary navigation">
       <div class="navbar-inner">
         <a class="logo" href="/sdn/index.php" title="Home">
-          <img src="/sdn/public/assets/v3_lingkod_logo.png" alt="Lingkod Logo" class="logo-ver2-img" />
+          <img
+            src="/sdn/public/assets/v3_lingkod_logo_nav.webp?v=<?= $assetVer('/public/assets/v3_lingkod_logo_nav.webp') ?>"
+            alt="Lingkod Logo"
+            class="logo-ver2-img"
+            width="98"
+            height="98"
+          />
           <span class="logo-text">
             <span class="logo-title-top">Mariveles Mental Wellness and General Hospital</span>
+            <span class="logo-title-bottom">LINGKOD</span>
           </span>
         </a>
 
@@ -165,7 +123,7 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
           <li><a href="#location-new"><span data-i18n="nav_location">Location</span></a></li>
           <li><a href="#footer-new"><span data-i18n="nav_contact">Contact Us</span></a></li>
           <li>
-            <button class="btn-login btn-patient-portal" onclick="window.open('/sdn/pages/patient-login.php', '_blank', 'noopener,noreferrer')"><span data-i18n="nav_portal">Patient Portal</span></button>
+            <a href="/sdn/pages/patient-login.php" target="_blank" rel="noopener noreferrer" class="btn-login btn-patient-portal"><span data-i18n="nav_portal">Patient Portal</span></a>
           </li>
           <li class="lang-switch">
             <button type="button" class="lang-switch-btn" id="langSwitchBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Language">
@@ -180,28 +138,29 @@ if (!file_exists($splashLogoDest) && file_exists($splashLogoSrc)) {
         </ul>
 
         <!-- Mobile Hamburger Menu -->
-        <div class="hamburger" id="hamburger">
+        <button type="button" class="hamburger" id="hamburger" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="navLinks">
           <span></span>
           <span></span>
           <span></span>
-        </div>
+        </button>
       </div>
     </nav>
 
-    <!-- Injected Pure HTML Overrides -->
-    <?php include 'hero-inline.php'; ?>
-    <?php include 'services-inline.php'; ?>
-    <?php include 'about-inline.php'; ?>
-    <?php include 'location-inline.php'; ?>
+    <main id="main-content">
+      <?php include 'hero-inline.php'; ?>
+      <?php include 'services-inline.php'; ?>
+      <?php include 'about-inline.php'; ?>
+      <?php include 'location-inline.php'; ?>
+    </main>
     <?php include 'footer-inline.php'; ?>
     <?php include 'chatbot-inline.php'; ?>
     <?php include __DIR__ . '/pages/patient-booking-modal.php'; ?>
-    <link rel="stylesheet" href="/sdn/public/css/mobile-refine.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/sdn/public/css/mobile-refine.css?v=<?= $assetVer('/public/css/mobile-refine.css') ?>">
 
-    <script src="/sdn/public/js/utils.js"></script>
-    <script src="/sdn/public/js/navigation.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/landing.js?v=<?= time() ?>"></script>
-    <script src="/sdn/public/js/landing-lang.js?v=<?= time() ?>"></script>
+    <script src="/sdn/public/js/utils.js?v=<?= $assetVer('/public/js/utils.js') ?>"></script>
+    <script src="/sdn/public/js/navigation.js?v=<?= $assetVer('/public/js/navigation.js') ?>"></script>
+    <script src="/sdn/public/js/landing.js?v=<?= $assetVer('/public/js/landing.js') ?>"></script>
+    <script src="/sdn/public/js/landing-lang.js?v=<?= $assetVer('/public/js/landing-lang.js') ?>"></script>
     <!-- AOS Library JS and Init -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>

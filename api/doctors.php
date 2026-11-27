@@ -36,19 +36,21 @@ if ($method === 'POST' || $method === 'DELETE') {
 $dept = $_GET['department'] ?? null;
 $mode = $_GET['mode']       ?? null;
 
-// Ensure profile_image, license_number, and title columns exist
-try {
-    $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('profile_image', $docCols, true)) {
-        @$pdo->exec("ALTER TABLE doctors ADD COLUMN profile_image VARCHAR(255) NULL");
-    }
-    if (!in_array('license_number', $docCols, true)) {
-        @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
-    }
-    if (!in_array('title', $docCols, true)) {
-        @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
-    }
-} catch (Throwable $ignore) {}
+// Ensure profile_image, license_number, and title columns exist (local MySQL only)
+if (!dbIsPgsql()) {
+    try {
+        $docCols = $pdo->query("SHOW COLUMNS FROM doctors")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('profile_image', $docCols, true)) {
+            @$pdo->exec("ALTER TABLE doctors ADD COLUMN profile_image VARCHAR(255) NULL");
+        }
+        if (!in_array('license_number', $docCols, true)) {
+            @$pdo->exec("ALTER TABLE doctors ADD COLUMN license_number VARCHAR(100) NULL");
+        }
+        if (!in_array('title', $docCols, true)) {
+            @$pdo->exec("ALTER TABLE doctors ADD COLUMN title VARCHAR(80) NULL");
+        }
+    } catch (Throwable $ignore) {}
+}
 
 // ── GET ──────────────────────────────────────────────────────────────────────
 if ($method === 'GET') {
@@ -74,7 +76,7 @@ if ($method === 'GET') {
 
         $bookedByDoc = [];
         try {
-            $pCols = $pdo->query("SHOW COLUMNS FROM patients")->fetchAll(PDO::FETCH_COLUMN);
+            $pCols = dbTableColumns($pdo, 'patients');
             $inqSql = in_array('inquiry_only', $pCols, true) ? ' AND COALESCE(inquiry_only, 0) = 0' : '';
             $bStmt = $pdo->prepare(
                 "SELECT assigned_doctor, COUNT(*) AS cnt
@@ -144,11 +146,13 @@ if ($method === 'GET') {
     }
 
     // Schedule view (public)
+    $startFmt = dbIsPgsql() ? "TO_CHAR(schedule_start, 'HH12:MI AM')" : "TIME_FORMAT(schedule_start,'%h:%i %p')";
+    $endFmt   = dbIsPgsql() ? "TO_CHAR(schedule_end, 'HH12:MI AM')"   : "TIME_FORMAT(schedule_end,  '%h:%i %p')";
     if ($dept) {
         $stmt = $pdo->prepare(
             "SELECT id, name, title, license_number, specialization, department,
-                    TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
-                    TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
+                    {$startFmt} AS schedule_start,
+                    {$endFmt} AS schedule_end,
                     status, schedule_date, profile_image
              FROM doctors
              WHERE (LOWER(department) = LOWER(?) OR LOWER(department) LIKE CONCAT('%', LOWER(?), '%'))
@@ -158,8 +162,8 @@ if ($method === 'GET') {
     } else {
         $stmt = $pdo->query(
             "SELECT id, name, title, license_number, specialization, department,
-                    TIME_FORMAT(schedule_start,'%h:%i %p') AS schedule_start,
-                    TIME_FORMAT(schedule_end,  '%h:%i %p') AS schedule_end,
+                    {$startFmt} AS schedule_start,
+                    {$endFmt} AS schedule_end,
                     status, schedule_date, profile_image
              FROM doctors
              ORDER BY department, schedule_start ASC"
@@ -239,7 +243,7 @@ if ($method === 'POST' && $isAdmin) {
 
         $stmt = $pdo->prepare(
             "INSERT INTO doctors (name, title, license_number, specialization, department, total_slots, status, schedule_date)
-             VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())"
+             VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_DATE)"
         );
         $stmt->execute([$name, $title !== '' ? $title : null, $licenseNumber !== '' ? $licenseNumber : null, $specialization, $department, $totalSlots, $status]);
         $newDoctorId = $pdo->lastInsertId();
