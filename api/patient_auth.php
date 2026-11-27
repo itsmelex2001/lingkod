@@ -147,19 +147,20 @@ try {
         $_SESSION['pending_otp_sent_at']    = time();
         $_SESSION['pending_otp_expires_at'] = time() + $otpTtlSeconds;
 
-        flushJsonAndContinue([
+        $emailSent = sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $otpExpiryMin);
+        echo json_encode([
             'success'         => false,
             'otp_required'    => true,
             'otp_mode'        => 'verify_account',
-            'email_sent'      => true,
+            'email_sent'      => $emailSent,
             'masked_email'    => maskEmail($patient['email']),
             'expires_in'      => $otpTtlSeconds,
             'resend_cooldown' => 60,
             'redirect'        => '/sdn/pages/verify-otp.php',
-            'message'         => 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
+            'message'         => $emailSent
+                ? 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
+                : 'Account verification required, but the verification email could not be delivered. Please click Resend Code or contact support.'
         ]);
-
-        sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $otpExpiryMin);
         exit;
     }
 
@@ -189,18 +190,19 @@ try {
         $_SESSION['pending_otp_sent_at']    = time();
         $_SESSION['pending_otp_expires_at'] = time() + $otpTtlSeconds;
 
-        flushJsonAndContinue([
+        $emailSent = sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $otpExpiryMin);
+        echo json_encode([
             'success'         => false,
             'otp_required'    => true,
             'otp_mode'        => 'login_2fa',
-            'email_sent'      => true,
+            'email_sent'      => $emailSent,
             'masked_email'    => maskEmail($patient['email']),
             'expires_in'      => $otpTtlSeconds,
             'resend_cooldown' => 60,
-            'message'         => 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
+            'message'         => $emailSent
+                ? 'A 6-digit verification code has been sent to ' . maskEmail($patient['email']) . '.'
+                : 'Two-step verification required, but the code email could not be delivered. Please try again.'
         ]);
-
-        sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $otpExpiryMin);
         exit;
     }
 

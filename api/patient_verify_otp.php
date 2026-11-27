@@ -75,13 +75,23 @@ try {
             ->execute([$otpHash, $otpHash, $otpExpiresAt, $pendingId]);
         $_SESSION['pending_otp_sent_at']    = time();
         $_SESSION['pending_otp_expires_at'] = time() + $expiresSeconds;
-        flushJsonAndContinue([
+        $emailSent = sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $expiresMinutes);
+        if (!$emailSent) {
+            http_response_code(500);
+            echo json_encode([
+                'success'    => false,
+                'email_sent' => false,
+                'message'    => 'Could not deliver the verification email right now. Please check server SMTP settings and try again.'
+            ]);
+            exit;
+        }
+        echo json_encode([
             'success'         => true,
+            'email_sent'      => true,
             'resend_cooldown' => $resendCooldown,
             'expires_in'      => $expiresSeconds,
             'message'         => 'A new verification code was sent to ' . maskEmail($patient['email']) . '.'
         ]);
-        sendPatientOtpEmail($patient['email'], $patient['full_name'] ?: 'Patient', $otp, $expiresMinutes);
         exit;
     }
 

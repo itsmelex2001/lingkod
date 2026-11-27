@@ -117,11 +117,17 @@ function sendPatientOtpEmail(string $email, string $fullName, string $otp, int $
                 </div>
             ";
             $mail->AltBody = "Hello {$fullName},\n\nYour Lingkod verification code is: {$otp}\nThis code expires in {$expiresMinutes} minutes.";
-            @$mail->send();
+            if ($smtpUser === '' || $smtpPass === '') {
+                error_log('OTP warning: SMTP_USER or SMTP_PASS is empty; falling back to PHP mail().');
+            }
+            $mail->send();
             $sent = true;
-        } catch (Exception $e) {
-            error_log("OTP PHPMailer error: " . $e->getMessage());
+            error_log('OTP email sent via ' . ($smtpUser !== '' ? 'SMTP' : 'mail()') . ' to ' . maskEmail($email));
+        } catch (\Throwable $e) {
+            error_log('OTP PHPMailer error: ' . $e->getMessage());
         }
+    } else {
+        error_log('OTP error: PHPMailer class not available (autoloader: ' . $autoloadPath . ')');
     }
 
     return $sent;
@@ -137,8 +143,12 @@ function flushJsonAndContinue(array $payload): void {
         ob_end_clean();
     }
     header('Content-Type: application/json; charset=utf-8');
-    // On Vercel serverless, keep execution open until subsequent SMTP send finishes
-    if (getenv('VERCEL') === '1') {
+    // On Vercel / AWS Lambda serverless, keep execution open until subsequent SMTP send finishes
+    $isServerless = getenv('VERCEL') !== false
+        || getenv('VERCEL_ENV') !== false
+        || getenv('VERCEL_URL') !== false
+        || getenv('AWS_LAMBDA_FUNCTION_NAME') !== false;
+    if ($isServerless) {
         echo $body;
         return;
     }
