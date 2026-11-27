@@ -6,7 +6,7 @@
     "api/vercel_router.php": {
       "runtime": "vercel-php@0.7.3",
       "maxDuration": 10,
-      "excludeFiles": "{node_modules/**,dist/**,src/**,assets/**,public/css/**,public/js/**,public/uploads/**,public/assets/**/*.mp4,public/assets/*spritesheet*.png,public/assets/mmwgh-images/**,public/assets/howto/**,public/assets/logos/**}",
+      "excludeFiles": "{_static/**,node_modules/**,dist/**,src/**,assets/**,public/css/**,public/js/**,public/uploads/**,public/assets/**/*.mp4,public/assets/*spritesheet*.png,public/assets/mmwgh-images/**,public/assets/howto/**,public/assets/logos/**}",
       "includeFiles": "{index.php,*-inline.php,cron_reminders.php,pages/**,api/**,vendor/**,public/assets/mmwgh_logo.png,public/assets/v3_lingkod_logo_email.png,public/assets/v3_lingkod_logo_green.png}"
     }
   },
