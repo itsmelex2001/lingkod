@@ -544,19 +544,19 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Landing Solid Forest-Green Navbar (WCAG AA >= 4.5:1 across all stops) ── */
+/* ── Landing Original 3-Stop Gradient Navbar ── */
 .navbar.navbar-hero-solid {
-  height: 96px;
+  height: 104px;
   padding: 0 2.5rem;
-  background: #186227;
-  box-shadow: 0 6px 20px rgba(4, 38, 12, 0.3);
+  background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
 }
 
 .navbar.navbar-hero-solid.scrolled {
-  background: rgba(24, 98, 39, 0.94);
+  background: linear-gradient(90deg, rgba(37, 186, 80, 0.85) 0%, rgba(126, 217, 87, 0.85) 50%, rgba(4, 112, 35, 0.85) 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgba(4, 38, 12, 0.38);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
 }
 
 .navbar.navbar-hero-solid .navbar-inner {
@@ -566,7 +566,7 @@ body {
 }
 
 .navbar.navbar-hero-solid .logo {
-  height: 96px;
+  height: 104px;
   gap: 10px;
   flex-shrink: 1;
   min-width: 0;
@@ -624,11 +624,12 @@ body {
   padding: 8px 20px;
   border-radius: 10px;
   border: 1.5px solid #ffffff;
-  background: rgba(4, 64, 22, 0.58);
+  background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
   color: #ffffff;
   font-size: 0.88rem;
   font-weight: 600;
   text-decoration: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -640,7 +641,8 @@ body {
 }
 
 .navbar.navbar-hero-solid .btn-patient-portal:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(90deg, #22ad49 0%, #72ce4b 50%, #03601e 100%);
+  filter: brightness(1.06);
   border-color: #ffffff;
   color: #ffffff;
 }
@@ -706,12 +708,12 @@ body {
 
 @media (max-width: 768px) {
   .navbar.navbar-hero-solid {
-    height: 60px;
+    height: 66px;
     padding: 0 1rem;
   }
 
   .navbar.navbar-hero-solid .logo {
-    height: 60px;
+    height: 66px;
   }
 
   .navbar.navbar-hero-solid .logo img.logo-ver2-img {
@@ -723,7 +725,7 @@ body {
   }
 
   .navbar.navbar-hero-solid .nav-links {
-    top: 60px;
+    top: 66px;
     gap: 4px;
   }
 
