@@ -115,7 +115,8 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         padding: clamp(1.5rem, 2.8vw, 3rem);
         height: 100%;
         min-height: 0;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
 
       .portal-left::before {
@@ -167,8 +168,8 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         z-index: 2;
         display: flex;
         flex-direction: column;
-        height: 100%;
-        min-height: 0;
+        flex: 1 0 auto;
+        gap: 1.25rem;
         justify-content: space-between;
       }
 
@@ -214,7 +215,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         margin-top: auto;
         margin-bottom: 0;
         padding: 0 0 clamp(0.5rem, 1vh, 1rem) 0;
-        min-height: 0;
+        flex-shrink: 0;
       }
 
       .portal-left-tagline {
@@ -286,18 +287,24 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         background-color: var(--color-surface-right);
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        gap: 1rem;
         height: 100%;
         min-height: 0;
         padding: clamp(0.85rem, 1.8vh, 1.5rem) clamp(1.25rem, 3vw, 2.5rem);
         overflow-y: auto;
         overflow-x: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+        scrollbar-width: thin;
+        scrollbar-color: #d1d5db transparent;
       }
 
       .portal-right::-webkit-scrollbar {
-        display: none;
+        width: 6px;
+        display: block;
+      }
+
+      .portal-right::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 999px;
       }
 
       /* Top navigation row: Home link & Language switch */
@@ -377,11 +384,10 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
       .portal-form-container {
         width: 100%;
         max-width: 400px;
-        margin: auto auto;
-        min-height: 0;
+        margin: auto;
+        flex: 0 0 auto;
         display: flex;
         flex-direction: column;
-        justify-content: center;
       }
 
       .brand-header {
@@ -608,6 +614,8 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
         margin-bottom: 0;
         font-size: 0.78rem;
       }
@@ -720,7 +728,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
       .portal-right-footer {
         width: 100%;
         max-width: 440px;
-        margin: auto auto 0;
+        margin: 0 auto;
         text-align: center;
         font-size: 0.7rem;
         color: var(--color-text-muted);
@@ -1048,9 +1056,10 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         border: 1px solid rgba(0, 0, 0, 0.05);
         box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
         padding: 28px;
+        max-height: calc(100dvh - 2rem);
+        overflow-y: auto;
         transform: translateY(8px);
         transition: transform 180ms ease-out;
-        overflow: hidden;
       }
 
       .modal-backdrop.is-active .modal-card {
@@ -1188,6 +1197,7 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
         .portal-layout {
           grid-template-columns: 1fr;
           height: auto;
+          max-height: none;
           min-height: 100dvh;
           overflow: visible;
         }
@@ -1247,6 +1257,12 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
       @media (max-height: 700px) and (min-width: 821px) {
         .portal-right {
           overflow-y: auto;
+        }
+        .portal-left-tagline {
+          font-size: clamp(2rem, 3.6vw, 3rem);
+        }
+        .portal-left-divider {
+          margin: 1rem 0;
         }
       }
     </style>

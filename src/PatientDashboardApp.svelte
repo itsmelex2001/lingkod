@@ -122,8 +122,57 @@
     }
   }
 
+  let allowInternalNav = false;
+
   onMount(() => {
     loadDashboardData();
+
+    let autoLogoutSent = false;
+    const internalPrefixes = [
+      '/sdn/pages/patient-book-appointment.php',
+      '/sdn/pages/schedules.php',
+      '/sdn/pages/regis-',
+      '/sdn/pages/patient-dashboard.php',
+      '/sdn/api/patient_logout.php'
+    ];
+
+    const onDocClick = (e) => {
+      const link = e.target?.closest?.('a[href]');
+      if (!link || (link.target && link.target !== '_self')) return;
+      const href = link.getAttribute('href') || '';
+      if (href.startsWith('#') || internalPrefixes.some((p) => href.startsWith(p))) {
+        allowInternalNav = true;
+        setTimeout(() => { allowInternalNav = false; }, 1500);
+      }
+    };
+
+    // shortcut: pagehide also fires on F5/reload because browsers do not expose close vs reload at unload time.
+    const onPageHide = () => {
+      if (allowInternalNav || autoLogoutSent) return;
+      autoLogoutSent = true;
+      const url = '/sdn/api/patient_logout.php?ajax=1&auto=1';
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url);
+      } else {
+        fetch(url, { method: 'POST', keepalive: true, credentials: 'same-origin' }).catch(() => {});
+      }
+    };
+
+    const onPageShow = (e) => {
+      if (e.persisted) {
+        window.location.replace('/sdn/pages/patient-login.php');
+      }
+    };
+
+    document.addEventListener('click', onDocClick, true);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+
+    return () => {
+      document.removeEventListener('click', onDocClick, true);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   });
 
   // Dynamic Greeting based on current time
@@ -196,6 +245,7 @@
   }
 
   function handleReschedule(appt) {
+    allowInternalNav = true;
     window.location.href = `/sdn/pages/patient-book-appointment.php?reschedule=${encodeURIComponent(appt.patient_code || appt.id)}`;
   }
 
@@ -229,10 +279,12 @@
   }
 
   function handleBookAppointment() {
+    allowInternalNav = true;
     window.location.href = '/sdn/pages/patient-book-appointment.php';
   }
 
   function handleViewDoctorSchedules() {
+    allowInternalNav = true;
     window.location.href = '/sdn/pages/schedules.php';
   }
 

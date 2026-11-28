@@ -5,6 +5,9 @@
  */
 
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 if (empty($_SESSION['patient_logged_in']) && !empty($_COOKIE['lingkod_patient_remember'])) {
     require_once __DIR__ . '/../api/config/db.php';
     require_once __DIR__ . '/../api/config/patient_remember.php';
@@ -5048,6 +5051,48 @@ $initials  = count($nameParts) >= 2
           document.getElementById('notifDropdown')?.classList.remove('show');
         }
       });
+
+      // Auto-logout when navigating away on the same tab or closing the tab.
+      // shortcut: pagehide also fires on F5/reload because browsers do not expose close vs reload at unload time.
+      (() => {
+        let allowInternalNav = false;
+        let autoLogoutSent = false;
+        const internalPrefixes = [
+          '/sdn/pages/patient-book-appointment.php',
+          '/sdn/pages/schedules.php',
+          '/sdn/pages/patient-dashboard.php',
+          '/sdn/api/patient_logout.php'
+        ];
+
+        document.addEventListener('click', (e) => {
+          const link = e.target?.closest?.('a[href]');
+          if (!link) return;
+          if (link.target && link.target !== '_self') return;
+          const href = link.getAttribute('href') || '';
+          if (href.startsWith('#') || internalPrefixes.some((p) => href.startsWith(p))) {
+            allowInternalNav = true;
+            setTimeout(() => { allowInternalNav = false; }, 1500);
+          }
+        }, true);
+
+        const triggerAutoLogout = () => {
+          if (allowInternalNav || autoLogoutSent) return;
+          autoLogoutSent = true;
+          const url = '/sdn/api/patient_logout.php?ajax=1&auto=1';
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(url);
+          } else {
+            fetch(url, { method: 'POST', keepalive: true, credentials: 'same-origin' }).catch(() => {});
+          }
+        };
+
+        window.addEventListener('pagehide', triggerAutoLogout);
+        window.addEventListener('pageshow', (e) => {
+          if (e.persisted) {
+            window.location.replace('/sdn/pages/patient-login.php');
+          }
+        });
+      })();
     </script>
       <script src="/sdn/public/js/patient-slip.js?v=20261128"></script>
       <script src="/sdn/assets/js/dashboard-mobile.js?v=20261128"></script>
