@@ -404,7 +404,7 @@
   }
 
   .howto-stepper-heading {
-    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-family: Impact, 'Anton', Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     font-size: clamp(2.5rem, 4.3vw, 3.4rem);
     color: #143318;
     font-weight: 400;
@@ -770,7 +770,7 @@
     pointer-events: none;
   }
   .main-heading-inline {
-    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif !important;
+    font-family: Impact, 'Anton', Haettenschweiler, 'Arial Narrow Bold', sans-serif !important;
     font-size: clamp(2.4rem, 4.4vw, 3.3rem) !important;
     color: #000000 !important;
     font-weight: 400 !important;
@@ -887,7 +887,7 @@
   }
 
   .tile-hover-title-inline {
-    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-family: Impact, 'Anton', Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     font-size: 1.45rem;
     color: #ffffff;
     letter-spacing: 1px;
@@ -950,7 +950,7 @@
   }
 
   .tile-title-inline {
-    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-family: Impact, 'Anton', Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     font-size: 2.3rem;
     font-weight: 400;
     color: #ffffff;
