@@ -26,6 +26,10 @@
       "dest": "/$1"
     },
     {
+      "src": "^/favicon\\.ico$",
+      "dest": "/public/assets/mmwgh_logo.png"
+    },
+    {
       "src": "^/sw\\.js$",
       "dest": "/sw.js"
     },

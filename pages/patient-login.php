@@ -19,6 +19,8 @@ $rememberedEmail = $_COOKIE[LINGKOD_REMEMBER_EMAIL_COOKIE] ?? '';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Portal | MMWGH LINGKOD</title>
+  <link rel="icon" type="image/png" href="/sdn/public/assets/mmwgh_logo.png" />
+  <link rel="apple-touch-icon" href="/sdn/public/assets/mmwgh_logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

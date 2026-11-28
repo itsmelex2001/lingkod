@@ -37,6 +37,8 @@ $csrfToken = $_SESSION['csrf_token'];
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Profile | LINGKOD</title>
+  <link rel="icon" type="image/png" href="/sdn/public/assets/mmwgh_logo.png" />
+  <link rel="apple-touch-icon" href="/sdn/public/assets/mmwgh_logo.png" />
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
     <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=10" />
     <link rel="stylesheet" href="/sdn/public/css/dashboard.css" />
