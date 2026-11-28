@@ -338,4 +338,95 @@ class PatientDashboardController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Cancel an upcoming patient appointment (pending/for approval or confirmed only).
+     */
+    public function cancelAppointment(Request $request, int $id): JsonResponse
+    {
+        [$patientId, $email, $userId] = $this->resolvePatientIdentifiers($request);
+
+        try {
+            $appointment = Appointment::forPatient($patientId, $email, $userId)
+                ->where('id', $id)
+                ->first();
+
+            if (!$appointment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'That appointment was not found on your account.'
+                ], 404);
+            }
+
+            $rawStatus = strtolower(trim((string)($appointment->status ?? '')));
+            if (in_array($rawStatus, ['arrived', 'checked_in', 'checked in'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This appointment can no longer be cancelled because you are already checked in.'
+                ], 409);
+            }
+            if (in_array($rawStatus, ['ongoing', 'in_consultation', 'in consultation'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This appointment can no longer be cancelled because the consultation has already started.'
+                ], 409);
+            }
+            if ($rawStatus === 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Completed appointments cannot be cancelled.'
+                ], 409);
+            }
+            if (in_array($rawStatus, ['cancelled', 'cancelled_by_patient', 'rejected', 'declined'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This appointment is already cancelled.'
+                ], 409);
+            }
+            if (!$appointment->can_cancel) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This appointment can no longer be cancelled.'
+                ], 409);
+            }
+
+            $appointment->status = 'cancelled';
+            $appointment->updated_at = Carbon::now('Asia/Manila');
+            $appointment->save();
+
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('appointments')) {
+                    $refNo = trim((string)($appointment->reference_no ?? ''));
+                    $apptDate = $appointment->appointment_date
+                        ? (is_string($appointment->appointment_date) ? $appointment->appointment_date : $appointment->appointment_date->format('Y-m-d'))
+                        : null;
+                    DB::table('appointments')
+                        ->where(function ($q) use ($refNo, $appointment, $apptDate) {
+                            if ($refNo !== '') {
+                                $q->where('reference_no', $refNo)
+                                  ->orWhere(function ($q2) use ($appointment, $apptDate) {
+                                      $q2->where('patient_id', $appointment->patient_id)
+                                         ->where('appointment_date', $apptDate);
+                                  });
+                            } else {
+                                $q->where('patient_id', $appointment->patient_id)
+                                  ->where('appointment_date', $apptDate);
+                            }
+                        })
+                        ->update(['status' => 'cancelled']);
+                }
+            } catch (\Throwable $ignoreMirror) {}
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Your appointment has been cancelled.'
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error cancelling patient appointment', ['id' => $id, 'exception' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not cancel this appointment.'
+            ], 500);
+        }
+    }
 }

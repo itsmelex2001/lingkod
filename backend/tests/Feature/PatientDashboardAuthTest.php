@@ -31,6 +31,10 @@ class PatientDashboardAuthTest extends TestCase
             'new_password' => 'NewPass123!',
             'confirm_password' => 'NewPass123!',
         ])->assertStatus(401);
+
+        $this->postJson('/api/patient/appointments/1/cancel', [
+            'patient_id' => 'PT-2026-082',
+        ])->assertStatus(401);
     }
 
     public function test_invalid_bearer_token_is_rejected(): void

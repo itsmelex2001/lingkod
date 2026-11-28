@@ -27,7 +27,7 @@ class AppointmentResource extends JsonResource
             'doctor'         => $this->assigned_doctor ?: 'Attending Physician',
             'chief_complaint'=> $this->chief_complaints ?: $this->consultation_nature,
             'can_reschedule' => $this->can_reschedule,
-            'can_cancel'     => $this->can_reschedule,
+            'can_cancel'     => $this->can_cancel,
         ];
     }
 }

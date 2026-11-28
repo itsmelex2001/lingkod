@@ -73,5 +73,43 @@ class PatientAppointmentLogicTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_can_cancel_status_rules(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 11, 13, 10, 0, 0, 'Asia/Manila'));
+
+        $allowed = ['pending', 'for_approval', 'for approval', 'for_processing', 'approved', 'confirmed', 'scheduled', 'rescheduled'];
+        foreach ($allowed as $st) {
+            $appt = new Appointment([
+                'patient_id' => 'PT-TEST-001',
+                'appointment_date' => '2026-11-16',
+                'scheduled_time' => '10:00:00',
+                'status' => $st,
+            ]);
+            $this->assertTrue($appt->can_cancel, "Expected status '{$st}' to be cancellable.");
+        }
+
+        $blocked = ['arrived', 'checked_in', 'checked in', 'ongoing', 'in_consultation', 'in consultation', 'completed', 'cancelled', 'cancelled_by_patient', 'rejected', 'no-show', 'transferred'];
+        foreach ($blocked as $st) {
+            $appt = new Appointment([
+                'patient_id' => 'PT-TEST-001',
+                'appointment_date' => '2026-11-16',
+                'scheduled_time' => '10:00:00',
+                'status' => $st,
+            ]);
+            $this->assertFalse($appt->can_cancel, "Expected status '{$st}' NOT to be cancellable.");
+        }
+
+        // Past confirmed appointment cannot be cancelled
+        $pastConfirmed = new Appointment([
+            'patient_id' => 'PT-TEST-001',
+            'appointment_date' => '2026-11-10',
+            'scheduled_time' => '09:00:00',
+            'status' => 'confirmed',
+        ]);
+        $this->assertFalse($pastConfirmed->can_cancel);
+
+        Carbon::setTestNow();
+    }
 }
 

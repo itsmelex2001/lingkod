@@ -5,6 +5,7 @@
   export let onBook = () => {};
   export let onViewDetails = (appt) => {};
   export let onReschedule = (appt) => {};
+  export let onCancel = (appt) => {};
 
   $: relativeLabel = (() => {
     if (!appointment?.date_raw) return '';
@@ -87,6 +88,17 @@
             on:click={() => onReschedule(appointment)}
           >
             Reschedule
+          </button>
+        {/if}
+
+        {#if appointment.can_cancel}
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded-lg border border-red-200 text-xs font-semibold text-red-700 bg-white hover:bg-red-50 transition"
+            style="padding: 6px 12px; border-radius: 8px; border: 1px solid #fecaca; background: white; color: #b91c1c; font-size: 12px; font-weight: 600; cursor: pointer;"
+            on:click={() => onCancel(appointment)}
+          >
+            Cancel
           </button>
         {/if}
 

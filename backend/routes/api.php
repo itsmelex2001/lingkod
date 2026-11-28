@@ -19,6 +19,7 @@ Route::get('/patient-records', [\App\Http\Controllers\AppointmentBookingControll
 Route::get('/patient/dashboard', [\App\Http\Controllers\PatientDashboardController::class, 'getDashboardData']);
 Route::post('/patient/dashboard', [\App\Http\Controllers\PatientDashboardController::class, 'getDashboardData']);
 Route::get('/patient/appointments', [\App\Http\Controllers\PatientDashboardController::class, 'getAppointmentsList']);
+Route::post('/patient/appointments/{id}/cancel', [\App\Http\Controllers\PatientDashboardController::class, 'cancelAppointment']);
 Route::post('/patient/profile', [\App\Http\Controllers\PatientDashboardController::class, 'updateProfile']);
 Route::post('/patient/change-password', [\App\Http\Controllers\PatientDashboardController::class, 'changePassword']);
 

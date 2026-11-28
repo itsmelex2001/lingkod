@@ -28,7 +28,8 @@ class Appointment extends Model
         'formatted_date',
         'formatted_time',
         'relative_label',
-        'can_reschedule'
+        'can_reschedule',
+        'can_cancel'
     ];
 
     /**
@@ -216,6 +217,19 @@ class Appointment extends Model
         $rawStatus = strtolower(trim($this->status ?? ''));
 
         return $apptTime->gt($now) && !in_array($rawStatus, ['completed', 'cancelled', 'rejected', 'in consultation', 'confirmed', 'approved', 'scheduled']);
+    }
+
+    public function getCanCancelAttribute(): bool
+    {
+        if (empty($this->full_datetime)) return false;
+        $now = Carbon::now('Asia/Manila');
+        $apptTime = Carbon::parse($this->full_datetime, 'Asia/Manila');
+        $rawStatus = strtolower(trim($this->status ?? ''));
+
+        return $apptTime->gt($now) && in_array($rawStatus, [
+            'pending', 'for_approval', 'for approval', 'for_processing',
+            'approved', 'confirmed', 'scheduled', 'rescheduled',
+        ], true);
     }
 }
 

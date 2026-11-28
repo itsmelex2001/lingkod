@@ -7,6 +7,7 @@
   import PasswordModal from './components/portal/PasswordModal.svelte';
   import AppointmentDetailsModal from './components/portal/AppointmentDetailsModal.svelte';
   import StatusPill from './components/portal/StatusPill.svelte';
+  import ConfirmModal from './components/ui/ConfirmModal.svelte';
 
   export let patientName = 'Alexu Gallardo';
   export let patientId = 'PT-2026-082';
@@ -19,6 +20,8 @@
   let showPasswordModal = false;
   let showDetailsModal = false;
   let selectedAppointment = null;
+  let cancelTarget = null;
+  let isCancelling = false;
 
   // Search & Date filters for Appointments tab
   let searchQuery = '';
@@ -196,6 +199,35 @@
     window.location.href = `/sdn/pages/patient-book-appointment.php?reschedule=${encodeURIComponent(appt.patient_code || appt.id)}`;
   }
 
+  function handleRequestCancel(appt) {
+    if (!appt?.can_cancel) return;
+    cancelTarget = appt;
+  }
+
+  async function confirmCancelAppointment() {
+    if (!cancelTarget || isCancelling) return;
+    isCancelling = true;
+    try {
+      const res = await fetch('/sdn/api/patient_cancel_appointment.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ id: cancelTarget.id })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        cancelTarget = null;
+        showToast(json.message || 'Appointment cancelled.', 'success');
+        await loadDashboardData();
+      } else {
+        showToast(json.message || 'Could not cancel this appointment.', 'error');
+      }
+    } catch (e) {
+      showToast('Could not reach the server.', 'error');
+    } finally {
+      isCancelling = false;
+    }
+  }
+
   function handleBookAppointment() {
     window.location.href = '/sdn/pages/patient-book-appointment.php';
   }
@@ -307,6 +339,17 @@
   }}
 />
 
+<ConfirmModal
+  isOpen={Boolean(cancelTarget)}
+  title="Cancel Appointment"
+  message={cancelTarget ? `Cancel your ${cancelTarget.department || 'clinic'} appointment on ${cancelTarget.date || ''} at ${cancelTarget.time || '8:00 AM'}? This will release your slot.` : ''}
+  confirmText={isCancelling ? 'Cancelling...' : 'Yes, Cancel'}
+  cancelText="Keep Appointment"
+  variant="danger"
+  on:confirm={confirmCancelAppointment}
+  on:cancel={() => { if (!isCancelling) cancelTarget = null; }}
+/>
+
 <div class="flex min-h-screen bg-[#f9fafb] text-[#111827] font-['Inter',sans-serif]">
   <!-- Left Shell Sidebar -->
   <Sidebar
@@ -379,6 +422,7 @@
           onBook={handleBookAppointment}
           onViewDetails={handleViewDetails}
           onReschedule={handleReschedule}
+          onCancel={handleRequestCancel}
         />
 
         <!-- Secondary Quiet Metrics -->
@@ -488,6 +532,7 @@
                   isUpcomingTab={true}
                   onView={handleViewDetails}
                   onReschedule={handleReschedule}
+                  onCancel={handleRequestCancel}
                 />
               {/each}
             </div>
@@ -634,6 +679,7 @@
                     isUpcomingTab={apptFilterTab === 'upcoming'}
                     onView={handleViewDetails}
                     onReschedule={handleReschedule}
+                    onCancel={handleRequestCancel}
                   />
                 {/each}
               </div>

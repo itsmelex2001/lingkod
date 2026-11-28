@@ -664,7 +664,7 @@ try {
         $apptDateTime = new DateTime($apptDate . ' ' . $timeIso, new DateTimeZone('Asia/Manila'));
         $isPast = $apptDateTime < $now;
 
-        $isExplicitCancelled = in_array($statusLower, ['cancelled', 'rejected', 'declined'], true);
+        $isExplicitCancelled = in_array($statusLower, ['cancelled', 'cancelled_by_patient', 'rejected', 'declined'], true);
         $isExplicitMissed    = in_array($statusLower, ['no-show', 'no_show', 'missed'], true);
         $isExplicitCompleted = ($statusLower === 'completed');
         $isRescheduledByStaff = !empty($appt['rescheduled_by_staff']) || ($statusLower === 'rescheduled');
@@ -778,7 +778,8 @@ try {
             'is_rescheduled'            => $isRescheduledByStaff,
             'rescheduled_by_staff'      => $isRescheduledByStaff,
             'rescheduled_from_date'     => $reschedFromFormatted,
-            'can_reschedule'            => (!$isPast && !$isExplicitCancelled && $displayStatus === 'For approval')
+            'can_reschedule'            => (!$isPast && !$isExplicitCancelled && $displayStatus === 'For approval'),
+            'can_cancel'                => (!$isPast && !$isExplicitCancelled && in_array($statusLower, ['pending', 'for_approval', 'for approval', 'for_processing', 'approved', 'confirmed', 'scheduled', 'rescheduled'], true))
         ];
 
         if ($isRescheduledByStaff && !$isExplicitCancelled && !$isExplicitMissed) {

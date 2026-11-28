@@ -5,6 +5,7 @@
   export let isUpcomingTab = false;
   export let onView = (appt) => {};
   export let onReschedule = (appt) => {};
+  export let onCancel = (appt) => {};
 
   $: deptDotColor = (() => {
     const dept = (appointment.department || '').toLowerCase();
@@ -78,6 +79,16 @@
         on:click={() => onReschedule(appointment)}
       >
         Reschedule
+      </button>
+    {/if}
+
+    {#if appointment.can_cancel}
+      <button
+        type="button"
+        class="px-2.5 py-1.5 rounded-md text-xs font-medium text-red-700 border border-red-200 bg-white hover:bg-red-50 transition"
+        on:click={() => onCancel(appointment)}
+      >
+        Cancel
       </button>
     {/if}
 

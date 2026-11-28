@@ -1289,6 +1289,53 @@ $initials  = count($nameParts) >= 2
         color: #64748b;
         flex-shrink: 0;
       }
+      .row-action-item.is-danger {
+        color: #b91c1c;
+      }
+      .row-action-item.is-danger svg {
+        color: #dc2626;
+      }
+      .row-action-item.is-danger:hover {
+        background: #fef2f2;
+      }
+      .cancel-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .cancel-keep-btn {
+        padding: 10px 16px;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #334155;
+        font-family: inherit;
+        font-size: 0.86rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .cancel-keep-btn:hover {
+        background: #f8fafc;
+      }
+      .cancel-confirm-btn {
+        padding: 10px 16px;
+        border-radius: 10px;
+        border: none;
+        background: #dc2626;
+        color: #ffffff;
+        font-family: inherit;
+        font-size: 0.86rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .cancel-confirm-btn:hover {
+        background: #b91c1c;
+      }
+      .cancel-confirm-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
 
       @media (min-width: 769px) {
       #view-appointments .view-header {
@@ -3273,6 +3320,25 @@ $initials  = count($nameParts) >= 2
       </div>
     </div>
 
+    <!-- Cancel Appointment Modal -->
+    <div id="cancelModal" class="modal-backdrop">
+      <div class="modal-dialog" style="max-width:440px;">
+        <div class="modal-top">
+          <h3>Cancel Appointment</h3>
+          <button class="btn-close-modal" onclick="closeCancelModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="cancelSummary" style="font-size:0.88rem; color:#334155; line-height:1.5; margin-bottom:10px;"></p>
+          <p style="font-size:0.82rem; color:#64748b; line-height:1.5; margin-bottom:12px;">This will release your scheduled clinic slot and move the visit to your Cancelled tab. This action cannot be undone.</p>
+          <p id="cancelError" style="display:none; color:#b91c1c; font-size:0.84rem; margin-bottom:10px;"></p>
+          <div class="cancel-modal-actions">
+            <button type="button" class="cancel-keep-btn" onclick="closeCancelModal()">Keep Appointment</button>
+            <button type="button" class="cancel-confirm-btn" id="cancelConfirmBtn" onclick="submitCancelAppointment()">Yes, Cancel Appointment</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
 
     <!-- â”€â”€ Change Password Modal â”€â”€ -->
@@ -3334,6 +3400,7 @@ $initials  = count($nameParts) >= 2
       let currentLang = localStorage.getItem('sdn_patient_lang') || 'en';
       let currentApptTab = 'upcoming';
       let rescheduleTarget = null;
+      let cancelTarget = null;
 
       const i18nDict = {
         en: {
@@ -3683,7 +3750,8 @@ $initials  = count($nameParts) >= 2
       function renderRowActionTrigger(item, forcedSlipType) {
         const canSlip = window.PatientSlip ? window.PatientSlip.canGenerateSlip(item) : false;
         const canResched = Boolean(item.can_reschedule);
-        if (!canSlip && !canResched) return '';
+        const canCancel = Boolean(item.can_cancel);
+        if (!canSlip && !canResched && !canCancel) return '';
         return `<button type="button" class="row-actions-btn" aria-label="Appointment actions" aria-haspopup="menu" aria-expanded="false" onclick="event.stopPropagation(); toggleRowActionMenu(this, ${Number(item.id)}, '${escapeHtml(forcedSlipType || '')}')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <circle cx="5" cy="12" r="2"></circle>
@@ -4681,6 +4749,52 @@ $initials  = count($nameParts) >= 2
         }
       }
 
+      function openCancelModal(id) {
+        const item = findAppointment(id);
+        if (!item || !item.can_cancel) return;
+        cancelTarget = item;
+        const forNote = (item.is_other_patient && item.patient_name) ? ` for ${item.patient_name}` : '';
+        document.getElementById('cancelSummary').textContent = `Cancel ${item.title}${forNote} (${item.patient_code}) scheduled on ${item.date} at ${item.time_label}?`;
+        const err = document.getElementById('cancelError');
+        err.style.display = 'none';
+        err.textContent = '';
+        document.getElementById('cancelModal').classList.add('active');
+      }
+
+      function closeCancelModal() {
+        document.getElementById('cancelModal')?.classList.remove('active');
+        cancelTarget = null;
+      }
+
+      async function submitCancelAppointment() {
+        if (!cancelTarget) return;
+        const err = document.getElementById('cancelError');
+        const btn = document.getElementById('cancelConfirmBtn');
+        err.style.display = 'none';
+        btn.disabled = true;
+        try {
+          const res = await fetch('/sdn/api/patient_cancel_appointment.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: cancelTarget.id })
+          });
+          const data = await res.json();
+          if (!data.success) {
+            err.textContent = data.message || 'Could not cancel this appointment.';
+            err.style.display = 'block';
+            return;
+          }
+          closeCancelModal();
+          showPortalToast('Appointment Cancelled', data.message || 'Your appointment has been cancelled.', 'success');
+          await initPortal();
+        } catch (e) {
+          err.textContent = 'Could not reach the server.';
+          err.style.display = 'block';
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
       function openPasswordModal() {
         document.getElementById('pwCurrent').value = '';
         document.getElementById('pwNew').value = '';
@@ -4795,6 +4909,14 @@ $initials  = count($nameParts) >= 2
             <button type="button" class="row-action-item" role="menuitem" onclick="closeRowActionMenu(); openRescheduleModal(${Number(item.id)})">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
               <span>Reschedule</span>
+            </button>
+          `);
+        }
+        if (item.can_cancel) {
+          itemsHtml.push(`
+            <button type="button" class="row-action-item is-danger" role="menuitem" onclick="closeRowActionMenu(); openCancelModal(${Number(item.id)})">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+              <span>Cancel Appointment</span>
             </button>
           `);
         }
@@ -4920,6 +5042,7 @@ $initials  = count($nameParts) >= 2
           closeRowActionMenu();
           closeModal();
           closeRescheduleModal();
+          closeCancelModal();
           closePasswordModal();
           closeProfileDropdown();
           document.getElementById('notifDropdown')?.classList.remove('show');
