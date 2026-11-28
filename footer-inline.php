@@ -91,6 +91,8 @@ $ftTelDigits = preg_replace('/[^0-9+]/', '', $ftHotline) ?: '0479354138';
         </button>
       </div>
     </div>
+
+    <div class="footer-copyright-inline">&copy; <?= date('Y') ?> MMWGH LINGKOD. All Rights Reserved.</div>
   </div>
 </footer>
 
@@ -365,13 +367,12 @@ $ftTelDigits = preg_replace('/[^0-9+]/', '', $ftHotline) ?: '0479354138';
   /* Responsive */
   @media (max-width: 960px) {
     .footer-dark-box-inline {
-      grid-template-columns: 1fr;
-      padding: 3rem 2rem;
-      border-radius: 40px;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.78fr) minmax(0, 1.17fr);
+      gap: 1.15rem;
+      padding: 2rem 1.5rem;
+      border-radius: 32px;
     }
     .footer-script-title-inline { font-size: 3rem; }
     .footer-desc-inline { font-size: 0.95rem; }
   }
 </style>
-
-</script>

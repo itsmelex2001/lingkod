@@ -49,33 +49,33 @@
 </section>
 
 <!-- Vision & Mission & Quality Policy Section -->
-<section class="vision-mission-section max-md:grid max-md:grid-cols-2 max-md:items-stretch max-md:gap-3">
-  <div class="vm-container max-md:contents">
-    <div class="vm-card max-md:min-w-0 max-md:p-2" data-aos="fade-up">
+<section class="vision-mission-section">
+  <div class="vm-container">
+    <div class="vm-card" data-aos="fade-up">
       <h3 class="vm-title">
-        <img src="/sdn/public/assets/vision_brush.png?v=<?= time() ?>" alt="Vision" class="vm-brush-inline max-md:h-auto max-md:max-h-[26px] max-md:w-auto max-md:max-w-full max-md:object-contain" />
+        <img src="/sdn/public/assets/vision_brush.png?v=<?= time() ?>" alt="Vision" class="vm-brush-inline" />
       </h3>
-      <p class="vm-text max-md:text-left max-md:text-xs max-md:leading-snug max-md:break-words" data-i18n="vision_body">Mariveles Mental Wellness and General Hospital is the premier client-oriented DOH hospital, providing safe. efficient, and quality services.</p>
+      <p class="vm-text" data-i18n="vision_body">Mariveles Mental Wellness and General Hospital is the premier client-oriented DOH hospital, providing safe. efficient, and quality services.</p>
       <div class="vm-line"></div>
     </div>
-    <div class="vm-card max-md:min-w-0 max-md:p-2" data-aos="fade-up" data-aos-delay="100">
+    <div class="vm-card" data-aos="fade-up" data-aos-delay="100">
       <h3 class="vm-title">
-        <img src="/sdn/public/assets/mission_brush.png?v=<?= time() ?>" alt="Mission" class="vm-brush-inline max-md:h-auto max-md:max-h-[26px] max-md:w-auto max-md:max-w-full max-md:object-contain" />
+        <img src="/sdn/public/assets/mission_brush.png?v=<?= time() ?>" alt="Mission" class="vm-brush-inline" />
       </h3>
-      <p class="vm-text max-md:text-left max-md:text-xs max-md:leading-snug max-md:break-words" data-i18n="mission_body">We are committed to delivering compassionate, safe, and high-quality healthcare in every encounter by preserving dignity, strengthening hope, and promoting holistic well-being for a healthier and more resilient community.</p>
+      <p class="vm-text" data-i18n="mission_body">We are committed to delivering compassionate, safe, and high-quality healthcare in every encounter by preserving dignity, strengthening hope, and promoting holistic well-being for a healthier and more resilient community.</p>
       <div class="vm-line"></div>
     </div>
   </div>
 
-  <div class="qp-container max-md:contents">
-    <div class="vm-card qp-card max-md:col-span-2 max-md:min-w-0 max-md:p-3" data-aos="fade-up" data-aos-delay="150">
+  <div class="qp-container">
+    <div class="vm-card qp-card" data-aos="fade-up" data-aos-delay="150">
       <h3 class="vm-title">
-        <img src="/sdn/public/assets/quality_policy_brush.png?v=<?= time() ?>" alt="Quality Policy" class="vm-brush-inline max-md:h-auto max-md:max-h-[30px] max-md:w-auto max-md:max-w-full max-md:object-contain" />
+        <img src="/sdn/public/assets/quality_policy_brush.png?v=<?= time() ?>" alt="Quality Policy" class="vm-brush-inline" />
       </h3>
       <div class="qp-text-group">
-        <p class="vm-text max-md:text-left max-md:text-[13px] max-md:leading-snug max-md:break-words" data-i18n="quality_1">The Mariveles Mental Wellness and General Hospital is committed to provide affordable quality mental and medical health care with Fairness, Accountability, and Continuous improvement. We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
-        <p class="vm-text max-md:text-left max-md:text-[13px] max-md:leading-snug max-md:break-words" data-i18n="quality_2">We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
-        <p class="vm-text max-md:text-left max-md:text-[13px] max-md:leading-snug max-md:break-words" data-i18n="quality_3">We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
+        <p class="vm-text" data-i18n="quality_1">The Mariveles Mental Wellness and General Hospital is committed to provide affordable quality mental and medical health care with Fairness, Accountability, and Continuous improvement. We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
+        <p class="vm-text" data-i18n="quality_2">We shall ensure compliance with statutory and regulatory requirements. We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
+        <p class="vm-text" data-i18n="quality_3">We pledge to continually improve our Quality Management System to exceed our client's satisfaction.</p>
       </div>
       <div class="vm-line"></div>
     </div>

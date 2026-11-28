@@ -490,8 +490,9 @@
   .vision-mission-section {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    padding: 0.85rem 0.7rem 1.15rem;
+    gap: 1.1rem 0.75rem;
+    padding: 1.85rem 0.95rem 2.25rem;
+    background: linear-gradient(to bottom, #98e698 0%, #d4f7d4 22%, #ffffff 45%, #ffffff 100%);
   }
 
   .vm-container,
@@ -500,59 +501,72 @@
     margin-top: 0;
   }
 
-  .vm-card.qp-card {
-    grid-column: span 2;
-  }
-
-  .vm-card,
-  .vm-card.qp-card {
-    width: auto;
+  .vm-card {
+    width: 100%;
     max-width: none;
     min-width: 0;
-    padding: 0.4rem 0.45rem 0;
-    border-radius: 14px;
+    padding: 1rem 0.8rem 0;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .vm-card.qp-card {
+    grid-column: 1 / -1;
+    width: 88%;
+    max-width: none;
+    min-width: 0;
+    margin: 0.15rem auto 0;
+    padding: 1.05rem 1rem 0;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 
   .vm-title {
-    margin-bottom: 0.2rem !important;
+    margin: 0 0 0.55rem 0 !important;
   }
 
   .vm-brush-inline {
-    height: auto;
-    max-height: 26px;
+    height: 36px;
+    max-height: 36px;
+    width: auto;
     max-width: 100%;
     object-fit: contain;
   }
 
   .qp-card .vm-brush-inline {
-    max-height: 30px;
+    height: 40px;
+    max-height: 40px;
   }
 
   .vm-text {
-    font-size: 0.75rem;
-    line-height: 1.4;
+    font-size: 0.66rem;
+    line-height: 1.48;
+    margin-bottom: 0.85rem;
+    text-align: justify;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .qp-text-group {
+    margin-bottom: 0.65rem;
+  }
+
+  .qp-text-group .vm-text {
+    font-size: 0.64rem;
+    line-height: 1.46;
     margin-bottom: 0.5rem;
     text-align: left;
     overflow-wrap: break-word;
     word-break: break-word;
   }
 
-  .qp-text-group {
-    margin-bottom: 0.35rem;
-  }
-
-  .qp-text-group .vm-text {
-    font-size: 0.8125rem;
-    line-height: 1.4;
-    margin-bottom: 0.4rem;
-    text-align: left;
-    overflow-wrap: break-word;
-    word-break: break-word;
-  }
-
   .vm-line {
-    width: 48px;
+    width: 58px;
     height: 2.5px;
+  }
+
+  .qp-card .vm-line {
+    width: 82px;
   }
 
   /* Site map */
@@ -612,103 +626,104 @@
     height: 280px;
   }
 
-  /* Footer */
+  /* Footer — 3-column horizontal layout matching reference */
   .footer-bg-section-inline {
-    min-height: 0;
-    padding: 2.25rem 1.15rem 5.5rem;
+    min-height: 220px;
+    padding: 1.85rem 1rem 4.25rem;
     background-position: center 20%;
   }
 
   .why-choose-us-brush-inline {
-    height: clamp(58px, 15vw, 72px);
+    height: clamp(46px, 12vw, 62px);
   }
 
   .footer-script-title-inline {
-    margin-bottom: 0.65rem !important;
+    margin-bottom: 0.55rem !important;
   }
 
   .footer-desc-inline {
-    font-size: 0.84rem;
-    line-height: 1.55;
+    font-size: clamp(0.7rem, 2.8vw, 0.82rem);
+    line-height: 1.5;
     max-width: 335px;
     margin: 0 auto;
   }
 
   .footer-overlap-wrapper-inline {
-    margin-top: -42px;
-    background: linear-gradient(to bottom, transparent 42px, #b7cfb3 42px);
-    padding: 0 0 0.6rem;
+    margin-top: -32px;
+    background: linear-gradient(to bottom, transparent 32px, #b7cfb3 32px);
+    padding: 0 0 0.65rem;
   }
 
   .footer-dark-box-inline {
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
-    gap: 1.85rem 1rem;
-    padding: 2rem 1.35rem 2.25rem;
-    border-radius: 36px;
-    margin-bottom: 0;
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.72fr) minmax(0, 1.26fr);
+    gap: 0.65rem;
+    padding: 1.35rem 0.9rem 1.4rem;
+    border-radius: 22px;
+    margin-bottom: 0.6rem;
     text-align: left;
   }
 
   .footer-col-brand-inline {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 
   .footer-logo-inline {
-    font-size: 2.05rem;
-    line-height: 1.06;
-    margin-bottom: 0.65rem;
+    font-size: clamp(0.92rem, 4vw, 1.25rem);
+    line-height: 1.08;
+    margin-bottom: 0.45rem;
+    text-transform: uppercase;
   }
 
   .footer-heading-inline {
-    font-size: clamp(0.92rem, 4.1vw, 1.04rem);
-    margin: 0 0 0.4rem 0;
+    font-size: clamp(0.64rem, 2.6vw, 0.84rem);
+    margin: 0 0 0.35rem 0;
     white-space: nowrap;
   }
 
   .footer-accent-line {
-    height: 2.5px;
-    margin-bottom: 1rem;
+    height: 1.5px;
+    margin-bottom: 0.6rem;
   }
 
   .footer-accent-brand {
-    width: 68px;
-    margin-left: 10px;
+    width: 34px;
+    margin-left: 0;
   }
 
   .footer-accent-links {
-    width: 42px;
+    width: 24px;
     margin-left: 0;
   }
 
   .footer-accent-contact {
-    width: 72px;
+    width: 44px;
     margin-left: 0;
   }
 
   .footer-tagline-main-inline {
-    font-size: 0.82rem;
-    line-height: 1.48;
+    font-size: clamp(0.48rem, 1.8vw, 0.62rem);
+    line-height: 1.38;
     color: #eef5ee;
-    margin-bottom: 0.75rem;
-    max-width: 310px;
+    margin-bottom: 0.45rem;
+    max-width: 100%;
   }
 
   .footer-tagline-sub-inline {
-    font-size: 0.76rem;
-    line-height: 1.4;
+    font-size: clamp(0.45rem, 1.65vw, 0.56rem);
+    line-height: 1.32;
     color: #c7e8c0;
   }
 
   .footer-links-inline {
-    gap: 0.65rem;
+    gap: 0.28rem;
     padding-left: 0;
   }
 
   .footer-links-inline a {
     display: inline-block;
-    font-size: 0.82rem;
-    line-height: 1.35;
-    padding: 0.15rem 0;
+    font-size: clamp(0.52rem, 1.95vw, 0.66rem);
+    line-height: 1.3;
+    padding: 0.06rem 0;
   }
 
   .contact-info-inline {
@@ -716,10 +731,11 @@
   }
 
   .contact-info-inline p {
-    font-size: clamp(0.74rem, 3.2vw, 0.82rem);
-    line-height: 1.42;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
+    font-size: clamp(0.5rem, 1.85vw, 0.64rem);
+    line-height: 1.32;
+    gap: 0.28rem;
+    margin-bottom: 0.45rem;
+    overflow-wrap: anywhere;
   }
 
   .contact-loc-indent-inline {
@@ -727,45 +743,45 @@
   }
 
   .contact-info-inline svg {
-    width: 15px !important;
-    height: 15px !important;
+    width: 11px !important;
+    height: 11px !important;
     margin-top: 2px;
   }
 
   .emergency-btn-inline {
     width: 100%;
-    max-width: 186px;
-    min-height: 44px;
+    max-width: 100%;
+    min-height: 30px;
     margin-left: 0;
     margin-top: 0.35rem;
-    padding: 0.4rem 0.75rem 0.4rem 0.45rem;
-    gap: 0.5rem;
+    padding: 0.28rem 0.48rem 0.28rem 0.3rem;
+    gap: 0.32rem;
     box-sizing: border-box;
   }
 
   .emergency-icon-inline {
-    width: 32px;
-    height: 32px;
+    width: 22px;
+    height: 22px;
   }
 
   .emergency-icon-inline svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 11px !important;
+    height: 11px !important;
   }
 
   .emergency-number-inline {
-    font-size: clamp(0.76rem, 3.3vw, 0.88rem);
+    font-size: clamp(0.54rem, 2.1vw, 0.7rem);
     white-space: nowrap;
     letter-spacing: 0.1px;
   }
 
   .emergency-label-inline {
-    font-size: clamp(0.58rem, 2.5vw, 0.66rem);
-    letter-spacing: 0.3px;
+    font-size: clamp(0.42rem, 1.6vw, 0.54rem);
+    letter-spacing: 0.25px;
   }
 
   .footer-copyright-inline {
-    font-size: 0.75rem;
+    font-size: clamp(0.56rem, 2.1vw, 0.68rem);
     padding: 0 0.5rem;
   }
 
