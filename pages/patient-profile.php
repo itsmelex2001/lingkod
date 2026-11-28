@@ -38,7 +38,7 @@ $csrfToken = $_SESSION['csrf_token'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Profile | LINGKOD</title>
     <link rel="stylesheet" href="/sdn/public/css/global.css?v=9" />
-    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=9" />
+    <link rel="stylesheet" href="/sdn/public/css/navigation.css?v=10" />
     <link rel="stylesheet" href="/sdn/public/css/dashboard.css" />
     <link rel="stylesheet" href="/sdn/public/css/patient-profile.css" />
     <!-- html2pdf for PDF generation -->

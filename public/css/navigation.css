@@ -9,18 +9,18 @@
   justify-content: space-between;
   padding: 0 2.5rem;
   height: 76px;
-  background: linear-gradient(90deg, #25ba50 0%, #7ed957 50%, #047023 100%);
+  background: #186227;
   border-bottom: none;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); /* Dark shadowy effect below the bar */
+  box-shadow: 0 6px 20px rgba(4, 38, 12, 0.3);
   transition: all var(--transition);
   gap: 1rem;
 }
 
 .navbar.scrolled {
-  background: linear-gradient(90deg, rgba(37, 186, 80, 0.85) 0%, rgba(126, 217, 87, 0.85) 50%, rgba(4, 112, 35, 0.85) 100%);
+  background: rgba(24, 98, 39, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); /* Even stronger shadow when scrolled */
+  box-shadow: 0 8px 24px rgba(4, 38, 12, 0.38);
 }
 
 /* ── Logo ── */
